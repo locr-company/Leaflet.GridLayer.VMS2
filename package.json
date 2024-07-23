@@ -1,8 +1,9 @@
 {
-  "name": "leaflet-gridlayer-vms2",
+  "name": "@locr-company/leaflet-gridlayer-vms2",
   "version": "0.1.0",
   "description": "A Leaflet GridLayer-Plugin for locr VMS2",
   "scripts": {
+    "lint:js": "standard src/unicode.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -23,5 +24,16 @@
   "bugs": {
     "url": "https://github.com/locr-company/Leaflet.GridLayer.VMS2/issues"
   },
-  "homepage": "https://github.com/locr-company/Leaflet.GridLayer.VMS2#readme"
+  "homepage": "https://github.com/locr-company/Leaflet.GridLayer.VMS2#readme",
+  "peerDependencies": {
+    "leaflet": "^1.0.0"
+  },
+  "devDependencies": {
+    "standard": "^17.1.0"
+  },
+  "standard": {
+    "globals": [
+      "L"
+    ]
+  }
 }
