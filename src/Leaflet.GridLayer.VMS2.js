@@ -305,7 +305,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   _pruneTiles: function () {
     // FIXME!
 
-    if (this.options.zoomPowerBase == DEFAULT_ZOOM_POWER_BASE) {
+    if (this.options.zoomPowerBase === DEFAULT_ZOOM_POWER_BASE) {
       this._pruneTilesOld()
 
       return
@@ -467,7 +467,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
         }
 
-        if (displacementLayer_.regions_[topRightHash_] && topRightHash_ != topLeftHash_) {
+        if (displacementLayer_.regions_[topRightHash_] && topRightHash_ !== topLeftHash_) {
           for (const hashedBox_ of displacementLayer_.regions_[topRightHash_]) {
             if (box_.left_ > hashedBox_.right_ ||
                             box_.right_ < hashedBox_.left_ ||
@@ -480,7 +480,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
         }
 
-        if (displacementLayer_.regions_[bottomLeftHash_] && bottomLeftHash_ != topLeftHash_ && bottomLeftHash_ != topRightHash_) {
+        if (displacementLayer_.regions_[bottomLeftHash_] && bottomLeftHash_ !== topLeftHash_ && bottomLeftHash_ !== topRightHash_) {
           for (const hashedBox_ of displacementLayer_.regions_[bottomLeftHash_]) {
             if (box_.left_ > hashedBox_.right_ ||
                             box_.right_ < hashedBox_.left_ ||
@@ -493,7 +493,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
         }
 
-        if (displacementLayer_.regions_[bottomRightHash_] && bottomRightHash_ != topLeftHash_ && bottomRightHash_ != topRightHash_ && bottomRightHash_ != bottomLeftHash_) {
+        if (displacementLayer_.regions_[bottomRightHash_] && bottomRightHash_ !== topLeftHash_ && bottomRightHash_ !== topRightHash_ && bottomRightHash_ !== bottomLeftHash_) {
           for (const hashedBox_ of displacementLayer_.regions_[bottomRightHash_]) {
             if (box_.left_ > hashedBox_.right_ ||
                             box_.right_ < hashedBox_.left_ ||
@@ -512,7 +512,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       const displacementLayer_ = displacementLayers_[displacementLayerName_]
 
       for (const box_ of boxes_) {
-        if (box_.left_ == box_.right_ || box_.top_ == box_.bottom_) {
+        if (box_.left_ === box_.right_ || box_.top_ === box_.bottom_) {
           continue
         }
 
@@ -527,7 +527,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         displacementLayer_.regions_[topLeftHash_].push(box_)
 
-        if (topRightHash_ != topLeftHash_) {
+        if (topRightHash_ !== topLeftHash_) {
           if (!displacementLayer_.regions_[topRightHash_]) {
             displacementLayer_.regions_[topRightHash_] = []
           }
@@ -535,7 +535,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           displacementLayer_.regions_[topRightHash_].push(box_)
         }
 
-        if (bottomLeftHash_ != topLeftHash_ && bottomLeftHash_ != topRightHash_) {
+        if (bottomLeftHash_ !== topLeftHash_ && bottomLeftHash_ !== topRightHash_) {
           if (!displacementLayer_.regions_[bottomLeftHash_]) {
             displacementLayer_.regions_[bottomLeftHash_] = []
           }
@@ -543,7 +543,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           displacementLayer_.regions_[bottomLeftHash_].push(box_)
         }
 
-        if (bottomRightHash_ != topLeftHash_ && bottomRightHash_ != topRightHash_ && bottomRightHash_ != bottomLeftHash_) {
+        if (bottomRightHash_ !== topLeftHash_ && bottomRightHash_ !== topRightHash_ && bottomRightHash_ !== bottomLeftHash_) {
           if (!displacementLayer_.regions_[bottomRightHash_]) {
             displacementLayer_.regions_[bottomRightHash_] = []
           }
@@ -730,7 +730,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       const textBoxHeight_ = drawingInfo_.fontSize_ * textLineInfos_.length
 
       if (textLineInfos_.length > 1) {
-        if (textY_ == 0) {
+        if (textY_ === 0) {
           textY_ -= (textLineInfos_.length - 1) * drawingInfo_.fontSize_ / 2
         } else if (textY_ < 0) {
           textY_ -= (textLineInfos_.length - 1) * drawingInfo_.fontSize_
@@ -932,7 +932,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               const textX_ = (x_ - drawingInfo_.drawingArea_.left_ + textDisplacementBox_.x_) * drawingInfo_.mapScale_
               let textY_ = (drawingInfo_.drawingArea_.top_ - y_ + textDisplacementBox_.y_) * drawingInfo_.mapScale_
 
-              if (textLineInfos_.length > 1 && textDisplacementBox_.baseline_ == 'middle') {
+              if (textLineInfos_.length > 1 && textDisplacementBox_.baseline_ === 'middle') {
                 textY_ -= drawingInfo_.fontSize_ * drawingInfo_.mapScale_ * (textLineInfos_.length - 1) / 2
               }
 
@@ -957,7 +957,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
     } else {
       if (drawingInfo_.isIcon_ && drawingInfo_.iconImage_) {
-        if (iconDisplacementBox_ && this._checkAndSetDisplacement_(drawingInfo_.displacementLayers_, drawingInfo_.displacementLayerNames_, [iconDisplacementBox_]) || !iconDisplacementBox_) {
+        if (
+          (iconDisplacementBox_ && this._checkAndSetDisplacement_(drawingInfo_.displacementLayers_, drawingInfo_.displacementLayerNames_, [iconDisplacementBox_])) ||
+          !iconDisplacementBox_
+        ) {
           const iconX_ = drawingInfo_.iconImageOffsetX_ - drawingInfo_.iconWidth_ * drawingInfo_.iconMirrorX_ / 2
           const iconY_ = drawingInfo_.iconImageOffsetY_ - drawingInfo_.iconHeight_ * drawingInfo_.iconMirrorY_ / 2
 
@@ -985,7 +988,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                         iconTop_ < drawingInfo_.boundingArea_.bottom_ ||
                         iconBottom_ > drawingInfo_.boundingArea_.top_) ||
                         drawingInfo_.isGrid_) { // Note: Top > Bottom! Allow every location if there is a grid!
-            if (drawingInfo_.iconAngle_ != 0) {
+            if (drawingInfo_.iconAngle_ !== 0) {
               drawingInfo_.context_.setTransform(new DOMMatrix().translate((x_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_, (drawingInfo_.drawingArea_.top_ - y_) * drawingInfo_.mapScale_).rotate(drawingInfo_.iconAngle_ * 180 / Math.PI))
               drawingInfo_.context_.drawImage(
                 drawingInfo_.iconImage_,
@@ -1012,7 +1015,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     const numberOfPoints_ = geometry_.getUint32(dataOffset_, true)
     dataOffset_ += 4
 
-    if (numberOfPoints_ == 0) {
+    if (numberOfPoints_ === 0) {
       return dataOffset_
     }
 
@@ -1081,7 +1084,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       let text_ = drawingInfo_.text_.slice()
       let textWidth_ = 0
 
-      if (text_.length == 1) {
+      if (text_.length === 1) {
         text_ = ' ' + text_ + ' '
       }
 
@@ -1209,7 +1212,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               for (let characterIndex_ = 0; characterIndex_ < text_.length; characterIndex_++) {
                 const angleStartPoint_ = characterIndex_ > 0 ? characterInfos_[characterIndex_ - 1].point_ : characterInfos_[0].point_
                 const angleEndPoint_ = characterIndex_ < characterInfos_.length - 1 ? characterInfos_[characterIndex_ + 1].point_ : characterInfos_[characterIndex_].point_
-                let characterRotationAngle_ = (angleEndPoint_.x_ - angleStartPoint_.x_) == 0 ? startRotationAngle_ : Math.atan((angleEndPoint_.y_ - angleStartPoint_.y_) / (angleEndPoint_.x_ - angleStartPoint_.x_))
+                let characterRotationAngle_ = (angleEndPoint_.x_ - angleStartPoint_.x_) === 0 ? startRotationAngle_ : Math.atan((angleEndPoint_.y_ - angleStartPoint_.y_) / (angleEndPoint_.x_ - angleStartPoint_.x_))
 
                 if (angleEndPoint_.x_ <= angleStartPoint_.x_) {
                   characterRotationAngle_ += Math.PI
@@ -1219,7 +1222,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                 characterInfos_[characterIndex_].rotationAngle_ = characterRotationAngle_
 
-                if (characterIndex_ == 0) {
+                if (characterIndex_ === 0) {
                   lastRotationAngle_ = characterRotationAngle_
                 }
 
@@ -1236,7 +1239,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 drawingInfo_.context_.beginGroup(drawingInfo_.text_)
 
                 for (let characterIndex_ = 0; characterIndex_ < text_.length; characterIndex_++) {
-                  if (text_[characterIndex_] != ' ') {
+                  if (text_[characterIndex_] !== ' ') {
                     const matrix_ = new DOMMatrix().translate((characterInfos_[characterIndex_].point_.x_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_, (drawingInfo_.drawingArea_.top_ - characterInfos_[characterIndex_].point_.y_) * drawingInfo_.mapScale_).rotate(-characterInfos_[characterIndex_].rotationAngle_ * 180 / Math.PI)
 
                     matrices_.push(matrix_)
@@ -1248,7 +1251,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 }
 
                 for (let characterIndex_ = 0; characterIndex_ < text_.length; characterIndex_++) {
-                  if (text_[characterIndex_] != ' ') {
+                  if (text_[characterIndex_] !== ' ') {
                     drawingInfo_.context_.tw = characterInfos_[characterIndex_].width_ * drawingInfo_.mapScale_
                     drawingInfo_.context_.setTransform(matrices_.shift())
                     drawingInfo_.context_.fillText(text_[characterIndex_], 0, 0)
@@ -1327,17 +1330,19 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           const deltaBottom_ = Math.round((drawingInfo_.tileBoundingBox_.bottom - y_) * deltaScale_)
 
           if (pointIndex_ > 0) {
-            if (deltaLeft_ == 0 && lastDeltaLeft_ == 0 ||
-                            deltaRight_ == 0 && lastDeltaRight_ == 0 ||
-                            deltaTop_ == 0 && lastDeltaTop_ == 0 ||
-                            deltaBottom_ == 0 && lastDeltaBottom_ == 0) {
+            if (
+              (deltaLeft_ === 0 && lastDeltaLeft_ === 0) ||
+              (deltaRight_ === 0 && lastDeltaRight_ === 0) ||
+              (deltaTop_ === 0 && lastDeltaTop_ === 0) ||
+              (deltaBottom_ === 0 && lastDeltaBottom_ === 0)
+            ) {
               if (pointsDrawn_ > 0) {
                 drawingInfo_.context_.stroke()
               }
 
               pointsDrawn_ = 0
             } else {
-              if (pointsDrawn_ == 0) {
+              if (pointsDrawn_ === 0) {
                 drawingInfo_.context_.beginPath()
 
                 drawingInfo_.context_.moveTo(Math.round((lastX_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_), Math.round((drawingInfo_.drawingArea_.top_ - lastY_) * drawingInfo_.mapScale_))
@@ -1375,7 +1380,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           const x_ = polygonPoints_[pointIndex_].x
           const y_ = polygonPoints_[pointIndex_].y
 
-          if (pointIndex_ == 0) {
+          if (pointIndex_ === 0) {
             drawingInfo_.context_.moveTo(Math.round((x_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_), Math.round((drawingInfo_.drawingArea_.top_ - y_) * drawingInfo_.mapScale_))
           } else {
             drawingInfo_.context_.lineTo(Math.round((x_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_), Math.round((drawingInfo_.drawingArea_.top_ - y_) * drawingInfo_.mapScale_))
@@ -1476,7 +1481,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             previousX_ = x_
             previousY_ = y_
 
-            if (geometryDataOffset_ == 8) {
+            if (geometryDataOffset_ === 8) {
               objectData_.info.Envelope.left = x_
               objectData_.info.Envelope.right = x_
               objectData_.info.Envelope.top = y_
@@ -1522,11 +1527,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         const styleType_ = this._getLayerStyleType_(layer_)
 
-        if (!layer_ ||
-                    this.options.type && this.options.type != styleType_ ||
-                    layer_.Enable === false ||
-                    tileInfo_.vms2TileZ_ < (layer_.ZoomRange[0] > 0 ? layer_.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
-                    tileInfo_.vms2TileZ_ >= (layer_.ZoomRange[1] + this.options.zoomRangeOffset)) {
+        if (
+          !layer_ ||
+          (this.options.type && this.options.type !== styleType_) ||
+          layer_.Enable === false ||
+          tileInfo_.vms2TileZ_ < (layer_.ZoomRange[0] > 0 ? layer_.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
+          tileInfo_.vms2TileZ_ >= (layer_.ZoomRange[1] + this.options.zoomRangeOffset)
+        ) {
           continue
         }
 
@@ -1546,7 +1553,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
         }
 
-        layer_.needsAreaExtension_ = !!(this._getLayerStyleType_(layer_) == 'text' || layer_.Grid || layer_.Save)
+        layer_.needsAreaExtension_ = !!(this._getLayerStyleType_(layer_) === 'text' || layer_.Grid || layer_.Save)
 
         if (layer_.CustomData) {
           if (!tileLayers_[layerName_]) {
@@ -1567,7 +1574,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
               layerLayoutIdCount_--
 
-              if (layerLayoutIdCount_ == 0) {
+              if (layerLayoutIdCount_ === 0) {
                 resolve(tileLayers_)
               }
             })
@@ -1683,7 +1690,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       if (!isNaN(objectStyle_.StrokeWidth)) {
-        if (objectStyle_.StrokeUnit == 'px') {
+        if (objectStyle_.StrokeUnit === 'px') {
           drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth
         } else {
           drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
@@ -1895,7 +1902,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
 
           if (!isNaN(objectStyle_.StrokeWidth)) {
-            if (objectStyle_.StrokeUnit == 'px') {
+            if (objectStyle_.StrokeUnit === 'px') {
               drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth
             } else {
               drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
@@ -2090,7 +2097,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
 
           if (!isNaN(objectStyle_.StrokeWidth)) {
-            if (objectStyle_.StrokeUnit == 'px') {
+            if (objectStyle_.StrokeUnit === 'px') {
               drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth
             } else {
               drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
@@ -2322,7 +2329,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         globalThis.vms2Context_.styleRequestQueues_[styleId_].push(resolve)
 
-        if (globalThis.vms2Context_.styleRequestQueues_[styleId_].length == 1) {
+        if (globalThis.vms2Context_.styleRequestQueues_[styleId_].length === 1) {
           const url_ = new URL(this.options.styleUrl.replace('{style_id}', styleId_), window.location.origin)
 
           const parameters_ = new URLSearchParams(url_.search)
@@ -2366,13 +2373,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
               if (this.options.styleOverride) {
                 for (const key_ in style_) {
-                  if (style_.hasOwnProperty(key_)) {
+                  if (Object.prototype.hasOwnProperty.call(style_, key_)) {
                     mapStyle_[key_] = style_[key_]
                   }
                 }
 
                 for (const key_ in this.options.styleOverride) {
-                  if (this.options.styleOverride.hasOwnProperty(key_)) {
+                  if (Object.prototype.hasOwnProperty.call(this.options.styleOverride, key_)) {
                     mapStyle_[key_] = this.options.styleOverride[key_]
                   }
                 }
@@ -2585,11 +2592,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                   const styleType_ = this._getLayerStyleType_(layer_)
 
-                  if (!layer_ ||
-                                        this.options.type && this.options.type != styleType_ ||
-                                        layer_.Enable === false ||
-                                        tileInfo_.vms2TileZ_ < (layer_.ZoomRange[0] > 0 ? layer_.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
-                                        tileInfo_.vms2TileZ_ >= (layer_.ZoomRange[1] + this.options.zoomRangeOffset)) {
+                  if (
+                    !layer_ ||
+                    (this.options.type && this.options.type !== styleType_) ||
+                    layer_.Enable === false ||
+                    tileInfo_.vms2TileZ_ < (layer_.ZoomRange[0] > 0 ? layer_.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
+                    tileInfo_.vms2TileZ_ >= (layer_.ZoomRange[1] + this.options.zoomRangeOffset)
+                  ) {
                     continue
                   }
 
@@ -2709,7 +2718,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   }
 
                   for (const layerCanvasName_ of layerCanvasNames_) {
-                    if (layerCanvasName_ == 'save') {
+                    if (layerCanvasName_ === 'save') {
                       if (!drawingInfo_.saveDataCanvas_) {
                         let saveDataCanvas_ = null
 
@@ -2756,7 +2765,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                       drawingInfo_.drawingArea_ = drawingInfo_.mapArea_
                     }
 
-                    if (layerCanvasName_ != 'save' && !layer_.Style && !layer_.Filters) {
+                    if (layerCanvasName_ !== 'save' && !layer_.Style && !layer_.Filters) {
                       continue
                     }
 
@@ -2786,13 +2795,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                     // Draw map objects.
 
-                    if (layerCanvasName_ == 'save') {
+                    if (layerCanvasName_ === 'save') {
                       layer_.layerName_ = layerName_
 
                       await this._drawSaveLayer_(drawingInfo_, mapObjects_, tileInfo_, layer_)
 
                       drawingInfo_.saveDataPixels_ = null // Invalidate pixels
-                    } else if (styleType_ == 'text') {
+                    } else if (styleType_ === 'text') {
                       await this._drawObjectsLayer_(drawingInfo_, mapObjects_, tileInfo_, layer_)
                     } else {
                       await this._drawBaseLayer_(drawingInfo_, mapObjects_, tileInfo_, layer_)
@@ -2820,7 +2829,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                 drawingInfo_.context_.globalCompositeOperation = 'destination-over'
 
-                if (this.options.type != 'text') {
+                if (this.options.type !== 'text') {
                   if (mapStyle_.BackgroundPatternFunction) {
                     if (!mapStyle_.BackgroundPatternFunction_) {
                       mapStyle_.BackgroundPatternFunction_ = new Function('ObjectData', 'MapZoom', 'RandomGenerator', 'return ' + mapStyle_.BackgroundPatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1'))
@@ -2880,7 +2889,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     const ids_ = layerId_.split('|')
 
-    if (!(ids_.length == 1 || ids_[2] != 'Points')) {
+    if (!(ids_.length === 1 || ids_[2] !== 'Points')) {
       detailZoom_ = 14
     }
 
@@ -2891,7 +2900,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     if (layerMap_) {
       for (const keyValuePair_ of layerMap_) {
-        if (keyValuePair_[1].detailZoom_ != detailZoom_) {
+        if (keyValuePair_[1].detailZoom_ !== detailZoom_) {
           continue
         }
 
@@ -2900,9 +2909,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         let tileCoordinateDoMatch_ = false
 
         if (deltaZ_ >= 0) {
-          tileCoordinateDoMatch_ = (keyValuePair_[1].x_ >> deltaZ_) == x_ && (keyValuePair_[1].y_ >> deltaZ_) == y_
+          tileCoordinateDoMatch_ = (keyValuePair_[1].x_ >> deltaZ_) === x_ && (keyValuePair_[1].y_ >> deltaZ_) === y_
         } else {
-          tileCoordinateDoMatch_ = (x_ >> -deltaZ_) == keyValuePair_[1].x_ && (y_ >> -deltaZ_) == keyValuePair_[1].y_
+          tileCoordinateDoMatch_ = (x_ >> -deltaZ_) === keyValuePair_[1].x_ && (y_ >> -deltaZ_) === keyValuePair_[1].y_
         }
 
         if (tileCoordinateDoMatch_) {
@@ -2944,7 +2953,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         tileLayerData_.tileCount_--
 
-        if (tileLayerData_.tileCount_ == 0) {
+        if (tileLayerData_.tileCount_ === 0) {
           tileLayerData_.resolve()
         }
       }
@@ -3032,7 +3041,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       if (style_.FontSpecs) {
         fontName_ = style_.FontSpecs[0]
 
-        if (style_.FontSpecs[1] == 'bold') {
+        if (style_.FontSpecs[1] === 'bold') {
           fontWeight_ = style_.FontSpecs[1]
         } else if (style_.FontSpecs[2]) {
           fontStyle_ = style_.FontSpecs[1]
@@ -3181,7 +3190,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         resolves_.push(resolve)
 
-        if (resolves_.length == 1) {
+        if (resolves_.length === 1) {
           const tileDbInfosUrlParts_ = this.options.tileUrl.split('?')
 
           fetch(new URL(tileDbInfosUrlParts_[0], window.location.origin))
@@ -3261,11 +3270,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       fetch(new URL(tileUrl_, window.location.origin), { signal: tileLayerData_.tileCanvas_.abortController_.signal })
         .then(response_ => {
           if (!response_.ok) {
-            throw {
+            throw new Error({
               code: response_.status,
               message: response_.statusText,
               response: response_
-            }
+            })
           }
 
           this.numberOfRequestedTiles++
@@ -3355,7 +3364,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           decodeFunction_()
         })
         .catch(error_ => {
-          if (error_.code == 20) {
+          if (error_.code === 20) {
             resolve()
           } else {
             throw error_
