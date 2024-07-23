@@ -1733,7 +1733,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
       if (objectStyle_.PatternFunction) {
         if (!objectStyle_.PatternFunction_) {
-          objectStyle_.PatternFunction_ = new Function('ObjectData', 'MapZoom', 'RandomGenerator', 'return ' + objectStyle_.PatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1'))
+          objectStyle_.PatternFunction_ = new Function(
+            'ObjectData',
+            'MapZoom',
+            'RandomGenerator',
+            'return ' + objectStyle_.PatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+          )
         }
 
         const patternName_ = objectStyle_.PatternFunction_(drawingInfo_.objectData_, tileInfo_.vms2TileZ_, this.randomGenerator_)
@@ -1865,7 +1870,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             }
 
             if (!filter_.ConditionFunction_) {
-              filter_.ConditionFunction_ = new Function('ObjectData', 'MapZoom', 'RandomGenerator', 'return ' + filter_.Condition.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1'))
+              filter_.ConditionFunction_ = new Function(
+                'ObjectData',
+                'MapZoom',
+                'RandomGenerator',
+                'return ' + filter_.Condition.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+              )
             }
 
             if (filter_.ConditionFunction_(objectData_, tileInfo_.vms2TileZ_, this.randomGenerator_)) {
@@ -1945,7 +1955,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
           if (objectStyle_.PatternFunction) {
             if (!objectStyle_.PatternFunction_) {
-              objectStyle_.PatternFunction_ = new Function('ObjectData', 'MapZoom', 'RandomGenerator', 'return ' + objectStyle_.PatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1'))
+              objectStyle_.PatternFunction_ = new Function(
+                'ObjectData',
+                'MapZoom',
+                'RandomGenerator',
+                'return ' + objectStyle_.PatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+              )
             }
           }
 
@@ -2060,7 +2075,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             }
 
             if (!filter_.ConditionFunction_) {
-              filter_.ConditionFunction_ = new Function('ObjectData', 'MapZoom', 'RandomGenerator', 'return ' + filter_.Condition.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1'))
+              filter_.ConditionFunction_ = new Function(
+                'ObjectData',
+                'MapZoom',
+                'RandomGenerator',
+                'return ' + filter_.Condition.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+              )
             }
 
             if (filter_.ConditionFunction_(objectData_, tileInfo_.vms2TileZ_, this.randomGenerator_)) {
@@ -2157,13 +2177,23 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
           if (objectStyle_.IconFunction) {
             if (!objectStyle_.IconFunction_) {
-              objectStyle_.IconFunction_ = new Function('ObjectData', 'MapZoom', 'RandomGenerator', 'return ' + objectStyle_.IconFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1'))
+              objectStyle_.IconFunction_ = new Function(
+                'ObjectData',
+                'MapZoom',
+                'RandomGenerator',
+                'return ' + objectStyle_.IconFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+              )
             }
           }
 
           if (objectStyle_.PatternFunction) {
             if (!objectStyle_.PatternFunction_) {
-              objectStyle_.PatternFunction_ = new Function('ObjectData', 'MapZoom', 'RandomGenerator', 'return ' + objectStyle_.PatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1'))
+              objectStyle_.PatternFunction_ = new Function(
+                'ObjectData',
+                'MapZoom',
+                'RandomGenerator',
+                'return ' + objectStyle_.PatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+              )
             }
           }
 
@@ -2258,7 +2288,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         if (activeObjectStyle_.TextFunction) {
           if (!activeObjectStyle_.TextFunction_) {
-            activeObjectStyle_.TextFunction_ = new Function('ObjectData', 'MapZoom', 'RandomGenerator', 'return ' + activeObjectStyle_.TextFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1'))
+            activeObjectStyle_.TextFunction_ = new Function(
+              'ObjectData',
+              'MapZoom',
+              'RandomGenerator',
+              'return ' + activeObjectStyle_.TextFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+            )
           }
 
           drawingInfo_.text_ = activeObjectStyle_.TextFunction_(drawingInfo_.objectData_, tileInfo_.vms2TileZ_, this.randomGenerator_)
@@ -2832,7 +2867,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 if (this.options.type !== 'text') {
                   if (mapStyle_.BackgroundPatternFunction) {
                     if (!mapStyle_.BackgroundPatternFunction_) {
-                      mapStyle_.BackgroundPatternFunction_ = new Function('ObjectData', 'MapZoom', 'RandomGenerator', 'return ' + mapStyle_.BackgroundPatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1'))
+                      mapStyle_.BackgroundPatternFunction_ = new Function(
+                        'ObjectData',
+                        'MapZoom',
+                        'RandomGenerator',
+                        'return ' + mapStyle_.BackgroundPatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+                      )
                     }
 
                     const patternName_ = mapStyle_.BackgroundPatternFunction_(null, tileInfo_.vms2TileZ_, this.randomGenerator_)

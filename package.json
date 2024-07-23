@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "A Leaflet GridLayer-Plugin for locr VMS2",
   "scripts": {
-    "lint:js": "standard src/unicode.js",
+    "lint:js": "eslint src/unicode.js src/Leaflet.GridLayer.VMS2.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -25,19 +25,14 @@
     "url": "https://github.com/locr-company/Leaflet.GridLayer.VMS2/issues"
   },
   "homepage": "https://github.com/locr-company/Leaflet.GridLayer.VMS2#readme",
+  "engines": {
+    "node": ">= 18.0.0"
+  },
   "peerDependencies": {
     "leaflet": "^1.0.0"
   },
   "devDependencies": {
-    "standard": "^17.1.0"
-  },
-  "standard": {
-    "globals": [
-      "DOMMatrix",
-      "FontFace",
-      "Image",
-      "L",
-      "Worker"
-    ]
+    "eslint": "^8.57.0",
+    "eslint-config-standard": "^17.1.0"
   }
 }
