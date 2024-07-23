@@ -1,0 +1,27 @@
+{
+  "name": "leaflet-gridlayer-vms2",
+  "version": "0.1.0",
+  "description": "A Leaflet GridLayer-Plugin for locr VMS2",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/locr-company/Leaflet.GridLayer.VMS2.git"
+  },
+  "keywords": [
+    "locr",
+    "vms2",
+    "leaflet",
+    "plugin"
+  ],
+  "author": {
+    "name": "AnimaInCorpore",
+    "email": "sascha.springer@atomic-skulls.de"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/locr-company/Leaflet.GridLayer.VMS2/issues"
+  },
+  "homepage": "https://github.com/locr-company/Leaflet.GridLayer.VMS2#readme"
+}
