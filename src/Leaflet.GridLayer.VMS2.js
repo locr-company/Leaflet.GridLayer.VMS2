@@ -273,8 +273,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     let key, tile
 
     const zoom = this._map.getZoom()
-    if (zoom > this.options.maxZoom ||
-            zoom < this.options.minZoom) {
+    if (
+      zoom > this.options.maxZoom ||
+      zoom < this.options.minZoom
+    ) {
       this._removeAllTiles()
       return
     }
@@ -338,7 +340,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           const latitudeMax = this._tileToLatitude_(coords.y, coords.z, this.options.zoomPowerBase)
           const longitudeMax = this._tileToLongitude_(coords.x + 1, coords.z, this.options.zoomPowerBase)
 
-          tile.bounds = new L.latLngBounds([latitudeMin, longitudeMin], [latitudeMax, longitudeMax])
+          tile.bounds = L.latLngBounds([latitudeMin, longitudeMin], [latitudeMax, longitudeMax])
 
           if (!(tile.bounds._southWest.lat < mapBounds._northEast.lat &&
                         tile.bounds._northEast.lat > mapBounds._southWest.lat &&
@@ -1510,7 +1512,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     }
   },
   _getTileLayers_: function (tileCanvas_, tileInfo_, mapStyle_) {
-    return new Promise(resolve_ => {
+    return new Promise(resolve => {
       const tileLayers_ = {}
 
       let layerLayoutIdCount_ = 0
@@ -1566,7 +1568,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               layerLayoutIdCount_--
 
               if (layerLayoutIdCount_ == 0) {
-                resolve_(tileLayers_)
+                resolve(tileLayers_)
               }
             })
 
@@ -2308,9 +2310,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     return 'base'
   },
   _requestStyle_: function () {
-    return new Promise(resolve_ => {
+    return new Promise(resolve => {
       if (this.options.style.Order && Array.isArray(this.options.style.Order)) {
-        resolve_(this.options.style)
+        resolve(this.options.style)
       } else {
         const styleId_ = this.options.style
 
@@ -2318,7 +2320,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           globalThis.vms2Context_.styleRequestQueues_[styleId_] = []
         }
 
-        globalThis.vms2Context_.styleRequestQueues_[styleId_].push(resolve_)
+        globalThis.vms2Context_.styleRequestQueues_[styleId_].push(resolve)
 
         if (globalThis.vms2Context_.styleRequestQueues_[styleId_].length == 1) {
           const url_ = new URL(this.options.styleUrl.replace('{style_id}', styleId_), window.location.origin)
@@ -2344,8 +2346,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             .then(style_ => {
               this.options.style = style_
 
-              for (const styleRequestResolve_ of globalThis.vms2Context_.styleRequestQueues_[styleId_]) {
-                styleRequestResolve_(this.options.style)
+              for (const styleRequestResolve of globalThis.vms2Context_.styleRequestQueues_[styleId_]) {
+                styleRequestResolve(this.options.style)
               }
 
               globalThis.vms2Context_.styleRequestQueues_[styleId_] = []
@@ -2355,7 +2357,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     })
   },
   _drawTile_: function (tileCanvas_, tileInfo_) {
-    return new Promise(resolve_ => {
+    return new Promise(resolve => {
       this._requestTileDbInfos_()
         .then(() => {
           this._requestStyle_()
@@ -2450,11 +2452,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
               this._getTileLayers_(tileCanvas_, tileInfo_, mapStyle_).then(async tileLayers_ => {
                 if (tileCanvas_.isDummy_) {
-                  return resolve_(tileLayers_)
+                  return resolve(tileLayers_)
                 }
 
                 if (tileCanvas_.hasBeenRemoved_) {
-                  return resolve_()
+                  return resolve()
                 }
 
                 if (tileCanvas_.hasBeenCreated_) {
@@ -2850,7 +2852,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                 drawingInfo_.mapCanvas_.inUse_ = false
 
-                resolve_()
+                resolve()
               })
             })
         })
@@ -2951,9 +2953,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     }
   },
   _getTileLayer_: function (tileLayerData_) {
-    return new Promise((resolve_, reject_) => {
-      tileLayerData_.resolve = resolve_
-      tileLayerData_.reject = reject_
+    return new Promise((resolve, reject) => {
+      tileLayerData_.resolve = resolve
+      tileLayerData_.reject = reject
 
       let fetchTileZ_ = Math.round(tileLayerData_.tileInfo_.vms2TileZ_)
 
@@ -3073,14 +3075,14 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     })
   },
   _requestImage_: function (imageUrlString_) {
-    return new Promise((resolve_, reject_) => {
+    return new Promise((resolve, reject) => {
       const imageCache_ = globalThis.vms2Context_.imageCache_
 
       if (imageCache_[imageUrlString_]) {
         if (imageCache_[imageUrlString_].isLoading_) {
-          imageCache_[imageUrlString_].resolveFunctions_.push(resolve_)
+          imageCache_[imageUrlString_].resolveFunctions_.push(resolve)
         } else {
-          resolve_(imageCache_[imageUrlString_].image_)
+          resolve(imageCache_[imageUrlString_].image_)
         }
 
         return
@@ -3089,7 +3091,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       const image_ = new Image()
 
       image_.crossOrigin = 'anonymous'
-      image_.onerror = reject_
+      image_.onerror = reject
 
       const imageUrl_ = new URL(imageUrlString_, window.location.origin)
 
@@ -3125,7 +3127,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         image_.src = imageUrlString_
       }
 
-      imageCache_[imageUrlString_] = { isLoading_: true, resolveFunctions_: [resolve_], image_ }
+      imageCache_[imageUrlString_] = { isLoading_: true, resolveFunctions_: [resolve], image_ }
     })
   },
   _setVoidTileArea_ (x_, y_, z_) {
@@ -3169,15 +3171,15 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     return false
   },
   _requestTileDbInfos_: function () {
-    return new Promise(resolve_ => {
+    return new Promise(resolve => {
       this.tileDbInfos_ = [] // Fixme!
 
       if (this.tileDbInfos_) {
-        resolve_(this.tileDbInfos_)
+        resolve(this.tileDbInfos_)
       } else {
         const resolves_ = this.tileDbInfosResolves_
 
-        resolves_.push(resolve_)
+        resolves_.push(resolve)
 
         if (resolves_.length == 1) {
           const tileDbInfosUrlParts_ = this.options.tileUrl.split('?')
@@ -3196,9 +3198,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     })
   },
   _requestTile_: function (dataLayerId_, x_, y_, z_, tileLayerData_) {
-    return new Promise(resolve_ => {
+    return new Promise(resolve => {
       if (!this.allSystemsGo_) {
-        return resolve_()
+        return resolve()
       }
 
       x_ &= ((1 << z_) - 1)
@@ -3229,7 +3231,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       if (this._getCachedTile_(dataLayerId_, x_, y_, z_, tileLayerData_)) {
-        return resolve_()
+        return resolve()
       }
 
       let tileUrl_ = this.options.tileUrl
@@ -3272,13 +3274,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         })
         .then(rawData_ => {
           if (tileLayerData_.tileCanvas_.hasBeenRemoved_) {
-            return resolve_()
+            return resolve()
           }
 
           if (rawData_.byteLength <= 4) {
             this._setVoidTileArea_(x_, y_, z_)
 
-            return resolve_()
+            return resolve()
           }
 
           const decodeData_ = { lId: dataLayerId_, datas: [] }
@@ -3324,7 +3326,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 const decodeEntry_ = globalThis.vms2Context_.decodeQueue_.shift()
 
                 if (decodeEntry_.tileLayerData_.tileCanvas_.hasBeenRemoved_) {
-                  decodeEntry_.resolve_()
+                  decodeEntry_.resolve()
                 } else {
                   decodeWorker_.postMessage(decodeEntry_.decodeData_)
 
@@ -3333,7 +3335,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                     globalThis.vms2Context_.decodeWorkersRunning_--
 
-                    decodeEntry_.resolve_()
+                    decodeEntry_.resolve()
 
                     if (globalThis.vms2Context_.decodeQueue_.length > 0) {
                       decodeFunction_()
@@ -3348,13 +3350,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             }
           }
 
-          globalThis.vms2Context_.decodeQueue_.push({ dataLayerId_, x_, y_, z_, tileLayerData_, decodeData_, resolve_ })
+          globalThis.vms2Context_.decodeQueue_.push({ dataLayerId_, x_, y_, z_, tileLayerData_, decodeData_, resolve })
 
           decodeFunction_()
         })
         .catch(error_ => {
           if (error_.code == 20) {
-            resolve_()
+            resolve()
           } else {
             throw error_
           }
