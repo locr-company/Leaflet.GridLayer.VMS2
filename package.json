@@ -2,8 +2,9 @@
   "name": "@locr-company/leaflet-gridlayer-vms2",
   "version": "0.1.0",
   "description": "A Leaflet GridLayer-Plugin for locr VMS2",
+  "types": "src/Leaflet.GridLayer.VMS2.d.ts",
   "scripts": {
-    "lint:js": "eslint src/unicode.js src/Leaflet.GridLayer.VMS2.js",
+    "lint:js": "eslint src/*.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -20,6 +21,12 @@
     "name": "AnimaInCorpore",
     "email": "sascha.springer@atomic-skulls.de"
   },
+  "contributors": [
+    {
+      "name": "Ringo Leese",
+      "email": "r.leese@locr.com"
+    }
+  ],
   "license": "SEE LICENSE IN LICENSE",
   "bugs": {
     "url": "https://github.com/locr-company/Leaflet.GridLayer.VMS2/issues"
@@ -29,9 +36,10 @@
     "node": ">= 18.0.0"
   },
   "peerDependencies": {
-    "leaflet": "^1.0.0"
+    "leaflet": "^1.7.0"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.12",
     "eslint": "^8.57.0",
     "eslint-config-standard": "^17.1.0"
   }
