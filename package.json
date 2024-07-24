@@ -1,6 +1,6 @@
 {
   "name": "@locr-company/leaflet-gridlayer-vms2",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A Leaflet GridLayer-Plugin for locr VMS2",
   "types": "src/Leaflet.GridLayer.VMS2.d.ts",
   "scripts": {
