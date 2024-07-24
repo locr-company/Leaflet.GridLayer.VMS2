@@ -1,3 +1,7 @@
+![github_tag](https://img.shields.io/github/v/tag/locr-company/Leaflet.GridLayer.VMS2)
+![GitHub Release](https://img.shields.io/github/v/release/locr-company/Leaflet.GridLayer.VMS2)
+![NPM Version](https://img.shields.io/npm/v/%40locr-company%2Fleaflet-gridlayer-vms2)
+
 # Synopsis
 
 `Leaflet.Gridlayer.VMS2` is a _LOCR VMS2_ [Leaflet GridLayer](https://leafletjs.com/reference.html#gridlayer) extension for the [Leaflet Javascript library for interactive maps](https://leafletjs.com/). _LOCR VMS2_ is an abbreviation for _LOCR VectorMapServer2_. 
