@@ -7,3 +7,12 @@ The extension uses tiled vector data processed from [OpenStreetMap](https://www.
 The _LOCR VMS2_ focuses on flexibility, high resolution image generation and the [WYSIWYG](https://en.wikipedia.org/wiki/WYSIWYG) technique.
 
 Take a look at the [examples](https://github.com/locr-company/Leaflet.GridLayer.VMS2/wiki#examples) or head over to the [Wiki](https://github.com/locr-company/Leaflet.GridLayer.VMS2/wiki) to get started.
+
+# Publish a new version
+
+```bash
+# update CHANGELOG.md
+
+npm version <major>.<minor>.<patch>
+git push && git push origin --tags
+```
