@@ -33,7 +33,7 @@
   },
   "homepage": "https://github.com/locr-company/Leaflet.GridLayer.VMS2#readme",
   "engines": {
-    "node": ">= 16.0.0"
+    "node": ">= 18.0.0"
   },
   "peerDependencies": {
     "leaflet": "^1.7.0"
