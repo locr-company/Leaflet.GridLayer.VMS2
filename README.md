@@ -12,9 +12,6 @@ The _LOCR VMS2_ focuses on flexibility, high resolution image generation and the
 
 Take a look at the [examples](https://github.com/locr-company/Leaflet.GridLayer.VMS2/wiki#examples) or head over to the [Wiki](https://github.com/locr-company/Leaflet.GridLayer.VMS2/wiki) to get started.
 
-# Publish a new version
+# For Maintainers
 
-* ```npm version <major>.<minor>.<patch>```
-* ```git push && git push origin --tags```
-* update CHANGELOG.md, commit and push changes!  
-* create a [new Release](https://github.com/locr-company/Leaflet.GridLayer.VMS2/releases/new) in GitHub
+[Publishing a new version](PUBLISHING.md)
