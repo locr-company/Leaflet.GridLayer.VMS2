@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2024-07-25
+
+### Fixed
+
+- return type of getMapCanvas method in .d.ts file
+
 ## [0.0.6] - 2024-07-24
 
 ### Removed
@@ -43,7 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - first pre-release
 
-[unreleased]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v0.0.6...HEAD
+[unreleased]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v0.1.0...HEAD
+[0.0.6]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v0.0.6...v0.1.0
 [0.0.6]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v0.0.3...v0.0.4
