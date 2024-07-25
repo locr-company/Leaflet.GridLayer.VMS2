@@ -5,7 +5,7 @@ declare module 'leaflet' {
         class VMS2 extends L.GridLayer {
             constructor(options?: VMS2Options);
 
-            getMapCanvas(options: MapCanvasOptions): Promise<void>;
+            getMapCanvas(options: MapCanvasOptions): Promise<HTMLCanvasElement|null>;
         }
 
         interface MapCanvasOptions {
