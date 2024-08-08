@@ -441,10 +441,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
       for (const box_ of boxes_) {
         if (displacementLayer_.allowedMapArea_) {
-          if (box_.left_ < displacementLayer_.allowedMapArea_.left_ ||
-                        box_.right_ > displacementLayer_.allowedMapArea_.right_ ||
-                        box_.top_ > displacementLayer_.allowedMapArea_.top_ ||
-                        box_.bottom_ < displacementLayer_.allowedMapArea_.bottom_) {
+          if (
+            box_.left_ < displacementLayer_.allowedMapArea_.left_ ||
+            box_.right_ > displacementLayer_.allowedMapArea_.right_ ||
+            box_.top_ > displacementLayer_.allowedMapArea_.top_ ||
+            box_.bottom_ < displacementLayer_.allowedMapArea_.bottom_
+          ) {
             return false
           }
         }
