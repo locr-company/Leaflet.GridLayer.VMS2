@@ -1833,10 +1833,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         continue
       }
 
-      if (mapObject_.info.Envelope.left > drawingInfo_.boundingArea_.right_ ||
-                mapObject_.info.Envelope.right < drawingInfo_.boundingArea_.left_ ||
-                mapObject_.info.Envelope.bottom > drawingInfo_.boundingArea_.top_ ||
-                mapObject_.info.Envelope.top < drawingInfo_.boundingArea_.bottom_) { // Note: Top > Bottom!
+      if (
+        mapObject_.info.Envelope.left > drawingInfo_.boundingArea_.right_ ||
+        mapObject_.info.Envelope.right < drawingInfo_.boundingArea_.left_ ||
+        mapObject_.info.Envelope.bottom > drawingInfo_.boundingArea_.top_ ||
+        mapObject_.info.Envelope.top < drawingInfo_.boundingArea_.bottom_
+      ) { // Note: Top > Bottom!
         continue
       }
 
