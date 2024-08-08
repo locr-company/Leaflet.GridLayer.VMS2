@@ -3218,10 +3218,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     voidTileAreas_.push({ tileLeft_, tileRight_, tileTop_, tileBottom_ })
 
     for (const voidTileArea_ of this.voidTileAreas_) {
-      if (voidTileArea_.tileLeft_ >= tileLeft_ &&
-                voidTileArea_.tileRight_ <= tileRight_ &&
-                voidTileArea_.tileTop_ >= tileTop_ &&
-                voidTileArea_.tileBottom_ <= tileBottom_) {
+      if (
+        voidTileArea_.tileLeft_ >= tileLeft_ &&
+        voidTileArea_.tileRight_ <= tileRight_ &&
+        voidTileArea_.tileTop_ >= tileTop_ &&
+        voidTileArea_.tileBottom_ <= tileBottom_
+      ) {
         continue
       }
 
