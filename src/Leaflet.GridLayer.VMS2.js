@@ -999,11 +999,15 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             iconTop_ = temp_
           }
 
-          if (!(iconLeft_ > drawingInfo_.boundingArea_.right_ ||
-                        iconRight_ < drawingInfo_.boundingArea_.left_ ||
-                        iconTop_ < drawingInfo_.boundingArea_.bottom_ ||
-                        iconBottom_ > drawingInfo_.boundingArea_.top_) ||
-                        drawingInfo_.isGrid_) { // Note: Top > Bottom! Allow every location if there is a grid!
+          if (
+            !(
+              iconLeft_ > drawingInfo_.boundingArea_.right_ ||
+              iconRight_ < drawingInfo_.boundingArea_.left_ ||
+              iconTop_ < drawingInfo_.boundingArea_.bottom_ ||
+              iconBottom_ > drawingInfo_.boundingArea_.top_
+            ) ||
+            drawingInfo_.isGrid_
+          ) { // Note: Top > Bottom! Allow every location if there is a grid!
             if (drawingInfo_.iconAngle_ !== 0) {
               drawingInfo_.context_.setTransform(new DOMMatrix().translate((x_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_, (drawingInfo_.drawingArea_.top_ - y_) * drawingInfo_.mapScale_).rotate(drawingInfo_.iconAngle_ * 180 / Math.PI))
               drawingInfo_.context_.drawImage(
