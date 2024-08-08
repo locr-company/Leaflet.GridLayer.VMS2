@@ -211,10 +211,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   },
   getMapCanvas: async function (tileInfo_) {
     /*
-        Start of billing related code block. Do not change or skip it, neither block its function.
-        It must be executed when this function is being called.
-        Refer to the license for more information.
-        */
+     * Start of billing related code block. Do not change or skip it, neither block its function.
+     * It must be executed when this function is being called.
+     * Refer to the license for more information.
+     */
     if (this.options.accessKey) {
       const meta_ = {
         function: this.getMapCanvas.name,
@@ -226,10 +226,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       fetch('https://vms2.locr.com/api/vms2/ping?key=' + this.options.accessKey + '&meta=' + encodeURIComponent(metaJson_))
     }
     /*
-        End of billing related code block. Do not change or skip it, neither block its function.
-        It must be executed when this function is being called.
-        Refer to the license for more information.
-        */
+     * End of billing related code block. Do not change or skip it, neither block its function.
+     * It must be executed when this function is being called.
+     * Refer to the license for more information.
+     */
 
     let mapCanvas_ = null
 
