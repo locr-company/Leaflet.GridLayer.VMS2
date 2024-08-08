@@ -3294,10 +3294,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         if (tileDbInfo_.infos.length > 0) {
           const boundingBox = tileDbInfo_.infos[0].bounding_box
 
-          if (tileLatitudeMin_ >= boundingBox.latitude_min &&
-                        tileLatitudeMax_ <= boundingBox.latitude_max &&
-                        tileLongitudeMin_ >= boundingBox.longitude_min &&
-                        tileLongitudeMax_ <= boundingBox.longitude_max) {
+          if (
+            tileLatitudeMin_ >= boundingBox.latitude_min &&
+            tileLatitudeMax_ <= boundingBox.latitude_max &&
+            tileLongitudeMin_ >= boundingBox.longitude_min &&
+            tileLongitudeMax_ <= boundingBox.longitude_max
+          ) {
             if (tileDbInfo_.infos[0].max_detail_zoom < 14 && tileDbInfo_.infos[0].max_detail_zoom < z_) {
               x_ >>= ((z_ & ~1) - tileDbInfo_.infos[0].max_detail_zoom)
               y_ >>= ((z_ & ~1) - tileDbInfo_.infos[0].max_detail_zoom)
