@@ -342,10 +342,14 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
           tile.bounds = L.latLngBounds([latitudeMin, longitudeMin], [latitudeMax, longitudeMax])
 
-          if (!(tile.bounds._southWest.lat < mapBounds._northEast.lat &&
-                        tile.bounds._northEast.lat > mapBounds._southWest.lat &&
-                        tile.bounds._southWest.lng < mapBounds._northEast.lng &&
-                        tile.bounds._northEast.lng > mapBounds._southWest.lng)) {
+          if (
+            !(
+              tile.bounds._southWest.lat < mapBounds._northEast.lat &&
+              tile.bounds._northEast.lat > mapBounds._southWest.lat &&
+              tile.bounds._southWest.lng < mapBounds._northEast.lng &&
+              tile.bounds._northEast.lng > mapBounds._southWest.lng
+            )
+          ) {
             tile.retain = false
           }
         }
@@ -364,10 +368,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           const tile2 = this._tiles[key2]
 
           if (!tile2.current && tile2.reain) {
-            if (tile2.bounds._northEast.lat < tile1.bounds._northEast.lat &&
-                            tile2.bounds._southWest.lat > tile1.bounds._southWest.lat &&
-                            tile2.bounds._northEast.lng < tile1.bounds._northEast.lng &&
-                            tile2.bounds._southWest.lng > tile1.bounds._southWest.lng) {
+            if (
+              tile2.bounds._northEast.lat < tile1.bounds._northEast.lat &&
+              tile2.bounds._southWest.lat > tile1.bounds._southWest.lat &&
+              tile2.bounds._northEast.lng < tile1.bounds._northEast.lng &&
+              tile2.bounds._southWest.lng > tile1.bounds._southWest.lng
+            ) {
               tile2.reain = false
             }
           }
@@ -441,10 +447,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
       for (const box_ of boxes_) {
         if (displacementLayer_.allowedMapArea_) {
-          if (box_.left_ < displacementLayer_.allowedMapArea_.left_ ||
-                        box_.right_ > displacementLayer_.allowedMapArea_.right_ ||
-                        box_.top_ > displacementLayer_.allowedMapArea_.top_ ||
-                        box_.bottom_ < displacementLayer_.allowedMapArea_.bottom_) {
+          if (
+            box_.left_ < displacementLayer_.allowedMapArea_.left_ ||
+            box_.right_ > displacementLayer_.allowedMapArea_.right_ ||
+            box_.top_ > displacementLayer_.allowedMapArea_.top_ ||
+            box_.bottom_ < displacementLayer_.allowedMapArea_.bottom_
+          ) {
             return false
           }
         }
@@ -456,10 +464,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         if (displacementLayer_.regions_[topLeftHash_]) {
           for (const hashedBox_ of displacementLayer_.regions_[topLeftHash_]) {
-            if (box_.left_ > hashedBox_.right_ ||
-                            box_.right_ < hashedBox_.left_ ||
-                            box_.bottom_ > hashedBox_.top_ ||
-                            box_.top_ < hashedBox_.bottom_) { // Note: Top > Bottom!
+            if (
+              box_.left_ > hashedBox_.right_ ||
+              box_.right_ < hashedBox_.left_ ||
+              box_.bottom_ > hashedBox_.top_ ||
+              box_.top_ < hashedBox_.bottom_
+            ) { // Note: Top > Bottom!
               continue
             }
 
@@ -469,10 +479,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         if (displacementLayer_.regions_[topRightHash_] && topRightHash_ !== topLeftHash_) {
           for (const hashedBox_ of displacementLayer_.regions_[topRightHash_]) {
-            if (box_.left_ > hashedBox_.right_ ||
-                            box_.right_ < hashedBox_.left_ ||
-                            box_.bottom_ > hashedBox_.top_ ||
-                            box_.top_ < hashedBox_.bottom_) { // Note: Top > Bottom!
+            if (
+              box_.left_ > hashedBox_.right_ ||
+              box_.right_ < hashedBox_.left_ ||
+              box_.bottom_ > hashedBox_.top_ ||
+              box_.top_ < hashedBox_.bottom_
+            ) { // Note: Top > Bottom!
               continue
             }
 
@@ -482,10 +494,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         if (displacementLayer_.regions_[bottomLeftHash_] && bottomLeftHash_ !== topLeftHash_ && bottomLeftHash_ !== topRightHash_) {
           for (const hashedBox_ of displacementLayer_.regions_[bottomLeftHash_]) {
-            if (box_.left_ > hashedBox_.right_ ||
-                            box_.right_ < hashedBox_.left_ ||
-                            box_.bottom_ > hashedBox_.top_ ||
-                            box_.top_ < hashedBox_.bottom_) { // Note: Top > Bottom!
+            if (
+              box_.left_ > hashedBox_.right_ ||
+              box_.right_ < hashedBox_.left_ ||
+              box_.bottom_ > hashedBox_.top_ ||
+              box_.top_ < hashedBox_.bottom_
+            ) { // Note: Top > Bottom!
               continue
             }
 
@@ -495,10 +509,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         if (displacementLayer_.regions_[bottomRightHash_] && bottomRightHash_ !== topLeftHash_ && bottomRightHash_ !== topRightHash_ && bottomRightHash_ !== bottomLeftHash_) {
           for (const hashedBox_ of displacementLayer_.regions_[bottomRightHash_]) {
-            if (box_.left_ > hashedBox_.right_ ||
-                            box_.right_ < hashedBox_.left_ ||
-                            box_.bottom_ > hashedBox_.top_ ||
-                            box_.top_ < hashedBox_.bottom_) { // Note: Top > Bottom!
+            if (
+              box_.left_ > hashedBox_.right_ ||
+              box_.right_ < hashedBox_.left_ ||
+              box_.bottom_ > hashedBox_.top_ ||
+              box_.top_ < hashedBox_.bottom_
+            ) { // Note: Top > Bottom!
               continue
             }
 
