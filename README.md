@@ -12,6 +12,12 @@ The _locr VMS2_ focuses on flexibility, high resolution image generation and the
 
 Take a look at the [examples](https://github.com/locr-company/Leaflet.GridLayer.VMS2/wiki#examples) or head over to the [Wiki](https://github.com/locr-company/Leaflet.GridLayer.VMS2/wiki) to get started.
 
+# Local Installation
+
+```sh
+npm install @locr-company/leaflet-gridlayer-vms2
+```
+
 # For Maintainers
 
 [Publishing a new version](PUBLISHING.md)
