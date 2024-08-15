@@ -2666,7 +2666,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                   const layer_ = mapStyle_.Layers[layerName_]
 
-                  const styleType_ = this._getLayerStyleType_(layer_)
+                  let styleType_ = this._getLayerStyleType_(layer_)
 
                   if (
                     !layer_ ||
