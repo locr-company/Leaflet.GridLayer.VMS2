@@ -359,7 +359,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     for (const key1 in this._tiles) {
       const tile1 = this._tiles[key1]
 
-      if (!tile1.current && tile1.reain) {
+      if (!tile1.current && tile1.retain) {
         for (const key2 in this._tiles) {
           if (key2 === key1) {
             continue
@@ -367,14 +367,14 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
           const tile2 = this._tiles[key2]
 
-          if (!tile2.current && tile2.reain) {
+          if (!tile2.current && tile2.retain) {
             if (
               tile2.bounds._northEast.lat < tile1.bounds._northEast.lat &&
               tile2.bounds._southWest.lat > tile1.bounds._southWest.lat &&
               tile2.bounds._northEast.lng < tile1.bounds._northEast.lng &&
               tile2.bounds._southWest.lng > tile1.bounds._southWest.lng
             ) {
-              tile2.reain = false
+              tile2.retain = false
             }
           }
         }
@@ -1573,7 +1573,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
         }
 
-        layer_.needsAreaExtension_ = !!(this._getLayerStyleType_(layer_) === 'text' || layer_.Grid || layer_.Save)
+        layer_.needsAreaExtension_ = !!(this._getLayerStyleType_(layer_) == 'text' || layer_.Grid || layer_.Save)
 
         if (layer_.CustomData) {
           if (!tileLayers_[layerName_]) {
@@ -1612,12 +1612,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     let objectScale_ = drawingInfo_.objectScale_
 
-    if (saveStyle_.ZoomScale != null) {
-      objectScale_ = 1 / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_DISPLAY_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, saveStyle_.ZoomScale)
+    if (!isNaN(saveStyle_.ZoomScale)) {
+      objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_DISPLAY_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, saveStyle_.ZoomScale)
     }
 
     if (!isNaN(saveStyle_.StrokeWidth)) {
-      drawingInfo_.context_.lineWidth = saveStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_
+      drawingInfo_.context_.lineWidth = saveStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
 
       drawingInfo_.context_.setLineDash([])
       drawingInfo_.context_.lineCap = 'round'
@@ -1631,7 +1631,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         continue
       }
 
-      if (mapObject_.geometry === undefined) { // Tile bounding box object to avoid drawing lines on tile edges.
+      if (mapObject_.geometry === undefined) { // Tile bounding box object to avoid drawing lines along tile edges.
         drawingInfo_.tileBoundingBox_ = mapObject_.info
 
         continue
@@ -1712,7 +1712,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       if (!isNaN(objectStyle_.StrokeWidth)) {
-        if (objectStyle_.StrokeUnit === 'px') {
+        if (objectStyle_.DisplayUnit == 'px') {
           drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth
         } else {
           drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
@@ -1785,7 +1785,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           continue
         }
 
-        if (mapObject_.geometry === undefined) { // Tile bounding box object to avoid drawing lines on tile edges.
+        if (mapObject_.geometry === undefined) { // Tile bounding box object to avoid drawing lines along tile edges.
           drawingInfo_.tileBoundingBox_ = mapObject_.info
 
           continue
@@ -1827,7 +1827,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         continue
       }
 
-      if (mapObject_.geometry === undefined) { // Tile bounding box object to avoid drawing lines on tile edges.
+      if (mapObject_.geometry === undefined) { // Tile bounding box object to avoid drawing lines along tile edges.
         drawingInfo_.tileBoundingBox_ = mapObject_.info
 
         continue
@@ -1938,7 +1938,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
 
           if (!isNaN(objectStyle_.StrokeWidth)) {
-            if (objectStyle_.StrokeUnit === 'px') {
+            if (objectStyle_.DisplayUnit == 'px') {
               drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth
             } else {
               drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
@@ -2034,7 +2034,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         continue
       }
 
-      if (mapObject_.geometry === undefined) { // Tile bounding box object to avoid drawing lines on tile edges.
+      if (mapObject_.geometry === undefined) { // Tile bounding box object to avoid drawing lines along tile edges.
         drawingInfo_.tileBoundingBox_ = mapObject_.info
 
         continue
@@ -2145,7 +2145,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
 
           if (!isNaN(objectStyle_.StrokeWidth)) {
-            if (objectStyle_.StrokeUnit === 'px') {
+            if (objectStyle_.DisplayUnit == 'px') {
               drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth
             } else {
               drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
@@ -2309,6 +2309,19 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             drawingInfo_.iconMinimumDistance_ = iconMinimumDistance_ * objectScale_
 
             drawingInfo_.iconTextPlacement_ = activeObjectStyle_.IconTextPlacement
+
+            if (objectStyle_.DisplayUnit == 'px') {
+              drawingInfo_.iconWidth_ /= objectScale_ * drawingInfo_.mapScale_
+              drawingInfo_.iconHeight_ /= objectScale_ * drawingInfo_.mapScale_
+
+              drawingInfo_.iconImageOffsetX_ /= objectScale_ * drawingInfo_.mapScale_
+              drawingInfo_.iconImageOffsetY_ /= objectScale_ * drawingInfo_.mapScale_
+
+              drawingInfo_.iconTextOffsetX_ /= objectScale_ * drawingInfo_.mapScale_
+              drawingInfo_.iconTextOffsetY_ /= objectScale_ * drawingInfo_.mapScale_
+
+              drawingInfo_.iconMinimumDistance_ /= objectScale_ * drawingInfo_.mapScale_
+            }
           }
 
           drawingInfo_.isIcon_ = true
@@ -2754,6 +2767,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                       mapObjects_.push({ info: objectInfo_, geometry: null })
                     }
+
+                    styleType_ = 'text'
                   } else {
                     drawingInfo_.isGrid_ = false
                   }
