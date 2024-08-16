@@ -1573,7 +1573,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
         }
 
-        layer_.needsAreaExtension_ = !!(this._getLayerStyleType_(layer_) == 'text' || layer_.Grid || layer_.Save)
+        layer_.needsAreaExtension_ = !!(this._getLayerStyleType_(layer_) === 'text' || layer_.Grid || layer_.Save)
 
         if (layer_.CustomData) {
           if (!tileLayers_[layerName_]) {
@@ -1712,7 +1712,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       if (!isNaN(objectStyle_.StrokeWidth)) {
-        if (objectStyle_.DisplayUnit == 'px') {
+        if (objectStyle_.DisplayUnit === 'px') {
           drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth
         } else {
           drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
@@ -1938,7 +1938,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
 
           if (!isNaN(objectStyle_.StrokeWidth)) {
-            if (objectStyle_.DisplayUnit == 'px') {
+            if (objectStyle_.DisplayUnit === 'px') {
               drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth
             } else {
               drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
@@ -2145,7 +2145,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
 
           if (!isNaN(objectStyle_.StrokeWidth)) {
-            if (objectStyle_.DisplayUnit == 'px') {
+            if (objectStyle_.DisplayUnit === 'px') {
               drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth
             } else {
               drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
@@ -2310,7 +2310,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
             drawingInfo_.iconTextPlacement_ = activeObjectStyle_.IconTextPlacement
 
-            if (objectStyle_.DisplayUnit == 'px') {
+            if (objectStyle_.DisplayUnit === 'px') {
               drawingInfo_.iconWidth_ /= objectScale_ * drawingInfo_.mapScale_
               drawingInfo_.iconHeight_ /= objectScale_ * drawingInfo_.mapScale_
 
