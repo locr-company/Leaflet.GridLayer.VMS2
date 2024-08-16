@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Style parameter "DisplayUnit" works for icons.
+- Minor cleanups and fixes.
+
 ## [1.0.0] - 2024-07-25
 
 ### Added
