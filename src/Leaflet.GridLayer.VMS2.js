@@ -2256,49 +2256,47 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
             drawingInfo_.iconImage_ = await this._requestImage_(iconUrl_)
 
-            let iconScales_ = [1, 1]
+            const iconScales_ = [1, 1]
 
             if (activeObjectStyle_.IconScales != null) {
-              iconScales_ = activeObjectStyle_.IconScales
+              iconScales_[0] = activeObjectStyle_.IconScales[0]
+              iconScales_[1] = activeObjectStyle_.IconScales[1]
             }
 
             drawingInfo_.iconMirrorX_ = iconScales_[0] < 0 ? -1 : 1
             drawingInfo_.iconMirrorY_ = iconScales_[1] < 0 ? -1 : 1
 
-            drawingInfo_.iconWidth_ = Math.abs(drawingInfo_.iconImage_.width * iconScales_[0] * objectScale_)
-            drawingInfo_.iconHeight_ = Math.abs(drawingInfo_.iconImage_.height * iconScales_[1] * objectScale_)
+            drawingInfo_.iconWidth_ = Math.abs(drawingInfo_.iconImage_.width * iconScales_[0]) * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : objectScale_)
+            drawingInfo_.iconHeight_ = Math.abs(drawingInfo_.iconImage_.height * iconScales_[1]) * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : objectScale_)
 
-            // drawingInfo_.iconAngle_ = activeObjectStyle_.IconAngle || 0;
             drawingInfo_.iconAngle_ = drawingInfo_.objectData_.Angle || 0
 
-            const iconImageAnchors_ = [0, 0]
+            const iconImageAnchor_ = [0, 0]
 
-            if (activeObjectStyle_.IconImageAnchors) {
-              iconImageAnchors_[0] = activeObjectStyle_.IconImageAnchors[0] * drawingInfo_.iconImage_.width * iconScales_[0] / 2
-              iconImageAnchors_[1] = activeObjectStyle_.IconImageAnchors[1] * drawingInfo_.iconImage_.height * iconScales_[1] / 2
+            if (activeObjectStyle_.IconImageAnchor) {
+              iconImageAnchor_[0] = objectStyle_.DisplayUnit === 'px' ? (activeObjectStyle_.IconImageAnchor[0] - drawingInfo_.iconImage_.width / 2) / drawingInfo_.mapScale_ : (activeObjectStyle_.IconImageAnchor[0] - 0.5) * Math.abs(drawingInfo_.iconImage_.width * iconScales_[0]) * objectScale_
+              iconImageAnchor_[1] = objectStyle_.DisplayUnit === 'px' ? (activeObjectStyle_.IconImageAnchor[1] - drawingInfo_.iconImage_.height / 2) / drawingInfo_.mapScale_ : (activeObjectStyle_.IconImageAnchor[1] - 0.5) * Math.abs(drawingInfo_.iconImage_.height * iconScales_[1]) * objectScale_
             }
 
             const iconImageOffsets_ = [0, 0]
 
             if (activeObjectStyle_.IconImageOffsets) {
-              iconImageOffsets_[0] = activeObjectStyle_.IconImageOffsets[0] * Math.abs(drawingInfo_.iconImage_.width * iconScales_[0])
-              iconImageOffsets_[1] = activeObjectStyle_.IconImageOffsets[1] * Math.abs(drawingInfo_.iconImage_.height * iconScales_[1])
+              iconImageOffsets_[0] = activeObjectStyle_.IconImageOffsets[0] * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : Math.abs(drawingInfo_.iconImage_.width * iconScales_[0]) * objectScale_)
+              iconImageOffsets_[1] = activeObjectStyle_.IconImageOffsets[1] * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : Math.abs(drawingInfo_.iconImage_.height * iconScales_[1]) * objectScale_)
             }
 
-            iconImageOffsets_[0] += iconImageAnchors_[0]
-            iconImageOffsets_[1] += iconImageAnchors_[1]
+            drawingInfo_.iconImageOffsetX_ = iconImageOffsets_[0] - iconImageAnchor_[0]
+            drawingInfo_.iconImageOffsetY_ = iconImageOffsets_[1] - iconImageAnchor_[1]
 
-            drawingInfo_.iconImageOffsetX_ = iconImageOffsets_[0] * objectScale_
-            drawingInfo_.iconImageOffsetY_ = iconImageOffsets_[1] * objectScale_
-
-            let iconTextOffset_ = [0, 0]
+            const iconTextOffset_ = [0, 0]
 
             if (activeObjectStyle_.IconTextOffset) {
-              iconTextOffset_ = activeObjectStyle_.IconTextOffset
+              iconTextOffset_[0] = activeObjectStyle_.IconTextOffset[0] * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : objectScale_)
+              iconTextOffset_[1] = activeObjectStyle_.IconTextOffset[1] * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : objectScale_)
             }
 
-            drawingInfo_.iconTextOffsetX_ = iconTextOffset_[0] * objectScale_
-            drawingInfo_.iconTextOffsetY_ = iconTextOffset_[1] * objectScale_
+            drawingInfo_.iconTextOffsetX_ = iconTextOffset_[0]
+            drawingInfo_.iconTextOffsetY_ = iconTextOffset_[1]
 
             let iconMinimumDistance_ = 200
 
@@ -2306,22 +2304,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               iconMinimumDistance_ = activeObjectStyle_.IconMinimumDistance
             }
 
-            drawingInfo_.iconMinimumDistance_ = iconMinimumDistance_ * objectScale_
+            drawingInfo_.iconMinimumDistance_ = iconMinimumDistance_ * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : objectScale_)
 
             drawingInfo_.iconTextPlacement_ = activeObjectStyle_.IconTextPlacement
-
-            if (objectStyle_.DisplayUnit === 'px') {
-              drawingInfo_.iconWidth_ /= objectScale_ * drawingInfo_.mapScale_
-              drawingInfo_.iconHeight_ /= objectScale_ * drawingInfo_.mapScale_
-
-              drawingInfo_.iconImageOffsetX_ /= objectScale_ * drawingInfo_.mapScale_
-              drawingInfo_.iconImageOffsetY_ /= objectScale_ * drawingInfo_.mapScale_
-
-              drawingInfo_.iconTextOffsetX_ /= objectScale_ * drawingInfo_.mapScale_
-              drawingInfo_.iconTextOffsetY_ /= objectScale_ * drawingInfo_.mapScale_
-
-              drawingInfo_.iconMinimumDistance_ /= objectScale_ * drawingInfo_.mapScale_
-            }
           }
 
           drawingInfo_.isIcon_ = true
