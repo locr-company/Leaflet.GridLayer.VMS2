@@ -1029,7 +1029,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
     }
   },
-  _drawLineString_ (drawingInfo_, geometry_, dataOffset_) {
+  _drawLineString_(drawingInfo_, geometry_, dataOffset_) {
     dataOffset_ += 4
 
     const numberOfPoints_ = geometry_.getUint32(dataOffset_, true)
@@ -1712,11 +1712,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       if (!isNaN(objectStyle_.StrokeWidth)) {
-        if (objectStyle_.DisplayUnit === 'px') {
-          drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth
-        } else {
-          drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
-        }
+        drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * (objectStyle_.DisplayUnit === 'px' ? 1 : objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_)
       }
 
       if (objectStyle_.StrokeAlpha && objectStyle_.StrokeWidth > 0 && objectStyle_.StrokeColor) {
@@ -1732,7 +1728,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           const lineDash_ = []
 
           for (const dash_ of objectStyle_.LineDash) {
-            lineDash_.push(dash_ * objectScale_ * drawingInfo_.mapScale_)
+            lineDash_.push(dash_ * (objectStyle_.DisplayUnit === 'px' ? 1 : objectScale_ * drawingInfo_.mapScale_))
           }
 
           drawingInfo_.context_.setLineDash(lineDash_)
@@ -1938,11 +1934,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
 
           if (!isNaN(objectStyle_.StrokeWidth)) {
-            if (objectStyle_.DisplayUnit === 'px') {
-              drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth
-            } else {
-              drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
-            }
+            drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * (objectStyle_.DisplayUnit === 'px' ? 1 : objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_)
           }
 
           if (objectStyle_.StrokeAlpha && objectStyle_.StrokeWidth > 0 && objectStyle_.StrokeColor) {
@@ -1958,7 +1950,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               const lineDash_ = []
 
               for (const dash_ of objectStyle_.LineDash) {
-                lineDash_.push(dash_ * objectScale_ * drawingInfo_.mapScale_)
+                lineDash_.push(dash_ * (objectStyle_.DisplayUnit === 'px' ? 1 : objectScale_ * drawingInfo_.mapScale_))
               }
 
               drawingInfo_.context_.setLineDash(lineDash_)
@@ -2145,11 +2137,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
 
           if (!isNaN(objectStyle_.StrokeWidth)) {
-            if (objectStyle_.DisplayUnit === 'px') {
-              drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth
-            } else {
-              drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
-            }
+            drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * (objectStyle_.DisplayUnit === 'px' ? 1 : objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_)
           }
 
           if (objectStyle_.StrokeAlpha && objectStyle_.StrokeWidth > 0 && objectStyle_.StrokeColor) {
@@ -2165,7 +2153,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               const lineDash_ = []
 
               for (const dash_ of objectStyle_.LineDash) {
-                lineDash_.push(dash_ * objectScale_ * drawingInfo_.mapScale_)
+                lineDash_.push(dash_ * (objectStyle_.DisplayUnit === 'px' ? 1 : objectScale_ * drawingInfo_.mapScale_))
               }
 
               drawingInfo_.context_.setLineDash(lineDash_)
@@ -2362,7 +2350,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
     }
   },
-  _getLayerStyleType_ (layer_) {
+  _getLayerStyleType_(layer_) {
     if (layer_.Style) {
       if (layer_.Style.IconFunction || layer_.Style.TextFunction) {
         return 'text'
@@ -3207,7 +3195,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       imageCache_[imageUrlString_] = { isLoading_: true, resolveFunctions_: [resolve], image_ }
     })
   },
-  _setVoidTileArea_ (x_, y_, z_) {
+  _setVoidTileArea_(x_, y_, z_) {
     const tileLeft_ = x_ << (16 - z_)
     const tileRight_ = (x_ + 1) << (16 - z_)
     const tileTop_ = y_ << (16 - z_)
@@ -3232,7 +3220,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     this.voidTileAreas_ = voidTileAreas_
   },
-  _checkVoidTileAreas_ (x_, y_, z_) {
+  _checkVoidTileAreas_(x_, y_, z_) {
     const tileLeft_ = x_ << (16 - z_)
     const tileRight_ = (x_ + 1) << (16 - z_)
     const tileTop_ = y_ << (16 - z_)
@@ -3240,9 +3228,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     for (const voidTileArea_ of this.voidTileAreas_) {
       if (tileLeft_ >= voidTileArea_.tileLeft_ &&
-                tileRight_ <= voidTileArea_.tileRight_ &&
-                tileTop_ >= voidTileArea_.tileTop_ &&
-                tileBottom_ <= voidTileArea_.tileBottom_) {
+        tileRight_ <= voidTileArea_.tileRight_ &&
+        tileTop_ >= voidTileArea_.tileTop_ &&
+        tileBottom_ <= voidTileArea_.tileBottom_) {
         return true
       }
     }
@@ -3492,24 +3480,24 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   _normalizedToLongitude_: function (x_) {
     return x_ * 360 - 180
   },
-  _hexify8_ (value_) {
+  _hexify8_(value_) {
     return ('00' + value_.toString(16)).slice(-2)
   },
-  _hexify16_ (values_) {
+  _hexify16_(values_) {
     return ('0000' + ((values_[0] << 8) + values_[1]).toString(16)).slice(-4)
   },
-  _hexify24_ (values_) {
+  _hexify24_(values_) {
     return ('000000' + ((values_[0] << 16) + (values_[1] << 8) + values_[2]).toString(16)).slice(-6)
   },
-  _hexify32_ (values_) {
+  _hexify32_(values_) {
     return this._hexify24_(values_) + this._hexify8_(values_[3])
   },
-  _getWorkerURL_ (url_) {
+  _getWorkerURL_(url_) {
     const content_ = `importScripts("${url_}");`
 
     return URL.createObjectURL(new Blob([content_], { type: 'text/javascript' }))
   },
-  async _getPattern_ (context_, patternName_) {
+  async _getPattern_(context_, patternName_) {
     if (!globalThis.vms2Context_.patternCache_[patternName_]) {
       let patternUrl_ = patternName_
 
@@ -3526,7 +3514,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     return globalThis.vms2Context_.patternCache_[patternName_]
   },
-  _remapPixels_ (pixels_, saveDataIds_, width_) {
+  _remapPixels_(pixels_, saveDataIds_, width_) {
     let lastValidRed_ = 0
     let lastValidGreen_ = 0
     let lastValidBlue_ = 0
