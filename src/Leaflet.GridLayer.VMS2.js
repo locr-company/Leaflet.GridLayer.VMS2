@@ -2,7 +2,7 @@ import { unicodeDataTable } from './unicode.js'
 import { MapOverlay } from './map_overlay.js'
 
 const DEFAULT_PRINT_DPI_ = 300
-const DEFAULT_DISPLAY_DPI_ = 72
+
 const EARTH_EQUATORIAL_RADIUS_METERS_ = 6378137
 const EARTH_EQUATORIAL_CIRCUMFERENCE_METERS_ = 2 * Math.PI * EARTH_EQUATORIAL_RADIUS_METERS_
 const TILE_AREA_DRAWING_EXTENSION_ = 1
@@ -1694,7 +1694,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     let objectScale_ = drawingInfo_.objectScale_
 
     if (!isNaN(saveStyle_.ZoomScale)) {
-      objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_DISPLAY_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, saveStyle_.ZoomScale)
+      objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, saveStyle_.ZoomScale)
     }
 
     if (!isNaN(saveStyle_.StrokeWidth)) {
@@ -1773,7 +1773,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       let objectScale_ = drawingInfo_.objectScale_
 
       if (!isNaN(objectStyle_.ZoomScale)) {
-        objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_DISPLAY_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
+        objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
       }
 
       if (isNaN(objectStyle_.FillAlpha)) {
@@ -1994,7 +1994,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         let objectScale_ = drawingInfo_.objectScale_
 
         if (!isNaN(objectStyle_.ZoomScale)) {
-          objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_DISPLAY_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
+          objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
         }
 
         if (activeObjectStyle_ !== objectStyle_) {
@@ -2197,7 +2197,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         let objectScale_ = drawingInfo_.objectScale_
 
         if (!isNaN(objectStyle_.ZoomScale)) {
-          objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_DISPLAY_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
+          objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
         }
 
         if (activeObjectStyle_ !== objectStyle_) {
@@ -2537,7 +2537,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 tileInfo_.mapBounds_.latitudeMin_ = this._tileToLatitude_(tileInfo_.y + 1, tileInfo_.z, this.options.zoomPowerBase)
                 tileInfo_.mapBounds_.latitudeMax_ = this._tileToLatitude_(tileInfo_.y, tileInfo_.z, this.options.zoomPowerBase)
 
-                tileInfo_.dpi_ = (this.options.dpi || DEFAULT_PRINT_DPI_) * DEFAULT_DISPLAY_DPI_ / DEFAULT_PRINT_DPI_ * tileInfo_.width_ / this.tileSize_
+                tileInfo_.dpi_ = (this.options.dpi || DEFAULT_PRINT_DPI_) * tileInfo_.width_ / this.tileSize_
               } else {
                 tileInfo_.mapBounds_.longitudeMin_ = tileInfo_.longitudeMin
                 tileInfo_.mapBounds_.longitudeMax_ = tileInfo_.longitudeMax
@@ -2566,7 +2566,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   tileInfo_.mapBounds_.latitudeMax_ = this._normalizedToLatitude_(normalizedMax_)
                 }
 
-                const tileSize_ = this.tileSize_ * tileInfo_.dpi / DEFAULT_DISPLAY_DPI_
+                const tileSize_ = this.tileSize_ * tileInfo_.dpi / DEFAULT_PRINT_DPI_
 
                 tileInfo_.z = Math.log(360 * tileInfo_.width_ / tileSize_ / (tileInfo_.mapBounds_.longitudeMax_ - tileInfo_.mapBounds_.longitudeMin_)) / Math.log(this.options.zoomPowerBase)
 
@@ -2745,7 +2745,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   if (layer_.Grid) {
                     drawingInfo_.isGrid_ = true
 
-                    const gridZoomScale_ = 1 / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_DISPLAY_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, layer_.Grid.ZoomScale || 1)
+                    const gridZoomScale_ = 1 / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, layer_.Grid.ZoomScale || 1)
 
                     const gridSize_ = [layer_.Grid.Size[0] * drawingInfo_.objectScale_ * gridZoomScale_, layer_.Grid.Size[1] * drawingInfo_.objectScale_ * gridZoomScale_]
 
