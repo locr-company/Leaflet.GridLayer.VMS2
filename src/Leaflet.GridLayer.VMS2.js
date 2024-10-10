@@ -1,7 +1,8 @@
 import { unicodeDataTable } from './unicode.js'
+import { MapOverlay } from './map_overlay.js'
 
 const DEFAULT_PRINT_DPI_ = 300
-const DEFAULT_DISPLAY_DPI_ = 72
+
 const EARTH_EQUATORIAL_RADIUS_METERS_ = 6378137
 const EARTH_EQUATORIAL_CIRCUMFERENCE_METERS_ = 2 * Math.PI * EARTH_EQUATORIAL_RADIUS_METERS_
 const TILE_AREA_DRAWING_EXTENSION_ = 1
@@ -209,7 +210,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     return tileCanvas_
   },
-  getMapCanvas: async function (tileInfo_) {
+  getMapCanvas: async function (tileInfo) {
     /*
      * Start of billing related code block. Do not change or skip it, neither block its function.
      * It must be executed when this function is being called.
@@ -218,7 +219,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     if (this.options.accessKey) {
       const meta_ = {
         function: this.getMapCanvas.name,
-        tileInfo: tileInfo_
+        tileInfo: tileInfo
       }
 
       const metaJson_ = JSON.stringify(meta_)
@@ -231,21 +232,25 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
      * Refer to the license for more information.
      */
 
-    let mapCanvas_ = null
+    let mapCanvas = null
 
-    if (tileInfo_.width && tileInfo_.height) {
-      mapCanvas_ = document.createElement('canvas')
+    if (tileInfo.width && tileInfo.height) {
+      mapCanvas = document.createElement('canvas')
 
-      mapCanvas_.width = tileInfo_.width
-      mapCanvas_.height = tileInfo_.height
+      mapCanvas.width = tileInfo.width
+      mapCanvas.height = tileInfo.height
 
-      mapCanvas_.inUse_ = true
-      mapCanvas_.hasBeenRemoved_ = false
+      mapCanvas.inUse_ = true
+      mapCanvas.hasBeenRemoved_ = false
 
-      await this._drawTile_(mapCanvas_, tileInfo_)
+      await this._drawTile_(mapCanvas, tileInfo)
+
+      let mapOverlay = new MapOverlay(tileInfo)
+
+      mapCanvas = mapOverlay.draw(mapCanvas)
     }
 
-    return mapCanvas_
+    return mapCanvas
   },
   getMapObjects: function (tileInfo_, doneFunction_) {
     const tileCanvas_ = {}
@@ -597,8 +602,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         break
 
-      case 4: // WKBMultiPoint
-        // console.log('Unhandled WKB type found: ' + wkbType_ + ' => MultiPoint');
+      case 4: // WKBMultiPoint.
+        // console.log('Unhandled WKB type found: ' + wkbType_ + ' => MultiPoint')
 
         break
 
@@ -658,7 +663,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         break
 
       default:
-        // console.log('Unhandled WKB type found: ' + wkbType_);
+        // console.log('Unhandled WKB type found: ' + wkbType_)
 
         break
     }
@@ -1316,14 +1321,14 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   },
   _drawPolygons_: function (drawingInfo_, polygons_) {
     if (drawingInfo_.isFilled_) {
-      this._drawPolygonsInterior_(drawingInfo_, polygons_)
+      this._drawPolygonsFilled_(drawingInfo_, polygons_)
     }
 
     if (drawingInfo_.isStroked_) {
-      this._drawPolygonsBoundary_(drawingInfo_, polygons_)
+      this._drawPolygonsStroked_(drawingInfo_, polygons_)
     }
   },
-  _drawPolygonsBoundary_: function (drawingInfo_, polygons_) {
+  _drawPolygonsStroked_: function (drawingInfo_, polygons_) {
     for (const polygonRings_ of polygons_) {
       for (const polygonPoints_ of polygonRings_) {
         const numberOfPoints_ = polygonPoints_.length
@@ -1344,10 +1349,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           const x_ = polygonPoints_[pointIndex_].x
           const y_ = polygonPoints_[pointIndex_].y
 
-          const deltaLeft_ = Math.round((x_ - drawingInfo_.tileBoundingBox_.left) * deltaScale_)
-          const deltaRight_ = Math.round((x_ - drawingInfo_.tileBoundingBox_.right) * deltaScale_)
-          const deltaTop_ = Math.round((drawingInfo_.tileBoundingBox_.top - y_) * deltaScale_)
-          const deltaBottom_ = Math.round((drawingInfo_.tileBoundingBox_.bottom - y_) * deltaScale_)
+          const deltaLeft_ = drawingInfo_.tileBoundingBox_ ? Math.round((x_ - drawingInfo_.tileBoundingBox_.left) * deltaScale_) : 1
+          const deltaRight_ = drawingInfo_.tileBoundingBox_ ? Math.round((x_ - drawingInfo_.tileBoundingBox_.right) * deltaScale_) : 1
+          const deltaTop_ = drawingInfo_.tileBoundingBox_ ? Math.round((drawingInfo_.tileBoundingBox_.top - y_) * deltaScale_) : 1
+          const deltaBottom_ = drawingInfo_.tileBoundingBox_ ? Math.round((drawingInfo_.tileBoundingBox_.bottom - y_) * deltaScale_) : 1
 
           if (pointIndex_ > 0) {
             if (
@@ -1389,7 +1394,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
     }
   },
-  _drawPolygonsInterior_: function (drawingInfo_, polygons_) {
+  _drawPolygonsFilled_: function (drawingInfo_, polygons_) {
     drawingInfo_.context_.beginPath()
 
     for (const polygonRings_ of polygons_) {
@@ -1501,7 +1506,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             previousX_ = x_
             previousY_ = y_
 
-            if (geometryDataOffset_ === 8) {
+            if (geometryDataOffset_ === 4 + 4) {
               objectData_.info.Envelope.left = x_
               objectData_.info.Envelope.right = x_
               objectData_.info.Envelope.top = y_
@@ -1525,6 +1530,78 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
             objectData_.geometry.setFloat32(geometryDataOffset_, y_, true)
             geometryDataOffset_ += 4
+          }
+
+          objectData_.info.Center.x = (objectData_.info.Envelope.left + objectData_.info.Envelope.right) / 2
+          objectData_.info.Center.y = (objectData_.info.Envelope.top + objectData_.info.Envelope.bottom) / 2
+
+          tileLayer_.push(objectData_)
+        }
+
+        break
+
+      case 'Polygon':
+        {
+          const objectData_ = {
+            info: {
+              Envelope: {},
+              Center: {}
+            }
+          }
+
+          if (properties_) {
+            objectData_.info.tags = properties_
+          }
+
+          let arraySize = 4 + 4 + 4
+
+          for (let ring of geojsonData_.coordinates) {
+            arraySize += ring.length * 4 * 2
+          }
+
+          objectData_.geometry = new DataView(new Uint8Array(arraySize).buffer)
+
+          let geometryDataOffset_ = 0
+
+          objectData_.geometry.setUint32(geometryDataOffset_, 3, true) // wkbType = 3 (WKBPolygon)
+          geometryDataOffset_ += 4
+
+          objectData_.geometry.setUint32(geometryDataOffset_, geojsonData_.coordinates.length, true)
+          geometryDataOffset_ += 4
+
+          for (let ring of geojsonData_.coordinates) {
+            objectData_.geometry.setUint32(geometryDataOffset_, ring.length, true)
+            geometryDataOffset_ += 4
+
+            for (const coordinate_ of ring) {
+              const x_ = this._longitudeToMeters_(coordinate_[0])
+              const y_ = this._latitudeToMeters_(coordinate_[1])
+
+              if (geometryDataOffset_ === 4 + 4 + 4) {
+                objectData_.info.Envelope.left = x_
+                objectData_.info.Envelope.right = x_
+                objectData_.info.Envelope.top = y_
+                objectData_.info.Envelope.bottom = y_
+              } else {
+                if (x_ < objectData_.info.Envelope.left) {
+                  objectData_.info.Envelope.left = x_
+                } else if (x_ > objectData_.info.Envelope.right) {
+                  objectData_.info.Envelope.right = x_
+                }
+
+                if (y_ < objectData_.info.Envelope.bottom) {
+                  objectData_.info.Envelope.bottom = y_
+                } else if (y_ > objectData_.info.Envelope.top) {
+                  objectData_.info.Envelope.top = y_
+                }
+              }
+
+              objectData_.geometry.setFloat32(geometryDataOffset_, x_, true)
+              geometryDataOffset_ += 4
+
+              objectData_.geometry.setFloat32(geometryDataOffset_, y_, true)
+              geometryDataOffset_ += 4
+            }
           }
 
           objectData_.info.Center.x = (objectData_.info.Envelope.left + objectData_.info.Envelope.right) / 2
@@ -1603,6 +1680,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
         }
       }
+
+      if (layerLayoutIdCount_ === 0) {
+        resolve(tileLayers_)
+      }
     })
   },
   _drawSaveLayer_: async function (drawingInfo_, mapObjects_, tileInfo_, layer_) {
@@ -1613,7 +1694,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     let objectScale_ = drawingInfo_.objectScale_
 
     if (!isNaN(saveStyle_.ZoomScale)) {
-      objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_DISPLAY_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, saveStyle_.ZoomScale)
+      objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, saveStyle_.ZoomScale)
     }
 
     if (!isNaN(saveStyle_.StrokeWidth)) {
@@ -1692,7 +1773,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       let objectScale_ = drawingInfo_.objectScale_
 
       if (!isNaN(objectStyle_.ZoomScale)) {
-        objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_DISPLAY_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
+        objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
       }
 
       if (isNaN(objectStyle_.FillAlpha)) {
@@ -1913,7 +1994,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         let objectScale_ = drawingInfo_.objectScale_
 
         if (!isNaN(objectStyle_.ZoomScale)) {
-          objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_DISPLAY_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
+          objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
         }
 
         if (activeObjectStyle_ !== objectStyle_) {
@@ -2116,7 +2197,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         let objectScale_ = drawingInfo_.objectScale_
 
         if (!isNaN(objectStyle_.ZoomScale)) {
-          objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_DISPLAY_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
+          objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
         }
 
         if (activeObjectStyle_ !== objectStyle_) {
@@ -2446,6 +2527,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               tileInfo_.width_ = tileCanvas_.width
               tileInfo_.height_ = tileCanvas_.height
 
+              let mapScale = tileInfo_.mapScale || this.options.mapScale
+
               tileInfo_.mapBounds_ = {}
 
               if (!isNaN(tileInfo_.x) && !isNaN(tileInfo_.y) && !isNaN(tileInfo_.z)) {
@@ -2454,7 +2537,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 tileInfo_.mapBounds_.latitudeMin_ = this._tileToLatitude_(tileInfo_.y + 1, tileInfo_.z, this.options.zoomPowerBase)
                 tileInfo_.mapBounds_.latitudeMax_ = this._tileToLatitude_(tileInfo_.y, tileInfo_.z, this.options.zoomPowerBase)
 
-                tileInfo_.dpi_ = DEFAULT_DISPLAY_DPI_ * tileInfo_.width_ / this.tileSize_
+                tileInfo_.dpi_ = (this.options.dpi || DEFAULT_PRINT_DPI_) * tileInfo_.width_ / this.tileSize_
               } else {
                 tileInfo_.mapBounds_.longitudeMin_ = tileInfo_.longitudeMin
                 tileInfo_.mapBounds_.longitudeMax_ = tileInfo_.longitudeMax
@@ -2483,28 +2566,32 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   tileInfo_.mapBounds_.latitudeMax_ = this._normalizedToLatitude_(normalizedMax_)
                 }
 
-                const tileSize_ = this.tileSize_ * tileInfo_.dpi / DEFAULT_DISPLAY_DPI_
+                const tileSize_ = this.tileSize_ * tileInfo_.dpi / DEFAULT_PRINT_DPI_
 
-                tileInfo_.z = Math.floor(Math.max(0, Math.log(((tileInfo_.width_ - 1) * 360) / (tileSize_ * (tileInfo_.mapBounds_.longitudeMax_ - tileInfo_.mapBounds_.longitudeMin_))) / Math.log(this.options.zoomPowerBase) + 1))
+                tileInfo_.z = Math.log(360 * tileInfo_.width_ / tileSize_ / (tileInfo_.mapBounds_.longitudeMax_ - tileInfo_.mapBounds_.longitudeMin_)) / Math.log(this.options.zoomPowerBase)
 
                 tileInfo_.dpi_ = tileInfo_.dpi
               }
 
+              let tileAreaDrawingExtension = TILE_AREA_DRAWING_EXTENSION_ * mapScale
+
               tileInfo_.drawingMapBounds_ = {
-                latitudeMin_: this._tileToLatitude_(this._latitudeToTile_(tileInfo_.mapBounds_.latitudeMin_, tileInfo_.z, this.options.zoomPowerBase) + TILE_AREA_DRAWING_EXTENSION_, tileInfo_.z, this.options.zoomPowerBase),
-                latitudeMax_: this._tileToLatitude_(this._latitudeToTile_(tileInfo_.mapBounds_.latitudeMax_, tileInfo_.z, this.options.zoomPowerBase) - TILE_AREA_DRAWING_EXTENSION_, tileInfo_.z, this.options.zoomPowerBase),
-                longitudeMin_: this._tileToLongitude_(this._longitudeToTile_(tileInfo_.mapBounds_.longitudeMin_, tileInfo_.z, this.options.zoomPowerBase) - TILE_AREA_DRAWING_EXTENSION_, tileInfo_.z, this.options.zoomPowerBase),
-                longitudeMax_: this._tileToLongitude_(this._longitudeToTile_(tileInfo_.mapBounds_.longitudeMax_, tileInfo_.z, this.options.zoomPowerBase) + TILE_AREA_DRAWING_EXTENSION_, tileInfo_.z, this.options.zoomPowerBase)
+                latitudeMin_: this._tileToLatitude_(this._latitudeToTile_(tileInfo_.mapBounds_.latitudeMin_, tileInfo_.z, this.options.zoomPowerBase) + tileAreaDrawingExtension, tileInfo_.z, this.options.zoomPowerBase),
+                latitudeMax_: this._tileToLatitude_(this._latitudeToTile_(tileInfo_.mapBounds_.latitudeMax_, tileInfo_.z, this.options.zoomPowerBase) - tileAreaDrawingExtension, tileInfo_.z, this.options.zoomPowerBase),
+                longitudeMin_: this._tileToLongitude_(this._longitudeToTile_(tileInfo_.mapBounds_.longitudeMin_, tileInfo_.z, this.options.zoomPowerBase) - tileAreaDrawingExtension, tileInfo_.z, this.options.zoomPowerBase),
+                longitudeMax_: this._tileToLongitude_(this._longitudeToTile_(tileInfo_.mapBounds_.longitudeMax_, tileInfo_.z, this.options.zoomPowerBase) + tileAreaDrawingExtension, tileInfo_.z, this.options.zoomPowerBase)
               }
+
+              let tileAreaSaveExtension = TILE_AREA_SAVE_EXTENSION_ * mapScale
 
               tileInfo_.saveMapBounds_ = {
-                latitudeMin_: this._tileToLatitude_(this._latitudeToTile_(tileInfo_.mapBounds_.latitudeMin_, tileInfo_.z, this.options.zoomPowerBase) + TILE_AREA_SAVE_EXTENSION_, tileInfo_.z, this.options.zoomPowerBase),
-                latitudeMax_: this._tileToLatitude_(this._latitudeToTile_(tileInfo_.mapBounds_.latitudeMax_, tileInfo_.z, this.options.zoomPowerBase) - TILE_AREA_SAVE_EXTENSION_, tileInfo_.z, this.options.zoomPowerBase),
-                longitudeMin_: this._tileToLongitude_(this._longitudeToTile_(tileInfo_.mapBounds_.longitudeMin_, tileInfo_.z, this.options.zoomPowerBase) - TILE_AREA_SAVE_EXTENSION_, tileInfo_.z, this.options.zoomPowerBase),
-                longitudeMax_: this._tileToLongitude_(this._longitudeToTile_(tileInfo_.mapBounds_.longitudeMax_, tileInfo_.z, this.options.zoomPowerBase) + TILE_AREA_SAVE_EXTENSION_, tileInfo_.z, this.options.zoomPowerBase)
+                latitudeMin_: this._tileToLatitude_(this._latitudeToTile_(tileInfo_.mapBounds_.latitudeMin_, tileInfo_.z, this.options.zoomPowerBase) + tileAreaSaveExtension, tileInfo_.z, this.options.zoomPowerBase),
+                latitudeMax_: this._tileToLatitude_(this._latitudeToTile_(tileInfo_.mapBounds_.latitudeMax_, tileInfo_.z, this.options.zoomPowerBase) - tileAreaSaveExtension, tileInfo_.z, this.options.zoomPowerBase),
+                longitudeMin_: this._tileToLongitude_(this._longitudeToTile_(tileInfo_.mapBounds_.longitudeMin_, tileInfo_.z, this.options.zoomPowerBase) - tileAreaSaveExtension, tileInfo_.z, this.options.zoomPowerBase),
+                longitudeMax_: this._tileToLongitude_(this._longitudeToTile_(tileInfo_.mapBounds_.longitudeMax_, tileInfo_.z, this.options.zoomPowerBase) + tileAreaSaveExtension, tileInfo_.z, this.options.zoomPowerBase)
               }
 
-              tileInfo_.vms2TileZ_ = Math.log2(Math.pow(this.options.zoomPowerBase, tileInfo_.z) / this.options.mapScale)
+              tileInfo_.vms2TileZ_ = Math.round(Math.log2(Math.pow(this.options.zoomPowerBase, tileInfo_.z) / mapScale))
 
               this._getTileLayers_(tileCanvas_, tileInfo_, mapStyle_).then(async tileLayers_ => {
                 if (tileCanvas_.isDummy_) {
@@ -2562,8 +2649,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   mapWidth_: tileInfo_.width_,
                   mapHeight_: tileInfo_.height_,
 
-                  userMapScale_: this.options.mapScale,
-                  objectScale_: this.options.objectScale * this.options.mapScale,
+                  userMapScale_: mapScale,
+                  objectScale_: this.options.objectScale * mapScale,
 
                   drawingArea_: mapArea_,
                   boundingArea_: mapArea_,
@@ -2577,7 +2664,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                   iconPositions_: {},
 
-                  patternScale_: tileInfo_.dpi_ * this.options.mapScale / DEFAULT_PRINT_DPI_,
+                  patternScale_: tileInfo_.dpi_ * mapScale / DEFAULT_PRINT_DPI_,
                   mapScale_: tileInfo_.width_ / (mapArea_.right_ - mapArea_.left_),
                   adjustedObjectScale_: Math.abs(tileInfo_.vms2TileZ_ < 6 ? 0.7 : 0.7 / Math.cos(tileInfo_.mapBounds_.latitudeMin_ * Math.PI / 180)),
 
@@ -2658,7 +2745,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   if (layer_.Grid) {
                     drawingInfo_.isGrid_ = true
 
-                    const gridZoomScale_ = 1 / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_DISPLAY_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, layer_.Grid.ZoomScale || 1)
+                    const gridZoomScale_ = 1 / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, layer_.Grid.ZoomScale || 1)
 
                     const gridSize_ = [layer_.Grid.Size[0] * drawingInfo_.objectScale_ * gridZoomScale_, layer_.Grid.Size[1] * drawingInfo_.objectScale_ * gridZoomScale_]
 
@@ -2762,7 +2849,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                   // Draw objects on all defined canvases.
 
-                  const layerCanvasNames_ = [''] // layer_.CanvasNames || [ '' ];
+                  const layerCanvasNames_ = [''] // layer_.CanvasNames || [ '' ]
 
                   if (layer_.Save) {
                     layerCanvasNames_.push('save')
@@ -3022,9 +3109,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       tileLayerData_.resolve = resolve
       tileLayerData_.reject = reject
 
-      let fetchTileZ_ = Math.round(tileLayerData_.tileInfo_.vms2TileZ_)
-
-      fetchTileZ_ += Math.max(-fetchTileZ_, (tileLayerData_.layerStyle_.Detail || 0) + this.options.detailOffset)
+      let fetchTileZ_ = tileLayerData_.tileInfo_.vms2TileZ_ + Math.max(-tileLayerData_.tileInfo_.vms2TileZ_, (tileLayerData_.layerStyle_.Detail || 0) + this.options.detailOffset)
 
       let fetchTileStartX_ = Math.floor(this._longitudeToTile_(tileLayerData_.tileInfo_.mapBounds_.longitudeMin_, fetchTileZ_))
       let fetchTileEndX = Math.floor(this._longitudeToTile_(tileLayerData_.tileInfo_.mapBounds_.longitudeMax_, fetchTileZ_))
@@ -3127,7 +3212,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
         }
       }).catch(exception_ => {
-        // console.log(exception_);
+        // console.log(exception_)
 
         for (const resolveFunction_ of globalThis.vms2Context_.fontFaceCache_[fontName_].resolveFunctions_) {
           if (resolveFunction_) {
