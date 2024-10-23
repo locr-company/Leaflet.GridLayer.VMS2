@@ -1,28 +1,29 @@
-import { unicodeDataTable } from './unicode.js'
+import { unicodeDataTable as UnicodeDataTable } from './unicode.js'
 import { MapOverlay } from './map_overlay.js'
 
-const DEFAULT_PRINT_DPI_ = 300
+const defaultPrintDpi = 300
 
-const EARTH_EQUATORIAL_RADIUS_METERS_ = 6378137
-const EARTH_EQUATORIAL_CIRCUMFERENCE_METERS_ = 2 * Math.PI * EARTH_EQUATORIAL_RADIUS_METERS_
-const TILE_AREA_DRAWING_EXTENSION_ = 1
-const TILE_AREA_SAVE_EXTENSION_ = 0.25
+const EARTH_EQUATORIAL_RADIUS_METERS = 6378137
+const EARTH_EQUATORIAL_CIRCUMFERENCE_METERS = 2 * Math.PI * EARTH_EQUATORIAL_RADIUS_METERS
+const TILE_AREA_DRAWING_EXTENSION = 1
+const TILE_AREA_SAVE_EXTENSION = 0.25
 
 const DEFAULT_ZOOM_POWER_BASE = 2
 const DEFAULT_STYLE_ID = '4201'
 
-const DEFAULT_STYLE_URL_ = 'https://vms2.locr.com/api/style/{style_id}'
-const DEFAULT_TILE_URL_ = 'https://vms2.locr.com/api/tile/{z}/{y}/{x}?k={key}&v={value}&t={type}'
-const DEFAULT_ASSETS_URL_ = 'https://vms2.locr.com/api/styles/assets'
+const DEFAULT_STYLE_URL = 'https://vms2.locr.com/api/style/{style_id}'
+const DEFAULT_TILE_URL = 'https://vms2.locr.com/api/tile/{z}/{y}/{x}?k={key}&v={value}&t={type}'
+const DEFAULT_ASSETS_URL = 'https://vms2.locr.com/api/styles/assets'
 
 const MIN_NUMBER_OF_WORKERS = 4
 
-const devicePixelRatio_ = window.devicePixelRatio || 1
+const devicePixelRatio = window.devicePixelRatio || 1
 
 const RandomGenerator = function () {
   this.state = 624
 }
 
+// eslint-disable-next-line camelcase
 RandomGenerator.prototype.init_seed = function (number) {
   this.state = number
 }
@@ -39,6 +40,7 @@ RandomGenerator.prototype.random = function () {
   return (x / 0xffffffff) + 0.5
 }
 
+// eslint-disable-next-line camelcase
 RandomGenerator.prototype.random_int = function () {
   let x = this.state
 
@@ -51,17 +53,18 @@ RandomGenerator.prototype.random_int = function () {
   return x
 }
 
+// eslint-disable-next-line camelcase
 RandomGenerator.prototype.random_pick = function (elements_, elementCounts_) {
   if (elementCounts_) {
-    const expandedElements_ = []
+    const expandedElements = []
 
-    for (let elementIndex_ = 0; elementIndex_ < elements_.length; elementIndex_++) {
-      for (let count_ = 0; count_ < elementCounts_[elementIndex_]; count_++) {
-        expandedElements_.push(elements_[elementIndex_])
+    for (let elementIndex = 0; elementIndex < elements_.length; elementIndex++) {
+      for (let count = 0; count < elementCounts_[elementIndex]; count++) {
+        expandedElements.push(elements_[elementIndex])
       }
     }
 
-    return expandedElements_[Math.floor(this.random() * expandedElements_.length)]
+    return expandedElements[Math.floor(this.random() * expandedElements.length)]
   } else {
     return elements_[Math.floor(this.random() * elements_.length)]
   }
@@ -70,28 +73,26 @@ RandomGenerator.prototype.random_pick = function (elements_, elementCounts_) {
 L.GridLayer.VMS2 = L.GridLayer.extend({
   numberOfRequestedTiles: 0,
 
-  allSystemsGo_: true,
+  allSystemsGo: true,
 
-  tileSize_: 0,
+  tileSize: 0,
 
-  voidTileAreas_: [],
+  randomGenerator: new RandomGenerator(),
 
-  randomGenerator_: new RandomGenerator(),
+  tileDbInfos: null,
+  tileDbInfosResolves: [],
 
-  tileDbInfos_: null,
-  tileDbInfosResolves_: [],
+  unicodeDataTable: UnicodeDataTable,
 
-  unicodeDataTable_: unicodeDataTable,
-
-  tileCanvases_: [],
-  saveDataCanvases_: [],
+  tileCanvases: [],
+  saveDataCanvases: [],
 
   options: {
     zoomPowerBase: DEFAULT_ZOOM_POWER_BASE,
     style: DEFAULT_STYLE_ID,
-    styleUrl: DEFAULT_STYLE_URL_,
-    tileUrl: DEFAULT_TILE_URL_,
-    assetsUrl: DEFAULT_ASSETS_URL_,
+    styleUrl: DEFAULT_STYLE_URL,
+    tileUrl: DEFAULT_TILE_URL,
+    assetsUrl: DEFAULT_ASSETS_URL,
     accessKey: '',
     mapScale: 1,
     objectScale: 1,
@@ -101,114 +102,114 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   },
 
   initialize: function (options_) {
-    if (!globalThis.vms2Context_) {
-      globalThis.vms2Context_ = {
-        decodeWorkers_: [],
-        decodeWorkersRunning_: 0,
-        decodeQueue_: [],
+    if (!globalThis.vms2Context) {
+      globalThis.vms2Context = {
+        decodeWorkers: [],
+        decodeWorkersRunning: 0,
+        decodeQueue: [],
 
-        styleRequestQueues_: {},
+        styleRequestQueues: {},
 
-        fontCharacterCanvas_: null,
-        fontCharacterContext_: null,
-        fontCharacterWidths_: {},
-        fontFaceCache_: {},
+        fontCharacterCanvas: null,
+        fontCharacterContext: null,
+        fontCharacterWidths: {},
+        fontFaceCache: {},
 
-        imageCache_: {},
-        patternCache_: {},
+        imageCache: {},
+        patternCache: {},
 
-        tileLayerRequestInfos_: {},
-        tileCache_: [],
-        tileCacheIndex_: 0,
-        tileCacheSize_: 600,
-        tileCacheLayerMaps_: {}
+        tileLayerRequestInfos: {},
+        tileCache: [],
+        tileCacheIndex: 0,
+        tileCacheSize: 600,
+        tileCacheLayerMaps: {}
       }
 
-      globalThis.vms2Context_.fontCharacterCanvas_ = document.createElement('canvas')
-      globalThis.vms2Context_.fontCharacterContext_ = globalThis.vms2Context_.fontCharacterCanvas_.getContext('2d')
+      globalThis.vms2Context.fontCharacterCanvas = document.createElement('canvas')
+      globalThis.vms2Context.fontCharacterContext = globalThis.vms2Context.fontCharacterCanvas.getContext('2d')
 
-      const maxNumberOfWorkers_ = Math.max(navigator.hardwareConcurrency - 1, MIN_NUMBER_OF_WORKERS)
+      const maxNumberOfWorkers = Math.max(navigator.hardwareConcurrency - 1, MIN_NUMBER_OF_WORKERS)
 
-      for (let count_ = 0; count_ < maxNumberOfWorkers_; count_++) {
-        const decodeWorker_ = new Worker(this._getWorkerURL_(new URL('decoder.js', import.meta.url)))
+      for (let count = 0; count < maxNumberOfWorkers; count++) {
+        const decodeWorker = new Worker(this._getWorkerURL(new URL('decoder.js', import.meta.url)))
 
-        decodeWorker_.onmessage = e => {
-          for (const tileData_ of e.data.tDs) {
-            let layerMap_ = globalThis.vms2Context_.tileCacheLayerMaps_[e.data.lId]
+        decodeWorker.onmessage = e => {
+          for (const tileData of e.data.tDs) {
+            let layerMap = globalThis.vms2Context.tileCacheLayerMaps[e.data.lId]
 
-            if (!layerMap_) {
-              layerMap_ = new Map()
+            if (!layerMap) {
+              layerMap = new Map()
 
-              globalThis.vms2Context_.tileCacheLayerMaps_[e.data.lId] = layerMap_
+              globalThis.vms2Context.tileCacheLayerMaps[e.data.lId] = layerMap
             }
 
-            const tileKey_ = tileData_.x + '|' + tileData_.y + '|' + tileData_.z + '|' + tileData_.dZ
+            const tileKey = tileData.x + '|' + tileData.y + '|' + tileData.z + '|' + tileData.dZ
 
-            layerMap_.set(tileKey_, { objects_: tileData_.tOs, x_: tileData_.x, y_: tileData_.y, z_: tileData_.z, detailZoom_: tileData_.dZ })
+            layerMap.set(tileKey, { objects: tileData.tOs, x: tileData.x, y: tileData.y, z: tileData.z, detailZoom: tileData.dZ })
 
-            const newEntry_ = { layerMap_, tileKey_ }
+            const newEntry = { layerMap, tileKey }
 
-            if (globalThis.vms2Context_.tileCache_[globalThis.vms2Context_.tileCacheIndex_]) {
-              const oldEntry_ = globalThis.vms2Context_.tileCache_[globalThis.vms2Context_.tileCacheIndex_]
+            if (globalThis.vms2Context.tileCache[globalThis.vms2Context.tileCacheIndex]) {
+              const oldEntry = globalThis.vms2Context.tileCache[globalThis.vms2Context.tileCacheIndex]
 
-              oldEntry_.layerMap_.delete(oldEntry_.tileKey_)
+              oldEntry.layerMap.delete(oldEntry.tileKey)
             }
 
-            globalThis.vms2Context_.tileCache_[globalThis.vms2Context_.tileCacheIndex_] = newEntry_
+            globalThis.vms2Context.tileCache[globalThis.vms2Context.tileCacheIndex] = newEntry
 
-            globalThis.vms2Context_.tileCacheIndex_ = (globalThis.vms2Context_.tileCacheIndex_ + 1) % globalThis.vms2Context_.tileCacheSize_
+            globalThis.vms2Context.tileCacheIndex = (globalThis.vms2Context.tileCacheIndex + 1) % globalThis.vms2Context.tileCacheSize
           }
 
-          const resolveFunction_ = e.target.resolveFunction_
+          const resolveFunction = e.target.resolveFunction
 
-          e.target.resolveFunction_ = null
+          e.target.resolveFunction = null
 
-          resolveFunction_()
+          resolveFunction()
         }
 
-        globalThis.vms2Context_.decodeWorkers_.push(decodeWorker_)
+        globalThis.vms2Context.decodeWorkers.push(decodeWorker)
       }
     }
 
     L.GridLayer.prototype.initialize.call(this, options_)
 
-    this.tileSize_ = this.getTileSize().x
+    this.tileSize = this.getTileSize().x
 
     this.options.tileUrl += '&key=' + this.options.accessKey
 
     this.options.zoomStep = Math.log2(this.options.zoomPowerBase)
   },
-  createTile: function (tileInfo_, doneFunction_) {
-    let tileCanvas_ = null
+  createTile: function (tileInfo, doneFunction_) {
+    let tileCanvas = null
 
-    for (const canvas_ of this.tileCanvases_) {
-      if (!canvas_.inUse_ && canvas_.hasBeenRemoved_) {
-        tileCanvas_ = canvas_
+    for (const canvas of this.tileCanvases) {
+      if (!canvas.inUse && canvas.hasBeenRemoved) {
+        tileCanvas = canvas
 
-        tileCanvas_.getContext('2d').clearRect(0, 0, tileCanvas_.width, tileCanvas_.height)
+        tileCanvas.getContext('2d').clearRect(0, 0, tileCanvas.width, tileCanvas.height)
 
         break
       }
     }
 
-    if (!tileCanvas_) {
-      tileCanvas_ = document.createElement('canvas')
+    if (!tileCanvas) {
+      tileCanvas = document.createElement('canvas')
 
-      tileCanvas_.width = Math.round(this.tileSize_ * devicePixelRatio_)
-      tileCanvas_.height = Math.round(this.tileSize_ * devicePixelRatio_)
+      tileCanvas.width = Math.round(this.tileSize * devicePixelRatio)
+      tileCanvas.height = Math.round(this.tileSize * devicePixelRatio)
 
-      tileCanvas_.isTile = true
+      tileCanvas.isTile = true
 
-      tileCanvas_.hasBeenCreated_ = true
+      tileCanvas.hasBeenCreated = true
     }
 
-    tileCanvas_.inUse_ = true
-    tileCanvas_.hasBeenRemoved_ = false
+    tileCanvas.inUse = true
+    tileCanvas.hasBeenRemoved = false
 
-    this._drawTile_(tileCanvas_, tileInfo_)
-      .then(() => doneFunction_(null, tileCanvas_))
+    this._drawTile(tileCanvas, tileInfo)
+      .then(() => doneFunction_(null, tileCanvas))
 
-    return tileCanvas_
+    return tileCanvas
   },
   getMapCanvas: async function (tileInfo) {
     /*
@@ -217,14 +218,14 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
      * Refer to the license for more information.
      */
     if (this.options.accessKey) {
-      const meta_ = {
+      const meta = {
         function: this.getMapCanvas.name,
         tileInfo: tileInfo
       }
 
-      const metaJson_ = JSON.stringify(meta_)
+      const metaJson = JSON.stringify(meta)
 
-      fetch('https://vms2.locr.com/api/vms2/ping?key=' + this.options.accessKey + '&meta=' + encodeURIComponent(metaJson_))
+      fetch('https://vms2.locr.com/api/vms2/ping?key=' + this.options.accessKey + '&meta=' + encodeURIComponent(metaJson))
     }
     /*
      * End of billing related code block. Do not change or skip it, neither block its function.
@@ -240,34 +241,30 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       mapCanvas.width = tileInfo.width
       mapCanvas.height = tileInfo.height
 
-      mapCanvas.inUse_ = true
-      mapCanvas.hasBeenRemoved_ = false
+      mapCanvas.inUse = true
+      mapCanvas.hasBeenRemoved = false
 
-      await this._drawTile_(mapCanvas, tileInfo)
-
-      let mapOverlay = new MapOverlay(tileInfo)
-
-      mapCanvas = mapOverlay.draw(mapCanvas)
+      await this._drawTile(mapCanvas, tileInfo)
     }
 
     return mapCanvas
   },
-  getMapObjects: function (tileInfo_, doneFunction_) {
-    const tileCanvas_ = {}
+  getMapObjects: function (tileInfo, doneFunction_) {
+    const tileCanvas = {}
 
-    if (tileInfo_.width && tileInfo_.height) {
-      tileCanvas_.width = Math.round(tileInfo_.width)
-      tileCanvas_.height = Math.round(tileInfo_.height)
+    if (tileInfo.width && tileInfo.height) {
+      tileCanvas.width = Math.round(tileInfo.width)
+      tileCanvas.height = Math.round(tileInfo.height)
     }
 
-    tileCanvas_.inUse_ = true
-    tileCanvas_.hasBeenRemoved_ = false
+    tileCanvas.inUse = true
+    tileCanvas.hasBeenRemoved = false
 
-    tileCanvas_.isDummy_ = true
+    tileCanvas.isDummy = true
 
-    this._drawTile_(tileCanvas_, tileInfo_)
-      .then(tileLayers_ => {
-        doneFunction_(tileLayers_)
+    this._drawTile(tileCanvas, tileInfo)
+      .then(tileLayers => {
+        doneFunction_(tileLayers)
       })
   },
   _pruneTilesOld: function () {
@@ -340,18 +337,22 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         if (coords.z - zoom > 2 / this.options.zoomStep || zoom - coords.z > 2 / this.options.zoomStep) {
           tile.retain = false
         } else {
-          const latitudeMin = this._tileToLatitude_(coords.y + 1, coords.z, this.options.zoomPowerBase)
-          const longitudeMin = this._tileToLongitude_(coords.x, coords.z, this.options.zoomPowerBase)
-          const latitudeMax = this._tileToLatitude_(coords.y, coords.z, this.options.zoomPowerBase)
-          const longitudeMax = this._tileToLongitude_(coords.x + 1, coords.z, this.options.zoomPowerBase)
+          const latitudeMin = this._tileToLatitude(coords.y + 1, coords.z, this.options.zoomPowerBase)
+          const longitudeMin = this._tileToLongitude(coords.x, coords.z, this.options.zoomPowerBase)
+          const latitudeMax = this._tileToLatitude(coords.y, coords.z, this.options.zoomPowerBase)
+          const longitudeMax = this._tileToLongitude(coords.x + 1, coords.z, this.options.zoomPowerBase)
 
           tile.bounds = L.latLngBounds([latitudeMin, longitudeMin], [latitudeMax, longitudeMax])
 
           if (
             !(
+              // eslint-disable-next-line no-underscore-dangle
               tile.bounds._southWest.lat < mapBounds._northEast.lat &&
+              // eslint-disable-next-line no-underscore-dangle
               tile.bounds._northEast.lat > mapBounds._southWest.lat &&
+              // eslint-disable-next-line no-underscore-dangle
               tile.bounds._southWest.lng < mapBounds._northEast.lng &&
+              // eslint-disable-next-line no-underscore-dangle
               tile.bounds._northEast.lng > mapBounds._southWest.lng
             )
           ) {
@@ -374,9 +375,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
           if (!tile2.current && tile2.retain) {
             if (
+              // eslint-disable-next-line no-underscore-dangle
               tile2.bounds._northEast.lat < tile1.bounds._northEast.lat &&
+              // eslint-disable-next-line no-underscore-dangle
               tile2.bounds._southWest.lat > tile1.bounds._southWest.lat &&
+              // eslint-disable-next-line no-underscore-dangle
               tile2.bounds._northEast.lng < tile1.bounds._northEast.lng &&
+              // eslint-disable-next-line no-underscore-dangle
               tile2.bounds._southWest.lng > tile1.bounds._southWest.lng
             ) {
               tile2.retain = false
@@ -405,15 +410,15 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     // Start of added code.
 
-    if (tileElement.abortController_) {
-      if (!tileElement.abortController_.signal.aborted) {
-        tileElement.abortController_.abort()
+    if (tileElement.abortController) {
+      if (!tileElement.abortController.signal.aborted) {
+        tileElement.abortController.abort()
       }
 
-      delete tileElement.abortController_
+      delete tileElement.abortController
     }
 
-    tileElement.hasBeenRemoved_ = true
+    tileElement.hasBeenRemoved = true
 
     // End of added code.
 
@@ -430,50 +435,50 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       coords: this._keyToTileCoords(key)
     })
   },
-  _checkAndSetDisplacement_: function (displacementLayers_, displacementLayerNames_, boxes_) {
-    for (const box_ of boxes_) {
-      if (box_.left_ > box_.right_) {
-        const temp_ = box_.left_
+  _checkAndSetDisplacement: function (displacementLayers, displacementLayerNames, boxes) {
+    for (const box of boxes) {
+      if (box.left > box.right) {
+        const temp = box.left
 
-        box_.left_ = box_.right_
-        box_.right_ = temp_
+        box.left = box.right
+        box.right = temp
       }
 
-      if (box_.bottom_ > box_.top_) {
-        const temp_ = box_.top_
+      if (box.bottom > box.top) {
+        const temp = box.top
 
-        box_.top_ = box_.bottom_
-        box_.bottom_ = temp_
+        box.top = box.bottom
+        box.bottom = temp
       }
     }
 
-    for (const displacementLayerName_ of displacementLayerNames_) {
-      const displacementLayer_ = displacementLayers_[displacementLayerName_]
+    for (const displacementLayerName of displacementLayerNames) {
+      const displacementLayer = displacementLayers[displacementLayerName]
 
-      for (const box_ of boxes_) {
-        if (displacementLayer_.allowedMapArea_) {
+      for (const box of boxes) {
+        if (displacementLayer.allowedMapArea) {
           if (
-            box_.left_ < displacementLayer_.allowedMapArea_.left_ ||
-            box_.right_ > displacementLayer_.allowedMapArea_.right_ ||
-            box_.top_ > displacementLayer_.allowedMapArea_.top_ ||
-            box_.bottom_ < displacementLayer_.allowedMapArea_.bottom_
+            box.left < displacementLayer.allowedMapArea.left ||
+            box.right > displacementLayer.allowedMapArea.right ||
+            box.top > displacementLayer.allowedMapArea.top ||
+            box.bottom < displacementLayer.allowedMapArea.bottom
           ) {
             return false
           }
         }
 
-        const topLeftHash_ = (box_.left_ >> displacementLayer_.shift_) + 'x' + (box_.top_ >> displacementLayer_.shift_)
-        const topRightHash_ = (box_.right_ >> displacementLayer_.shift_) + 'x' + (box_.top_ >> displacementLayer_.shift_)
-        const bottomLeftHash_ = (box_.left_ >> displacementLayer_.shift_) + 'x' + (box_.bottom_ >> displacementLayer_.shift_)
-        const bottomRightHash_ = (box_.right_ >> displacementLayer_.shift_) + 'x' + (box_.bottom_ >> displacementLayer_.shift_)
+        const topLeftHash = (box.left >> displacementLayer.shift) + 'x' + (box.top >> displacementLayer.shift)
+        const topRightHash = (box.right >> displacementLayer.shift) + 'x' + (box.top >> displacementLayer.shift)
+        const bottomLeftHash = (box.left >> displacementLayer.shift) + 'x' + (box.bottom >> displacementLayer.shift)
+        const bottomRightHash = (box.right >> displacementLayer.shift) + 'x' + (box.bottom >> displacementLayer.shift)
 
-        if (displacementLayer_.regions_[topLeftHash_]) {
-          for (const hashedBox_ of displacementLayer_.regions_[topLeftHash_]) {
+        if (displacementLayer.regions[topLeftHash]) {
+          for (const hashedBox of displacementLayer.regions[topLeftHash]) {
             if (
-              box_.left_ > hashedBox_.right_ ||
-              box_.right_ < hashedBox_.left_ ||
-              box_.bottom_ > hashedBox_.top_ ||
-              box_.top_ < hashedBox_.bottom_
+              box.left > hashedBox.right ||
+              box.right < hashedBox.left ||
+              box.bottom > hashedBox.top ||
+              box.top < hashedBox.bottom
             ) { // Note: Top > Bottom!
               continue
             }
@@ -482,13 +487,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
         }
 
-        if (displacementLayer_.regions_[topRightHash_] && topRightHash_ !== topLeftHash_) {
-          for (const hashedBox_ of displacementLayer_.regions_[topRightHash_]) {
+        if (displacementLayer.regions[topRightHash] && topRightHash !== topLeftHash) {
+          for (const hashedBox of displacementLayer.regions[topRightHash]) {
             if (
-              box_.left_ > hashedBox_.right_ ||
-              box_.right_ < hashedBox_.left_ ||
-              box_.bottom_ > hashedBox_.top_ ||
-              box_.top_ < hashedBox_.bottom_
+              box.left > hashedBox.right ||
+              box.right < hashedBox.left ||
+              box.bottom > hashedBox.top ||
+              box.top < hashedBox.bottom
             ) { // Note: Top > Bottom!
               continue
             }
@@ -497,13 +502,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
         }
 
-        if (displacementLayer_.regions_[bottomLeftHash_] && bottomLeftHash_ !== topLeftHash_ && bottomLeftHash_ !== topRightHash_) {
-          for (const hashedBox_ of displacementLayer_.regions_[bottomLeftHash_]) {
+        if (displacementLayer.regions[bottomLeftHash] && bottomLeftHash !== topLeftHash && bottomLeftHash !== topRightHash) {
+          for (const hashedBox of displacementLayer.regions[bottomLeftHash]) {
             if (
-              box_.left_ > hashedBox_.right_ ||
-              box_.right_ < hashedBox_.left_ ||
-              box_.bottom_ > hashedBox_.top_ ||
-              box_.top_ < hashedBox_.bottom_
+              box.left > hashedBox.right ||
+              box.right < hashedBox.left ||
+              box.bottom > hashedBox.top ||
+              box.top < hashedBox.bottom
             ) { // Note: Top > Bottom!
               continue
             }
@@ -512,13 +517,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
         }
 
-        if (displacementLayer_.regions_[bottomRightHash_] && bottomRightHash_ !== topLeftHash_ && bottomRightHash_ !== topRightHash_ && bottomRightHash_ !== bottomLeftHash_) {
-          for (const hashedBox_ of displacementLayer_.regions_[bottomRightHash_]) {
+        if (displacementLayer.regions[bottomRightHash] && bottomRightHash !== topLeftHash && bottomRightHash !== topRightHash && bottomRightHash !== bottomLeftHash) {
+          for (const hashedBox of displacementLayer.regions[bottomRightHash]) {
             if (
-              box_.left_ > hashedBox_.right_ ||
-              box_.right_ < hashedBox_.left_ ||
-              box_.bottom_ > hashedBox_.top_ ||
-              box_.top_ < hashedBox_.bottom_
+              box.left > hashedBox.right ||
+              box.right < hashedBox.left ||
+              box.bottom > hashedBox.top ||
+              box.top < hashedBox.bottom
             ) { // Note: Top > Bottom!
               continue
             }
@@ -529,504 +534,504 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
     }
 
-    for (const displacementLayerName_ of displacementLayerNames_) {
-      const displacementLayer_ = displacementLayers_[displacementLayerName_]
+    for (const displacementLayerName of displacementLayerNames) {
+      const displacementLayer = displacementLayers[displacementLayerName]
 
-      for (const box_ of boxes_) {
-        if (box_.left_ === box_.right_ || box_.top_ === box_.bottom_) {
+      for (const box of boxes) {
+        if (box.left === box.right || box.top === box.bottom) {
           continue
         }
 
-        const topLeftHash_ = (box_.left_ >> displacementLayer_.shift_) + 'x' + (box_.top_ >> displacementLayer_.shift_)
-        const topRightHash_ = (box_.right_ >> displacementLayer_.shift_) + 'x' + (box_.top_ >> displacementLayer_.shift_)
-        const bottomLeftHash_ = (box_.left_ >> displacementLayer_.shift_) + 'x' + (box_.bottom_ >> displacementLayer_.shift_)
-        const bottomRightHash_ = (box_.right_ >> displacementLayer_.shift_) + 'x' + (box_.bottom_ >> displacementLayer_.shift_)
+        const topLeftHash = (box.left >> displacementLayer.shift) + 'x' + (box.top >> displacementLayer.shift)
+        const topRightHash = (box.right >> displacementLayer.shift) + 'x' + (box.top >> displacementLayer.shift)
+        const bottomLeftHash = (box.left >> displacementLayer.shift) + 'x' + (box.bottom >> displacementLayer.shift)
+        const bottomRightHash = (box.right >> displacementLayer.shift) + 'x' + (box.bottom >> displacementLayer.shift)
 
-        if (!displacementLayer_.regions_[topLeftHash_]) {
-          displacementLayer_.regions_[topLeftHash_] = []
+        if (!displacementLayer.regions[topLeftHash]) {
+          displacementLayer.regions[topLeftHash] = []
         }
 
-        displacementLayer_.regions_[topLeftHash_].push(box_)
+        displacementLayer.regions[topLeftHash].push(box)
 
-        if (topRightHash_ !== topLeftHash_) {
-          if (!displacementLayer_.regions_[topRightHash_]) {
-            displacementLayer_.regions_[topRightHash_] = []
+        if (topRightHash !== topLeftHash) {
+          if (!displacementLayer.regions[topRightHash]) {
+            displacementLayer.regions[topRightHash] = []
           }
 
-          displacementLayer_.regions_[topRightHash_].push(box_)
+          displacementLayer.regions[topRightHash].push(box)
         }
 
-        if (bottomLeftHash_ !== topLeftHash_ && bottomLeftHash_ !== topRightHash_) {
-          if (!displacementLayer_.regions_[bottomLeftHash_]) {
-            displacementLayer_.regions_[bottomLeftHash_] = []
+        if (bottomLeftHash !== topLeftHash && bottomLeftHash !== topRightHash) {
+          if (!displacementLayer.regions[bottomLeftHash]) {
+            displacementLayer.regions[bottomLeftHash] = []
           }
 
-          displacementLayer_.regions_[bottomLeftHash_].push(box_)
+          displacementLayer.regions[bottomLeftHash].push(box)
         }
 
-        if (bottomRightHash_ !== topLeftHash_ && bottomRightHash_ !== topRightHash_ && bottomRightHash_ !== bottomLeftHash_) {
-          if (!displacementLayer_.regions_[bottomRightHash_]) {
-            displacementLayer_.regions_[bottomRightHash_] = []
+        if (bottomRightHash !== topLeftHash && bottomRightHash !== topRightHash && bottomRightHash !== bottomLeftHash) {
+          if (!displacementLayer.regions[bottomRightHash]) {
+            displacementLayer.regions[bottomRightHash] = []
           }
 
-          displacementLayer_.regions_[bottomRightHash_].push(box_)
+          displacementLayer.regions[bottomRightHash].push(box)
         }
       }
     }
 
     return true
   },
-  _drawGeometry_: function (drawingInfo_, geometry_, dataOffset_ = 0) {
-    const wkbType_ = geometry_.getUint32(dataOffset_, true)
+  _drawGeometry: function (drawingInfo, geometry, dataOffset = 0) {
+    const wkbType = geometry.getUint32(dataOffset, true)
 
-    switch (wkbType_) {
-      case 1: // WKBPoint.
-        dataOffset_ = this._drawPoint_(drawingInfo_, geometry_, dataOffset_)
+    switch (wkbType) {
+    case 1: // WKBPoint.
+      dataOffset = this._drawPoint(drawingInfo, geometry, dataOffset)
 
-        break
+      break
 
-      case 2: // WKBLineString.
-        dataOffset_ = this._drawLineString_(drawingInfo_, geometry_, dataOffset_)
+    case 2: // WKBLineString.
+      dataOffset = this._drawLineString(drawingInfo, geometry, dataOffset)
 
-        break
+      break
 
-      case 3: // WKBPolygon.
-        if (drawingInfo_.isIcon_ || drawingInfo_.isText_) {
-          this._drawIcon_(drawingInfo_, drawingInfo_.objectData_.Center.x, drawingInfo_.objectData_.Center.y)
-          dataOffset_ = this._skipPolygon_(geometry_, dataOffset_)
-        } else {
-          const polygons = []
-          dataOffset_ = this._preparePolygon_(drawingInfo_, geometry_, dataOffset_, polygons)
-          this._drawPolygons_(drawingInfo_, polygons)
+    case 3: // WKBPolygon.
+      if (drawingInfo.isIcon || drawingInfo.isText) {
+        this._drawIcon(drawingInfo, drawingInfo.objectData.Center.x, drawingInfo.objectData.Center.y)
+        dataOffset = this._skipPolygon(geometry, dataOffset)
+      } else {
+        const polygons = []
+        dataOffset = this._preparePolygon(drawingInfo, geometry, dataOffset, polygons)
+        this._drawPolygons(drawingInfo, polygons)
+      }
+
+      break
+
+    case 4: // WKBMultiPoint.
+      // console.log('Unhandled WKB type found: ' + wkbType + ' => MultiPoint')
+
+      break
+
+    case 5: // WKBMultiLineString.
+      {
+        dataOffset += 4
+
+        const numberOfLineStrings = geometry.getUint32(dataOffset, true)
+        dataOffset += 4
+
+        for (let lineStringIndex = 0; lineStringIndex < numberOfLineStrings; lineStringIndex++) {
+          dataOffset = this._drawLineString(drawingInfo, geometry, dataOffset)
+        }
+      }
+
+      break
+
+    case 6: // WKBMultiPolygon.
+      dataOffset += 4
+
+      if (drawingInfo.isIcon || drawingInfo.isText) {
+        this._drawIcon(drawingInfo, drawingInfo.objectData.Center.x, drawingInfo.objectData.Center.y)
+
+        const numberOfPolygons = geometry.getUint32(dataOffset, true)
+        dataOffset += 4
+
+        for (let polygonIndex = 0; polygonIndex < numberOfPolygons; polygonIndex++) {
+          dataOffset = this._skipPolygon(geometry, dataOffset)
+        }
+      } else {
+        const polygons = []
+
+        const numberOfPolygons = geometry.getUint32(dataOffset, true)
+        dataOffset += 4
+
+        for (let polygonIndex = 0; polygonIndex < numberOfPolygons; polygonIndex++) {
+          dataOffset = this._preparePolygon(drawingInfo, geometry, dataOffset, polygons)
         }
 
-        break
+        this._drawPolygons(drawingInfo, polygons)
+      }
 
-      case 4: // WKBMultiPoint.
-        // console.log('Unhandled WKB type found: ' + wkbType_ + ' => MultiPoint')
+      break
 
-        break
+    case 7: // WKBGeometryCollection.
+      {
+        dataOffset += 4
 
-      case 5: // WKBMultiLineString.
-        {
-          dataOffset_ += 4
+        const numberOfGeometries = geometry.getUint32(dataOffset, true)
+        dataOffset += 4
 
-          const numberOfLineStrings_ = geometry_.getUint32(dataOffset_, true)
-          dataOffset_ += 4
-
-          for (let lineStringIndex_ = 0; lineStringIndex_ < numberOfLineStrings_; lineStringIndex_++) {
-            dataOffset_ = this._drawLineString_(drawingInfo_, geometry_, dataOffset_)
-          }
+        for (let geometryIndex = 0; geometryIndex < numberOfGeometries; geometryIndex++) {
+          dataOffset = this._drawGeometry(drawingInfo, geometry, dataOffset)
         }
+      }
 
-        break
+      break
 
-      case 6: // WKBMultiPolygon.
-        dataOffset_ += 4
+    default:
+      // console.log('Unhandled WKB type found: ' + wkbType_)
 
-        if (drawingInfo_.isIcon_ || drawingInfo_.isText_) {
-          this._drawIcon_(drawingInfo_, drawingInfo_.objectData_.Center.x, drawingInfo_.objectData_.Center.y)
-
-          const numberOfPolygons_ = geometry_.getUint32(dataOffset_, true)
-          dataOffset_ += 4
-
-          for (let polygonIndex_ = 0; polygonIndex_ < numberOfPolygons_; polygonIndex_++) {
-            dataOffset_ = this._skipPolygon_(geometry_, dataOffset_)
-          }
-        } else {
-          const polygons_ = []
-
-          const numberOfPolygons_ = geometry_.getUint32(dataOffset_, true)
-          dataOffset_ += 4
-
-          for (let polygonIndex_ = 0; polygonIndex_ < numberOfPolygons_; polygonIndex_++) {
-            dataOffset_ = this._preparePolygon_(drawingInfo_, geometry_, dataOffset_, polygons_)
-          }
-
-          this._drawPolygons_(drawingInfo_, polygons_)
-        }
-
-        break
-
-      case 7: // WKBGeometryCollection.
-        {
-          dataOffset_ += 4
-
-          const numberOfGeometries_ = geometry_.getUint32(dataOffset_, true)
-          dataOffset_ += 4
-
-          for (let geometryIndex_ = 0; geometryIndex_ < numberOfGeometries_; geometryIndex_++) {
-            dataOffset_ = this._drawGeometry_(drawingInfo_, geometry_, dataOffset_)
-          }
-        }
-
-        break
-
-      default:
-        // console.log('Unhandled WKB type found: ' + wkbType_)
-
-        break
+      break
     }
 
-    return dataOffset_
+    return dataOffset
   },
-  _drawPoint_: function (drawingInfo_, geometry_, dataOffset_) {
-    dataOffset_ += 4
+  _drawPoint: function (drawingInfo, geometry, dataOffset) {
+    dataOffset += 4
 
-    const x_ = geometry_.getFloat32(dataOffset_, true)
-    dataOffset_ += 4
+    const x = geometry.getFloat32(dataOffset, true)
+    dataOffset += 4
 
-    const y_ = geometry_.getFloat32(dataOffset_, true)
-    dataOffset_ += 4
+    const y = geometry.getFloat32(dataOffset, true)
+    dataOffset += 4
 
-    if (drawingInfo_.isIcon_ || drawingInfo_.isText_) {
-      this._drawIcon_(drawingInfo_, x_, y_)
+    if (drawingInfo.isIcon || drawingInfo.isText) {
+      this._drawIcon(drawingInfo, x, y)
     }
 
-    return dataOffset_
+    return dataOffset
   },
-  _drawIcon_: function (drawingInfo_, x_, y_) {
-    let iconDisplacementBox_ = null
-    const textDisplacementBoxes_ = []
-    const textLineInfos_ = []
+  _drawIcon: function (drawingInfo, x, y) {
+    let iconDisplacementBox = null
+    const textDisplacementBoxes = []
+    const textLineInfos = []
 
-    if (drawingInfo_.isIcon_ && drawingInfo_.iconImage_) {
-      if (drawingInfo_.displacementScaleX_ > 0 && drawingInfo_.displacementScaleY_ > 0) {
-        iconDisplacementBox_ = {
-          left_: x_ + drawingInfo_.iconImageOffsetX_ - drawingInfo_.iconWidth_ * drawingInfo_.displacementScaleX_ / 2,
-          right_: x_ + drawingInfo_.iconImageOffsetX_ + drawingInfo_.iconWidth_ * drawingInfo_.displacementScaleX_ / 2,
-          top_: y_ - drawingInfo_.iconImageOffsetY_ + drawingInfo_.iconHeight_ * drawingInfo_.displacementScaleY_ / 2,
-          bottom_: y_ - drawingInfo_.iconImageOffsetY_ - drawingInfo_.iconHeight_ * drawingInfo_.displacementScaleY_ / 2
+    if (drawingInfo.isIcon && drawingInfo.iconImage) {
+      if (drawingInfo.displacementScaleX > 0 && drawingInfo.displacementScaleY > 0) {
+        iconDisplacementBox = {
+          left: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth * drawingInfo.displacementScaleX / 2,
+          right: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth * drawingInfo.displacementScaleX / 2,
+          top: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight * drawingInfo.displacementScaleY / 2,
+          bottom: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight * drawingInfo.displacementScaleY / 2
         }
       }
     }
 
-    if (drawingInfo_.isText_ && drawingInfo_.text_) {
-      let textY_ = drawingInfo_.iconTextOffsetY_
+    if (drawingInfo.isText && drawingInfo.text) {
+      let textY = drawingInfo.iconTextOffsetY
 
       // Convert name to multiline text.
 
-      let maxTextLength_ = 10
+      let maxTextLength = 10
 
-      const textWords_ = drawingInfo_.text_.replace(/-/g, '- ').split(' ')
+      const textWords = drawingInfo.text.replace(/-/g, '- ').split(' ')
 
-      for (const textWord_ of textWords_) {
-        if (textWord_.length > maxTextLength_) {
-          maxTextLength_ = textWord_.length
+      for (const textWord of textWords) {
+        if (textWord.length > maxTextLength) {
+          maxTextLength = textWord.length
         }
       }
 
-      let textLine_ = ''
+      let textLine = ''
 
-      for (const textWord_ of textWords_) {
-        if (textLine_.length + textWord_.length > maxTextLength_) {
-          textLineInfos_.push({ text_: textLine_ })
+      for (const textWord of textWords) {
+        if (textLine.length + textWord.length > maxTextLength) {
+          textLineInfos.push({ text: textLine })
 
-          textLine_ = textWord_
+          textLine = textWord
         } else {
-          if (textLine_) {
-            textLine_ += ' '
+          if (textLine) {
+            textLine += ' '
           }
 
-          textLine_ += textWord_
+          textLine += textWord
         }
       }
 
-      if (textLine_) {
-        textLineInfos_.push({ text_: textLine_ })
+      if (textLine) {
+        textLineInfos.push({ text: textLine })
       }
 
-      let textBoxWidth_ = 0
+      let textBoxWidth = 0
 
-      globalThis.vms2Context_.fontCharacterContext_.font = drawingInfo_.fontStyle_ + ' 100px ' + drawingInfo_.fontFamily_
+      globalThis.vms2Context.fontCharacterContext.font = drawingInfo.fontStyle + ' 100px ' + drawingInfo.fontFamily
 
-      for (const textLineInfo_ of textLineInfos_) {
-        textLineInfo_.width_ = globalThis.vms2Context_.fontCharacterContext_.measureText(textLineInfo_.text_).width * drawingInfo_.fontSize_ / 100
+      for (const textLineInfo of textLineInfos) {
+        textLineInfo.width = globalThis.vms2Context.fontCharacterContext.measureText(textLineInfo.text).width * drawingInfo.fontSize / 100
 
-        if (textLineInfo_.width_ > textBoxWidth_) {
-          textBoxWidth_ = textLineInfo_.width_
+        if (textLineInfo.width > textBoxWidth) {
+          textBoxWidth = textLineInfo.width
         }
       }
 
-      const textBoxHeight_ = drawingInfo_.fontSize_ * textLineInfos_.length
+      const textBoxHeight = drawingInfo.fontSize * textLineInfos.length
 
-      if (textLineInfos_.length > 1) {
-        if (textY_ === 0) {
-          textY_ -= (textLineInfos_.length - 1) * drawingInfo_.fontSize_ / 2
-        } else if (textY_ < 0) {
-          textY_ -= (textLineInfos_.length - 1) * drawingInfo_.fontSize_
+      if (textLineInfos.length > 1) {
+        if (textY === 0) {
+          textY -= (textLineInfos.length - 1) * drawingInfo.fontSize / 2
+        } else if (textY < 0) {
+          textY -= (textLineInfos.length - 1) * drawingInfo.fontSize
         }
       }
 
-      const spacingX_ = textBoxWidth_ * (drawingInfo_.displacementScaleX_ - 1)
-      const spacingY_ = textBoxHeight_ * (drawingInfo_.displacementScaleY_ - 1)
+      const spacingX = textBoxWidth * (drawingInfo.displacementScaleX - 1)
+      const spacingY = textBoxHeight * (drawingInfo.displacementScaleY - 1)
 
-      if (drawingInfo_.displacementScaleX_ > 0 && drawingInfo_.displacementScaleY_ > 0) {
-        if (drawingInfo_.iconTextPlacement_ && drawingInfo_.isIcon_ && drawingInfo_.iconImage_) {
-          for (const placementCode_ in drawingInfo_.iconTextPlacement_) {
-            const gapX_ = drawingInfo_.iconWidth_ * drawingInfo_.iconTextPlacement_[placementCode_]
-            const gapY_ = drawingInfo_.iconHeight_ * drawingInfo_.iconTextPlacement_[placementCode_]
+      if (drawingInfo.displacementScaleX > 0 && drawingInfo.displacementScaleY > 0) {
+        if (drawingInfo.iconTextPlacement && drawingInfo.isIcon && drawingInfo.iconImage) {
+          for (const placementCode in drawingInfo.iconTextPlacement) {
+            const gapX = drawingInfo.iconWidth * drawingInfo.iconTextPlacement[placementCode]
+            const gapY = drawingInfo.iconHeight * drawingInfo.iconTextPlacement[placementCode]
 
-            switch (placementCode_) {
-              case 't':
-                textDisplacementBoxes_.push({
-                  x_: drawingInfo_.iconImageOffsetX_,
-                  y_: drawingInfo_.iconImageOffsetY_ - textBoxHeight_ - drawingInfo_.iconHeight_ / 2 - gapY_,
-                  left_: x_ + drawingInfo_.iconImageOffsetX_ - textBoxWidth_ / 2 - spacingX_,
-                  right_: x_ + drawingInfo_.iconImageOffsetX_ + textBoxWidth_ / 2 + spacingX_,
-                  top_: y_ - drawingInfo_.iconImageOffsetY_ + textBoxHeight_ + drawingInfo_.iconHeight_ / 2 + spacingY_ + gapY_,
-                  bottom_: y_ - drawingInfo_.iconImageOffsetY_ + drawingInfo_.iconHeight_ / 2 - spacingY_ + gapY_,
-                  align_: 'center',
-                  baseline_: 'top'
-                })
-                break
+            switch (placementCode) {
+            case 't':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX,
+                y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
+                left: x + drawingInfo.iconImageOffsetX - textBoxWidth / 2 - spacingX,
+                right: x + drawingInfo.iconImageOffsetX + textBoxWidth / 2 + spacingX,
+                top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
+                bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
+                align: 'center',
+                baseline: 'top'
+              })
+              break
 
-              case 'b':
-                textDisplacementBoxes_.push({
-                  x_: drawingInfo_.iconImageOffsetX_,
-                  y_: drawingInfo_.iconImageOffsetY_ + drawingInfo_.iconHeight_ / 2 + gapY_,
-                  left_: x_ + drawingInfo_.iconImageOffsetX_ - textBoxWidth_ / 2 - spacingX_,
-                  right_: x_ + drawingInfo_.iconImageOffsetX_ + textBoxWidth_ / 2 + spacingX_,
-                  top_: y_ - drawingInfo_.iconImageOffsetY_ - drawingInfo_.iconHeight_ / 2 + spacingY_ - gapY_,
-                  bottom_: y_ - drawingInfo_.iconImageOffsetY_ - textBoxHeight_ - drawingInfo_.iconHeight_ / 2 - spacingY_ - gapY_,
-                  align_: 'center',
-                  baseline_: 'top'
-                })
-                break
+            case 'b':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX,
+                y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
+                left: x + drawingInfo.iconImageOffsetX - textBoxWidth / 2 - spacingX,
+                right: x + drawingInfo.iconImageOffsetX + textBoxWidth / 2 + spacingX,
+                top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
+                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
+                align: 'center',
+                baseline: 'top'
+              })
+              break
 
-              case 'l':
-                textDisplacementBoxes_.push({
-                  x_: drawingInfo_.iconImageOffsetX_ - drawingInfo_.iconWidth_ / 2 - gapX_,
-                  y_: drawingInfo_.iconImageOffsetY_ - textBoxHeight_ / 2,
-                  left_: x_ + drawingInfo_.iconImageOffsetX_ - textBoxWidth_ - drawingInfo_.iconWidth_ / 2 - spacingX_ - gapX_,
-                  right_: x_ + drawingInfo_.iconImageOffsetX_ - drawingInfo_.iconWidth_ / 2 + spacingX_ - gapX_,
-                  top_: y_ - drawingInfo_.iconImageOffsetY_ + textBoxHeight_ / 2 + spacingY_,
-                  bottom_: y_ - drawingInfo_.iconImageOffsetY_ - textBoxHeight_ / 2 - spacingY_,
-                  align_: 'right',
-                  baseline_: 'top'
-                })
-                break
+            case 'l':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
+                y: drawingInfo.iconImageOffsetY - textBoxHeight / 2,
+                left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
+                right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
+                top: y - drawingInfo.iconImageOffsetY + textBoxHeight / 2 + spacingY,
+                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight / 2 - spacingY,
+                align: 'right',
+                baseline: 'top'
+              })
+              break
 
-              case 'r':
-                textDisplacementBoxes_.push({
-                  x_: drawingInfo_.iconImageOffsetX_ + drawingInfo_.iconWidth_ / 2 + gapX_,
-                  y_: drawingInfo_.iconImageOffsetY_ - textBoxHeight_ / 2,
-                  left_: x_ + drawingInfo_.iconImageOffsetX_ + drawingInfo_.iconWidth_ / 2 - spacingX_ + gapX_,
-                  right_: x_ + drawingInfo_.iconImageOffsetX_ + textBoxWidth_ + drawingInfo_.iconWidth_ / 2 + spacingX_ + gapX_,
-                  top_: y_ - drawingInfo_.iconImageOffsetY_ + textBoxHeight_ / 2 + spacingY_,
-                  bottom_: y_ - drawingInfo_.iconImageOffsetY_ - textBoxHeight_ / 2 - spacingY_,
-                  align_: 'left',
-                  baseline_: 'top'
-                })
-                break
+            case 'r':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
+                y: drawingInfo.iconImageOffsetY - textBoxHeight / 2,
+                left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 - spacingX + gapX,
+                right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 + spacingX + gapX,
+                top: y - drawingInfo.iconImageOffsetY + textBoxHeight / 2 + spacingY,
+                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight / 2 - spacingY,
+                align: 'left',
+                baseline: 'top'
+              })
+              break
 
-              case 'tl':
-                textDisplacementBoxes_.push({
-                  x_: drawingInfo_.iconImageOffsetX_ - drawingInfo_.iconWidth_ / 2 - gapX_,
-                  y_: drawingInfo_.iconImageOffsetY_ - textBoxHeight_ - drawingInfo_.iconHeight_ / 2 - gapY_,
-                  left_: x_ + drawingInfo_.iconImageOffsetX_ - textBoxWidth_ - drawingInfo_.iconWidth_ / 2 - spacingX_ - gapX_,
-                  right_: x_ + drawingInfo_.iconImageOffsetX_ - drawingInfo_.iconWidth_ / 2 + spacingX_ - gapX_,
-                  top_: y_ - drawingInfo_.iconImageOffsetY_ + textBoxHeight_ + drawingInfo_.iconHeight_ / 2 + spacingY_ + gapY_,
-                  bottom_: y_ - drawingInfo_.iconImageOffsetY_ + drawingInfo_.iconHeight_ / 2 - spacingY_ + gapY_,
-                  align_: 'right',
-                  baseline_: 'top'
-                })
-                break
+            case 'tl':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
+                y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
+                left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
+                right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
+                top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
+                bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
+                align: 'right',
+                baseline: 'top'
+              })
+              break
 
-              case 'tr':
-                textDisplacementBoxes_.push({
-                  x_: drawingInfo_.iconImageOffsetX_ + drawingInfo_.iconWidth_ / 2 + gapX_,
-                  y_: drawingInfo_.iconImageOffsetY_ - textBoxHeight_ - drawingInfo_.iconHeight_ / 2 - gapY_,
-                  left_: x_ + drawingInfo_.iconImageOffsetX_ + drawingInfo_.iconWidth_ / 2 + spacingX_ + gapX_,
-                  right_: x_ + drawingInfo_.iconImageOffsetX_ + textBoxWidth_ + drawingInfo_.iconWidth_ / 2 - spacingX_ + gapX_,
-                  top_: y_ - drawingInfo_.iconImageOffsetY_ + textBoxHeight_ + drawingInfo_.iconHeight_ / 2 + spacingY_ + gapY_,
-                  bottom_: y_ - drawingInfo_.iconImageOffsetY_ + drawingInfo_.iconHeight_ / 2 - spacingY_ + gapY_,
-                  align_: 'left',
-                  baseline_: 'top'
-                })
-                break
+            case 'tr':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
+                y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
+                left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + spacingX + gapX,
+                right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 - spacingX + gapX,
+                top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
+                bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
+                align: 'left',
+                baseline: 'top'
+              })
+              break
 
-              case 'bl':
-                textDisplacementBoxes_.push({
-                  x_: drawingInfo_.iconImageOffsetX_ - drawingInfo_.iconWidth_ / 2 - gapX_,
-                  y_: drawingInfo_.iconImageOffsetY_ + drawingInfo_.iconHeight_ / 2 + gapY_,
-                  left_: x_ + drawingInfo_.iconImageOffsetX_ - textBoxWidth_ - drawingInfo_.iconWidth_ / 2 - spacingX_ - gapX_,
-                  right_: x_ + drawingInfo_.iconImageOffsetX_ - drawingInfo_.iconWidth_ / 2 + spacingX_ - gapX_,
-                  top_: y_ - drawingInfo_.iconImageOffsetY_ - drawingInfo_.iconHeight_ / 2 + spacingY_ - gapY_,
-                  bottom_: y_ - drawingInfo_.iconImageOffsetY_ - textBoxHeight_ - drawingInfo_.iconHeight_ / 2 - spacingY_ - gapY_,
-                  align_: 'right',
-                  baseline_: 'top'
-                })
-                break
+            case 'bl':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
+                y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
+                left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
+                right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
+                top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
+                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
+                align: 'right',
+                baseline: 'top'
+              })
+              break
 
-              case 'br':
-                textDisplacementBoxes_.push({
-                  x_: drawingInfo_.iconImageOffsetX_ + drawingInfo_.iconWidth_ / 2 + gapX_,
-                  y_: drawingInfo_.iconImageOffsetY_ + drawingInfo_.iconHeight_ / 2 + gapY_,
-                  left_: x_ + drawingInfo_.iconImageOffsetX_ + drawingInfo_.iconWidth_ / 2 - spacingX_ + gapX_,
-                  right_: x_ + drawingInfo_.iconImageOffsetX_ + textBoxWidth_ + drawingInfo_.iconWidth_ / 2 + spacingX_ + gapX_,
-                  top_: y_ - drawingInfo_.iconImageOffsetY_ - drawingInfo_.iconHeight_ / 2 + spacingY_ - gapY_,
-                  bottom_: y_ - drawingInfo_.iconImageOffsetY_ - textBoxHeight_ - drawingInfo_.iconHeight_ / 2 - spacingY_ - gapY_,
-                  align_: 'left',
-                  baseline_: 'top'
-                })
-                break
+            case 'br':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
+                y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
+                left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 - spacingX + gapX,
+                right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 + spacingX + gapX,
+                top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
+                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
+                align: 'left',
+                baseline: 'top'
+              })
+              break
             }
           }
         } else {
-          textDisplacementBoxes_.push({
-            x_: drawingInfo_.iconTextOffsetX_,
-            y_: drawingInfo_.iconTextOffsetY_,
-            left_: x_ + drawingInfo_.iconTextOffsetX_ - textBoxWidth_ / 2 - spacingX_,
-            right_: x_ + drawingInfo_.iconTextOffsetX_ + textBoxWidth_ / 2 + spacingX_,
-            top_: y_ - drawingInfo_.iconTextOffsetY_ + textBoxHeight_ / 2 + spacingY_,
-            bottom_: y_ - drawingInfo_.iconTextOffsetY_ - textBoxHeight_ / 2 - spacingY_,
-            align_: 'center',
-            baseline_: 'middle'
+          textDisplacementBoxes.push({
+            x: drawingInfo.iconTextOffsetX,
+            y: drawingInfo.iconTextOffsetY,
+            left: x + drawingInfo.iconTextOffsetX - textBoxWidth / 2 - spacingX,
+            right: x + drawingInfo.iconTextOffsetX + textBoxWidth / 2 + spacingX,
+            top: y - drawingInfo.iconTextOffsetY + textBoxHeight / 2 + spacingY,
+            bottom: y - drawingInfo.iconTextOffsetY - textBoxHeight / 2 - spacingY,
+            align: 'center',
+            baseline: 'middle'
           })
         }
       }
     }
 
-    if (textDisplacementBoxes_.length > 0) {
-      for (const textDisplacementBox_ of textDisplacementBoxes_) {
-        const textAndIconBoxes_ = []
+    if (textDisplacementBoxes.length > 0) {
+      for (const textDisplacementBox of textDisplacementBoxes) {
+        const textAndIconBoxes = []
 
-        textAndIconBoxes_.push(textDisplacementBox_)
+        textAndIconBoxes.push(textDisplacementBox)
 
-        if (iconDisplacementBox_) {
-          textAndIconBoxes_.push(iconDisplacementBox_)
+        if (iconDisplacementBox) {
+          textAndIconBoxes.push(iconDisplacementBox)
         }
 
-        if (this._checkAndSetDisplacement_(drawingInfo_.displacementLayers_, drawingInfo_.displacementLayerNames_, textAndIconBoxes_)) {
-          let groupStarted_ = false
+        if (this._checkAndSetDisplacement(drawingInfo.displacementLayers, drawingInfo.displacementLayerNames, textAndIconBoxes)) {
+          let groupStarted = false
 
-          if (drawingInfo_.isIcon_ && drawingInfo_.iconImage_) {
-            const iconX_ = drawingInfo_.iconImageOffsetX_ - drawingInfo_.iconWidth_ * drawingInfo_.iconMirrorX_ / 2
-            const iconY_ = drawingInfo_.iconImageOffsetY_ - drawingInfo_.iconHeight_ * drawingInfo_.iconMirrorY_ / 2
+          if (drawingInfo.isIcon && drawingInfo.iconImage) {
+            const iconX = drawingInfo.iconImageOffsetX - drawingInfo.iconWidth * drawingInfo.iconMirrorX / 2
+            const iconY = drawingInfo.iconImageOffsetY - drawingInfo.iconHeight * drawingInfo.iconMirrorY / 2
 
-            let iconLeft_ = x_ + iconX_
-            let iconRight_ = iconLeft_ + drawingInfo_.iconWidth_ * drawingInfo_.iconMirrorX_
-            let iconBottom_ = y_ + iconY_
-            let iconTop_ = iconBottom_ + drawingInfo_.iconHeight_ * drawingInfo_.iconMirrorY_
+            let iconLeft = x + iconX
+            let iconRight = iconLeft + drawingInfo.iconWidth * drawingInfo.iconMirrorX
+            let iconBottom = y + iconY
+            let iconTop = iconBottom + drawingInfo.iconHeight * drawingInfo.iconMirrorY
 
-            if (iconLeft_ > iconRight_) {
-              const temp_ = iconLeft_
+            if (iconLeft > iconRight) {
+              const temp = iconLeft
 
-              iconLeft_ = iconRight_
-              iconRight_ = temp_
+              iconLeft = iconRight
+              iconRight = temp
             }
 
-            if (iconBottom_ > iconTop_) {
-              const temp_ = iconBottom_
+            if (iconBottom > iconTop) {
+              const temp = iconBottom
 
-              iconBottom_ = iconTop_
-              iconTop_ = temp_
+              iconBottom = iconTop
+              iconTop = temp
             }
 
-            if (!(iconLeft_ > drawingInfo_.mapArea_.right_ || iconRight_ < drawingInfo_.mapArea_.left_ || iconTop_ < drawingInfo_.mapArea_.bottom_ || iconBottom_ > drawingInfo_.mapArea_.top_)) { // Note: Top > Bottom!
-              drawingInfo_.context_.beginGroup(drawingInfo_.text_ || '')
+            if (!(iconLeft > drawingInfo.mapArea.right || iconRight < drawingInfo.mapArea.left || iconTop < drawingInfo.mapArea.bottom || iconBottom > drawingInfo.mapArea.top)) { // Note: Top > Bottom!
+              drawingInfo.context.beginGroup(drawingInfo.text || '')
 
-              groupStarted_ = true
+              groupStarted = true
 
-              drawingInfo_.context_.drawImage(
-                drawingInfo_.iconImage_,
-                (x_ - drawingInfo_.drawingArea_.left_ + iconX_) * drawingInfo_.mapScale_,
-                (drawingInfo_.drawingArea_.top_ - y_ + iconY_) * drawingInfo_.mapScale_,
-                drawingInfo_.iconWidth_ * drawingInfo_.iconMirrorX_ * drawingInfo_.mapScale_,
-                drawingInfo_.iconHeight_ * drawingInfo_.iconMirrorY_ * drawingInfo_.mapScale_
+              drawingInfo.context.drawImage(
+                drawingInfo.iconImage,
+                (x - drawingInfo.drawingArea.left + iconX) * drawingInfo.mapScale,
+                (drawingInfo.drawingArea.top - y + iconY) * drawingInfo.mapScale,
+                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.mapScale,
+                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.mapScale
               )
             }
           }
 
-          if (drawingInfo_.isText_ && drawingInfo_.text_) {
-            if (!(textDisplacementBox_.left_ > drawingInfo_.mapArea_.right_ || textDisplacementBox_.right_ < drawingInfo_.mapArea_.left_ || textDisplacementBox_.top_ < drawingInfo_.mapArea_.bottom_ || textDisplacementBox_.bottom_ > drawingInfo_.mapArea_.top_)) { // Note: Top > Bottom!
-              drawingInfo_.context_.beginGroup(drawingInfo_.text_)
+          if (drawingInfo.isText && drawingInfo.text) {
+            if (!(textDisplacementBox.left > drawingInfo.mapArea.right || textDisplacementBox.right < drawingInfo.mapArea.left || textDisplacementBox.top < drawingInfo.mapArea.bottom || textDisplacementBox.bottom > drawingInfo.mapArea.top)) { // Note: Top > Bottom!
+              drawingInfo.context.beginGroup(drawingInfo.text)
 
-              if (drawingInfo_.isIcon_ && drawingInfo_.iconPositions_[drawingInfo_.text_]) {
-                drawingInfo_.iconPositions_[drawingInfo_.text_].push({ x_, y_ })
+              if (drawingInfo.isIcon && drawingInfo.iconPositions[drawingInfo.text]) {
+                drawingInfo.iconPositions[drawingInfo.text].push({ x: x, y: y })
               }
 
-              drawingInfo_.context_.textAlign = textDisplacementBox_.align_
-              drawingInfo_.context_.textBaseline = textDisplacementBox_.baseline_
+              drawingInfo.context.textAlign = textDisplacementBox.align
+              drawingInfo.context.textBaseline = textDisplacementBox.baseline
 
-              const textX_ = (x_ - drawingInfo_.drawingArea_.left_ + textDisplacementBox_.x_) * drawingInfo_.mapScale_
-              let textY_ = (drawingInfo_.drawingArea_.top_ - y_ + textDisplacementBox_.y_) * drawingInfo_.mapScale_
+              const textX = (x - drawingInfo.drawingArea.left + textDisplacementBox.x) * drawingInfo.mapScale
+              let textY = (drawingInfo.drawingArea.top - y + textDisplacementBox.y) * drawingInfo.mapScale
 
-              if (textLineInfos_.length > 1 && textDisplacementBox_.baseline_ === 'middle') {
-                textY_ -= drawingInfo_.fontSize_ * drawingInfo_.mapScale_ * (textLineInfos_.length - 1) / 2
+              if (textLineInfos.length > 1 && textDisplacementBox.baseline === 'middle') {
+                textY -= drawingInfo.fontSize * drawingInfo.mapScale * (textLineInfos.length - 1) / 2
               }
 
-              for (const textLineInfo_ of textLineInfos_) {
-                drawingInfo_.context_.tw = textLineInfo_.width_
-                drawingInfo_.context_.strokeText(textLineInfo_.text_, textX_, textY_)
-                drawingInfo_.context_.fillText(textLineInfo_.text_, textX_, textY_)
+              for (const textLineInfo of textLineInfos) {
+                drawingInfo.context.tw = textLineInfo.width
+                drawingInfo.context.strokeText(textLineInfo.text, textX, textY)
+                drawingInfo.context.fillText(textLineInfo.text, textX, textY)
 
-                textY_ += drawingInfo_.fontSize_ * drawingInfo_.mapScale_
+                textY += drawingInfo.fontSize * drawingInfo.mapScale
               }
 
-              drawingInfo_.context_.endGroup()
+              drawingInfo.context.endGroup()
             }
           }
 
-          if (groupStarted_) {
-            drawingInfo_.context_.endGroup()
+          if (groupStarted) {
+            drawingInfo.context.endGroup()
           }
 
           break
         }
       }
     } else {
-      if (drawingInfo_.isIcon_ && drawingInfo_.iconImage_) {
+      if (drawingInfo.isIcon && drawingInfo.iconImage) {
         if (
-          (iconDisplacementBox_ && this._checkAndSetDisplacement_(drawingInfo_.displacementLayers_, drawingInfo_.displacementLayerNames_, [iconDisplacementBox_])) ||
-          !iconDisplacementBox_
+          (iconDisplacementBox && this._checkAndSetDisplacement(drawingInfo.displacementLayers, drawingInfo.displacementLayerNames, [iconDisplacementBox])) ||
+          !iconDisplacementBox
         ) {
-          const iconX_ = drawingInfo_.iconImageOffsetX_ - drawingInfo_.iconWidth_ * drawingInfo_.iconMirrorX_ / 2
-          const iconY_ = drawingInfo_.iconImageOffsetY_ - drawingInfo_.iconHeight_ * drawingInfo_.iconMirrorY_ / 2
+          const iconX = drawingInfo.iconImageOffsetX - drawingInfo.iconWidth * drawingInfo.iconMirrorX / 2
+          const iconY = drawingInfo.iconImageOffsetY - drawingInfo.iconHeight * drawingInfo.iconMirrorY / 2
 
-          let iconLeft_ = x_ + iconX_
-          let iconRight_ = iconLeft_ + drawingInfo_.iconWidth_ * drawingInfo_.iconMirrorX_
-          let iconBottom_ = y_ + iconY_
-          let iconTop_ = iconBottom_ + drawingInfo_.iconHeight_ * drawingInfo_.iconMirrorY_
+          let iconLeft = x + iconX
+          let iconRight = iconLeft + drawingInfo.iconWidth * drawingInfo.iconMirrorX
+          let iconBottom = y + iconY
+          let iconTop = iconBottom + drawingInfo.iconHeight * drawingInfo.iconMirrorY
 
-          if (iconLeft_ > iconRight_) {
-            const temp_ = iconLeft_
+          if (iconLeft > iconRight) {
+            const temp = iconLeft
 
-            iconLeft_ = iconRight_
-            iconRight_ = temp_
+            iconLeft = iconRight
+            iconRight = temp
           }
 
-          if (iconBottom_ > iconTop_) {
-            const temp_ = iconBottom_
+          if (iconBottom > iconTop) {
+            const temp = iconBottom
 
-            iconBottom_ = iconTop_
-            iconTop_ = temp_
+            iconBottom = iconTop
+            iconTop = temp
           }
 
           if (
             !(
-              iconLeft_ > drawingInfo_.boundingArea_.right_ ||
-              iconRight_ < drawingInfo_.boundingArea_.left_ ||
-              iconTop_ < drawingInfo_.boundingArea_.bottom_ ||
-              iconBottom_ > drawingInfo_.boundingArea_.top_
+              iconLeft > drawingInfo.boundingArea.right ||
+              iconRight < drawingInfo.boundingArea.left ||
+              iconTop < drawingInfo.boundingArea.bottom ||
+              iconBottom > drawingInfo.boundingArea.top
             ) ||
-            drawingInfo_.isGrid_
+            drawingInfo.isGrid
           ) { // Note: Top > Bottom! Allow every location if there is a grid!
-            if (drawingInfo_.iconAngle_ !== 0) {
-              drawingInfo_.context_.setTransform(new DOMMatrix().translate((x_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_, (drawingInfo_.drawingArea_.top_ - y_) * drawingInfo_.mapScale_).rotate(drawingInfo_.iconAngle_ * 180 / Math.PI))
-              drawingInfo_.context_.drawImage(
-                drawingInfo_.iconImage_,
-                iconX_ * drawingInfo_.mapScale_, iconY_ * drawingInfo_.mapScale_,
-                drawingInfo_.iconWidth_ * drawingInfo_.iconMirrorX_ * drawingInfo_.mapScale_,
-                drawingInfo_.iconHeight_ * drawingInfo_.iconMirrorY_ * drawingInfo_.mapScale_)
+            if (drawingInfo.iconAngle !== 0) {
+              drawingInfo.context.setTransform(new DOMMatrix().translate((x - drawingInfo.drawingArea.left) * drawingInfo.mapScale, (drawingInfo.drawingArea.top - y) * drawingInfo.mapScale).rotate(drawingInfo.iconAngle * 180 / Math.PI))
+              drawingInfo.context.drawImage(
+                drawingInfo.iconImage,
+                iconX * drawingInfo.mapScale, iconY * drawingInfo.mapScale,
+                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.mapScale,
+                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.mapScale)
             } else {
-              drawingInfo_.context_.drawImage(
-                drawingInfo_.iconImage_,
-                (x_ - drawingInfo_.drawingArea_.left_ + iconX_) * drawingInfo_.mapScale_,
-                (drawingInfo_.drawingArea_.top_ - y_ + iconY_) * drawingInfo_.mapScale_,
-                drawingInfo_.iconWidth_ * drawingInfo_.iconMirrorX_ * drawingInfo_.mapScale_,
-                drawingInfo_.iconHeight_ * drawingInfo_.iconMirrorY_ * drawingInfo_.mapScale_
+              drawingInfo.context.drawImage(
+                drawingInfo.iconImage,
+                (x - drawingInfo.drawingArea.left + iconX) * drawingInfo.mapScale,
+                (drawingInfo.drawingArea.top - y + iconY) * drawingInfo.mapScale,
+                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.mapScale,
+                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.mapScale
               )
             }
           }
@@ -1034,1409 +1039,1407 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
     }
   },
-  _drawLineString_(drawingInfo_, geometry_, dataOffset_) {
-    dataOffset_ += 4
+  _drawLineString: function (drawingInfo, geometry, dataOffset) {
+    dataOffset += 4
 
-    const numberOfPoints_ = geometry_.getUint32(dataOffset_, true)
-    dataOffset_ += 4
+    const numberOfPoints = geometry.getUint32(dataOffset, true)
+    dataOffset += 4
 
-    if (numberOfPoints_ === 0) {
-      return dataOffset_
+    if (numberOfPoints === 0) {
+      return dataOffset
     }
 
-    if (drawingInfo_.isIcon_ && drawingInfo_.iconImage_) { // Draw an icon and text on the line center.
-      const halfLength_ = drawingInfo_.objectData_.length / 2
-      let iconPositionLength_ = 0
+    if (drawingInfo.isIcon && drawingInfo.iconImage) { // Draw an icon and text on the line center.
+      const halfLength = drawingInfo.objectData.length / 2
+      let iconPositionLength = 0
 
-      let x_ = geometry_.getFloat32(dataOffset_, true)
-      dataOffset_ += 4
+      let x = geometry.getFloat32(dataOffset, true)
+      dataOffset += 4
 
-      let y_ = geometry_.getFloat32(dataOffset_, true)
-      dataOffset_ += 4
+      let y = geometry.getFloat32(dataOffset, true)
+      dataOffset += 4
 
-      for (let pointIndex_ = 1; pointIndex_ < numberOfPoints_; pointIndex_++) {
-        const x2_ = geometry_.getFloat32(dataOffset_, true)
-        dataOffset_ += 4
+      for (let pointIndex = 1; pointIndex < numberOfPoints; pointIndex++) {
+        const x2 = geometry.getFloat32(dataOffset, true)
+        dataOffset += 4
 
-        const y2_ = geometry_.getFloat32(dataOffset_, true)
-        dataOffset_ += 4
+        const y2 = geometry.getFloat32(dataOffset, true)
+        dataOffset += 4
 
-        const deltaX_ = x2_ - x_
-        const deltaY_ = y2_ - y_
+        const deltaX = x2 - x
+        const deltaY = y2 - y
 
-        const segmentLength_ = Math.sqrt(deltaX_ * deltaX_ + deltaY_ * deltaY_)
+        const segmentLength = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
 
-        if (iconPositionLength_ + segmentLength_ > halfLength_) {
-          const factor_ = (halfLength_ - iconPositionLength_) / segmentLength_
+        if (iconPositionLength + segmentLength > halfLength) {
+          const factor = (halfLength - iconPositionLength) / segmentLength
 
-          x_ += deltaX_ * factor_
-          y_ += deltaY_ * factor_
+          x += deltaX * factor
+          y += deltaY * factor
 
-          dataOffset_ += (numberOfPoints_ - pointIndex_ - 1) * 4 * 2
+          dataOffset += (numberOfPoints - pointIndex - 1) * 4 * 2
 
           break
         }
 
-        iconPositionLength_ += segmentLength_
+        iconPositionLength += segmentLength
 
-        x_ = x2_
-        y_ = y2_
+        x = x2
+        y = y2
       }
 
       // Check the distance to other labels of the same type.
 
-      let isExceedingMinimumDistance_ = true
+      let isExceedingMinimumDistance = true
 
-      if (drawingInfo_.iconPositions_[drawingInfo_.text_]) {
-        for (const iconPosition_ of drawingInfo_.iconPositions_[drawingInfo_.text_]) {
-          const deltaX_ = x_ - iconPosition_.x_
-          const deltaY_ = y_ - iconPosition_.y_
+      if (drawingInfo.iconPositions[drawingInfo.text]) {
+        for (const iconPosition of drawingInfo.iconPositions[drawingInfo.text]) {
+          const deltaX = x - iconPosition.x
+          const deltaY = y - iconPosition.y
 
-          if (deltaX_ * deltaX_ + deltaY_ * deltaY_ < drawingInfo_.iconMinimumDistance_ * drawingInfo_.iconMinimumDistance_) {
-            isExceedingMinimumDistance_ = false
+          if (deltaX * deltaX + deltaY * deltaY < drawingInfo.iconMinimumDistance * drawingInfo.iconMinimumDistance) {
+            isExceedingMinimumDistance = false
 
             break
           }
         }
       } else {
-        drawingInfo_.iconPositions_[drawingInfo_.text_] = []
+        drawingInfo.iconPositions[drawingInfo.text] = []
       }
 
-      if (isExceedingMinimumDistance_) {
-        this._drawIcon_(drawingInfo_, x_, y_)
+      if (isExceedingMinimumDistance) {
+        this._drawIcon(drawingInfo, x, y)
       }
-    } else if (drawingInfo_.isText_ && drawingInfo_.text_) { // Draw text along the line.
-      let text_ = drawingInfo_.text_.slice()
-      let textWidth_ = 0
+    } else if (drawingInfo.isText && drawingInfo.text) { // Draw text along the line.
+      let text = drawingInfo.text.slice()
+      let textWidth = 0
 
-      if (text_.length === 1) {
-        text_ = ' ' + text_ + ' '
+      if (text.length === 1) {
+        text = ' ' + text + ' '
       }
 
-      for (let characterIndex_ = 0; characterIndex_ < text_.length; characterIndex_++) {
-        if (this.unicodeDataTable_[text_.charCodeAt(characterIndex_)]) {
-          text_ = [...text_].reverse().join('')
+      for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
+        if (this.unicodeDataTable[text.charCodeAt(characterIndex)]) {
+          text = [...text].reverse().join('')
 
           break
         }
       }
 
-      for (let characterIndex_ = 0; characterIndex_ < text_.length; characterIndex_++) {
-        if (!globalThis.vms2Context_.fontCharacterWidths_[drawingInfo_.fontFamily_]) {
-          globalThis.vms2Context_.fontCharacterWidths_[drawingInfo_.fontFamily_] = {}
+      for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
+        if (!globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily]) {
+          globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily] = {}
         }
 
-        if (!globalThis.vms2Context_.fontCharacterWidths_[drawingInfo_.fontFamily_][drawingInfo_.fontStyle_]) {
-          globalThis.vms2Context_.fontCharacterWidths_[drawingInfo_.fontFamily_][drawingInfo_.fontStyle_] = {}
+        if (!globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle]) {
+          globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle] = {}
         }
 
-        if (!globalThis.vms2Context_.fontCharacterWidths_[drawingInfo_.fontFamily_][drawingInfo_.fontStyle_][text_[characterIndex_]]) {
-          globalThis.vms2Context_.fontCharacterContext_.font = drawingInfo_.fontStyle_ + ' 100px \'' + drawingInfo_.fontFamily_ + '\''
-          globalThis.vms2Context_.fontCharacterWidths_[drawingInfo_.fontFamily_][drawingInfo_.fontStyle_][text_[characterIndex_]] = globalThis.vms2Context_.fontCharacterContext_.measureText(text_[characterIndex_]).width
+        if (!globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][text[characterIndex]]) {
+          globalThis.vms2Context.fontCharacterContext.font = drawingInfo.fontStyle + ' 100px \'' + drawingInfo.fontFamily + '\''
+          globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][text[characterIndex]] = globalThis.vms2Context.fontCharacterContext.measureText(text[characterIndex]).width
         }
 
-        textWidth_ += globalThis.vms2Context_.fontCharacterWidths_[drawingInfo_.fontFamily_][drawingInfo_.fontStyle_][text_[characterIndex_]] * drawingInfo_.fontSize_ / 100
+        textWidth += globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][text[characterIndex]] * drawingInfo.fontSize / 100
       }
 
-      if (textWidth_ < drawingInfo_.objectData_.length) {
-        const segmentLengths_ = []
-        const points_ = []
-        let lineStringLength_ = 0
+      if (textWidth < drawingInfo.objectData.length) {
+        const segmentLengths = []
+        const points = []
+        let lineStringLength = 0
 
-        for (let pointIndex_ = 0; pointIndex_ < numberOfPoints_; pointIndex_++) {
-          const x_ = geometry_.getFloat32(dataOffset_, true)
-          dataOffset_ += 4
+        for (let pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
+          const x = geometry.getFloat32(dataOffset, true)
+          dataOffset += 4
 
-          const y_ = geometry_.getFloat32(dataOffset_, true)
-          dataOffset_ += 4
+          const y = geometry.getFloat32(dataOffset, true)
+          dataOffset += 4
 
-          points_.push({ x_, y_ })
+          points.push({ x, y })
 
-          if (pointIndex_ > 0) {
-            const deltaX_ = points_[pointIndex_ - 1].x_ - x_
-            const deltaY_ = points_[pointIndex_ - 1].y_ - y_
+          if (pointIndex > 0) {
+            const deltaX = points[pointIndex - 1].x - x
+            const deltaY = points[pointIndex - 1].y - y
 
-            const segmentLength_ = Math.sqrt(deltaX_ * deltaX_ + deltaY_ * deltaY_)
+            const segmentLength = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
 
-            lineStringLength_ += segmentLength_
-            segmentLengths_.push(segmentLength_)
+            lineStringLength += segmentLength
+            segmentLengths.push(segmentLength)
           }
         }
 
-        if (textWidth_ < lineStringLength_) {
-          let additionalCharacterRotation_ = 0
-          let pointsIndex_ = 0
-          let lineOffset_ = 0
-          let characterOffset_ = (lineStringLength_ - textWidth_) / 2
+        if (textWidth < lineStringLength) {
+          let additionalCharacterRotation = 0
+          let pointsIndex = 0
+          let lineOffset = 0
+          let characterOffset = (lineStringLength - textWidth) / 2
 
-          const characterInfos_ = []
+          const characterInfos = []
 
-          let tempLength_ = 0
-          let tempPointsIndex_ = 0
+          let tempLength = 0
+          let tempPointsIndex = 0
 
-          while (tempLength_ + segmentLengths_[tempPointsIndex_] < lineStringLength_ / 2) {
-            tempLength_ += segmentLengths_[tempPointsIndex_]
+          while (tempLength + segmentLengths[tempPointsIndex] < lineStringLength / 2) {
+            tempLength += segmentLengths[tempPointsIndex]
 
-            tempPointsIndex_++
+            tempPointsIndex++
           }
 
-          if (points_[tempPointsIndex_].x_ > points_[tempPointsIndex_ + 1].x_) {
-            text_ = [...text_].reverse().join('')
+          if (points[tempPointsIndex].x > points[tempPointsIndex + 1].x) {
+            text = [...text].reverse().join('')
 
-            additionalCharacterRotation_ = Math.PI
+            additionalCharacterRotation = Math.PI
           }
 
-          for (let characterIndex_ = 0; characterIndex_ < text_.length; characterIndex_++) {
-            const characterWidth_ = globalThis.vms2Context_.fontCharacterWidths_[drawingInfo_.fontFamily_][drawingInfo_.fontStyle_][text_[characterIndex_]] * drawingInfo_.fontSize_ / 100
+          for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
+            const characterWidth = globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][text[characterIndex]] * drawingInfo.fontSize / 100
 
-            characterOffset_ += characterWidth_ / 2
+            characterOffset += characterWidth / 2
 
-            while (lineOffset_ + segmentLengths_[pointsIndex_] < characterOffset_) {
-              lineOffset_ += segmentLengths_[pointsIndex_++]
+            while (lineOffset + segmentLengths[pointsIndex] < characterOffset) {
+              lineOffset += segmentLengths[pointsIndex++]
             }
 
-            const factor_ = (characterOffset_ - lineOffset_) / segmentLengths_[pointsIndex_]
-            const textX_ = points_[pointsIndex_].x_ + (points_[pointsIndex_ + 1].x_ - points_[pointsIndex_].x_) * factor_
-            const textY_ = points_[pointsIndex_].y_ + (points_[pointsIndex_ + 1].y_ - points_[pointsIndex_].y_) * factor_
+            const factor = (characterOffset - lineOffset) / segmentLengths[pointsIndex]
+            const textX = points[pointsIndex].x + (points[pointsIndex + 1].x - points[pointsIndex].x) * factor
+            const textY = points[pointsIndex].y + (points[pointsIndex + 1].y - points[pointsIndex].y) * factor
 
-            characterOffset_ += characterWidth_ / 2
+            characterOffset += characterWidth / 2
 
-            characterInfos_.push({ point_: { x_: textX_, y_: textY_ }, width_: characterWidth_ })
+            characterInfos.push({ point: { x: textX, y: textY }, width: characterWidth })
           }
 
-          const textBoxes_ = []
-          let textIsVisible_ = false
+          const textBoxes = []
+          let textIsVisible = false
 
-          if (drawingInfo_.displacementScaleX_ > 0 && drawingInfo_.displacementScaleY_ > 0) {
-            for (const characterInfo_ of characterInfos_) {
-              const left_ = characterInfo_.point_.x_ - drawingInfo_.fontSize_ * drawingInfo_.displacementScaleX_ / 2
-              const right_ = characterInfo_.point_.x_ + drawingInfo_.fontSize_ * drawingInfo_.displacementScaleX_ / 2
-              const top_ = characterInfo_.point_.y_ + drawingInfo_.fontSize_ * drawingInfo_.displacementScaleY_ / 2
-              const bottom_ = characterInfo_.point_.y_ - drawingInfo_.fontSize_ * drawingInfo_.displacementScaleY_ / 2
+          if (drawingInfo.displacementScaleX > 0 && drawingInfo.displacementScaleY > 0) {
+            for (const characterInfo of characterInfos) {
+              const left = characterInfo.point.x - drawingInfo.fontSize * drawingInfo.displacementScaleX / 2
+              const right = characterInfo.point.x + drawingInfo.fontSize * drawingInfo.displacementScaleX / 2
+              const top = characterInfo.point.y + drawingInfo.fontSize * drawingInfo.displacementScaleY / 2
+              const bottom = characterInfo.point.y - drawingInfo.fontSize * drawingInfo.displacementScaleY / 2
 
-              textBoxes_.push({ left_, right_, top_, bottom_ })
+              textBoxes.push({ left, right, top, bottom })
 
-              if (!(left_ > drawingInfo_.mapArea_.right_ || right_ < drawingInfo_.mapArea_.left_ || top_ < drawingInfo_.mapArea_.bottom_ || bottom_ > drawingInfo_.mapArea_.top_)) { // Note: Top > Bottom!
-                textIsVisible_ = true
+              if (!(left > drawingInfo.mapArea.right || right < drawingInfo.mapArea.left || top < drawingInfo.mapArea.bottom || bottom > drawingInfo.mapArea.top)) { // Note: Top > Bottom!
+                textIsVisible = true
               }
             }
           }
 
-          if (this._checkAndSetDisplacement_(drawingInfo_.displacementLayers_, drawingInfo_.displacementLayerNames_, textBoxes_)) {
-            if (textIsVisible_) {
-              let maximumRotationAngleDelta_ = 0
-              let lastRotationAngle_ = 0
-              let startRotationAngle_ = 0
+          if (this._checkAndSetDisplacement(drawingInfo.displacementLayers, drawingInfo.displacementLayerNames, textBoxes)) {
+            if (textIsVisible) {
+              let maximumRotationAngleDelta = 0
+              let lastRotationAngle = 0
+              let startRotationAngle = 0
 
-              if (characterInfos_[0].point_.y_ > characterInfos_[1].point_.y_) {
-                startRotationAngle_ = Math.PI / 2
+              if (characterInfos[0].point.y > characterInfos[1].point.y) {
+                startRotationAngle = Math.PI / 2
               } else {
-                startRotationAngle_ = -Math.PI / 2
+                startRotationAngle = -Math.PI / 2
               }
 
-              for (let characterIndex_ = 0; characterIndex_ < text_.length; characterIndex_++) {
-                const angleStartPoint_ = characterIndex_ > 0 ? characterInfos_[characterIndex_ - 1].point_ : characterInfos_[0].point_
-                const angleEndPoint_ = characterIndex_ < characterInfos_.length - 1 ? characterInfos_[characterIndex_ + 1].point_ : characterInfos_[characterIndex_].point_
-                let characterRotationAngle_ = (angleEndPoint_.x_ - angleStartPoint_.x_) === 0 ? startRotationAngle_ : Math.atan((angleEndPoint_.y_ - angleStartPoint_.y_) / (angleEndPoint_.x_ - angleStartPoint_.x_))
+              for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
+                const angleStartPoint = characterIndex > 0 ? characterInfos[characterIndex - 1].point : characterInfos[0].point
+                const angleEndPoint = characterIndex < characterInfos.length - 1 ? characterInfos[characterIndex + 1].point : characterInfos[characterIndex].point
+                let characterRotationAngle = (angleEndPoint.x - angleStartPoint.x) === 0 ? startRotationAngle : Math.atan((angleEndPoint.y - angleStartPoint.y) / (angleEndPoint.x - angleStartPoint.x))
 
-                if (angleEndPoint_.x_ <= angleStartPoint_.x_) {
-                  characterRotationAngle_ += Math.PI
+                if (angleEndPoint.x <= angleStartPoint.x) {
+                  characterRotationAngle += Math.PI
                 }
 
-                characterRotationAngle_ += additionalCharacterRotation_
+                characterRotationAngle += additionalCharacterRotation
 
-                characterInfos_[characterIndex_].rotationAngle_ = characterRotationAngle_
+                characterInfos[characterIndex].rotationAngle = characterRotationAngle
 
-                if (characterIndex_ === 0) {
-                  lastRotationAngle_ = characterRotationAngle_
+                if (characterIndex === 0) {
+                  lastRotationAngle = characterRotationAngle
                 }
 
-                const rotationAngleDelta_ = Math.abs(lastRotationAngle_ - characterRotationAngle_)
+                const rotationAngleDelta = Math.abs(lastRotationAngle - characterRotationAngle)
 
-                if (rotationAngleDelta_ > maximumRotationAngleDelta_) {
-                  maximumRotationAngleDelta_ = rotationAngleDelta_
+                if (rotationAngleDelta > maximumRotationAngleDelta) {
+                  maximumRotationAngleDelta = rotationAngleDelta
                 }
               }
 
-              if (maximumRotationAngleDelta_ < Math.PI * 2 / 4) {
-                const matrices_ = []
+              if (maximumRotationAngleDelta < Math.PI * 2 / 4) {
+                const matrices = []
 
-                drawingInfo_.context_.beginGroup(drawingInfo_.text_)
+                drawingInfo.context.beginGroup(drawingInfo.text)
 
-                for (let characterIndex_ = 0; characterIndex_ < text_.length; characterIndex_++) {
-                  if (text_[characterIndex_] !== ' ') {
-                    const matrix_ = new DOMMatrix().translate((characterInfos_[characterIndex_].point_.x_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_, (drawingInfo_.drawingArea_.top_ - characterInfos_[characterIndex_].point_.y_) * drawingInfo_.mapScale_).rotate(-characterInfos_[characterIndex_].rotationAngle_ * 180 / Math.PI)
+                for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
+                  if (text[characterIndex] !== ' ') {
+                    const matrix = new DOMMatrix().translate((characterInfos[characterIndex].point.x - drawingInfo.drawingArea.left) * drawingInfo.mapScale, (drawingInfo.drawingArea.top - characterInfos[characterIndex].point.y) * drawingInfo.mapScale).rotate(-characterInfos[characterIndex].rotationAngle * 180 / Math.PI)
 
-                    matrices_.push(matrix_)
+                    matrices.push(matrix)
 
-                    drawingInfo_.context_.tw = characterInfos_[characterIndex_].width_ * drawingInfo_.mapScale_
-                    drawingInfo_.context_.setTransform(matrix_)
-                    drawingInfo_.context_.strokeText(text_[characterIndex_], 0, 0)
+                    drawingInfo.context.tw = characterInfos[characterIndex].width * drawingInfo.mapScale
+                    drawingInfo.context.setTransform(matrix)
+                    drawingInfo.context.strokeText(text[characterIndex], 0, 0)
                   }
                 }
 
-                for (let characterIndex_ = 0; characterIndex_ < text_.length; characterIndex_++) {
-                  if (text_[characterIndex_] !== ' ') {
-                    drawingInfo_.context_.tw = characterInfos_[characterIndex_].width_ * drawingInfo_.mapScale_
-                    drawingInfo_.context_.setTransform(matrices_.shift())
-                    drawingInfo_.context_.fillText(text_[characterIndex_], 0, 0)
+                for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
+                  if (text[characterIndex] !== ' ') {
+                    drawingInfo.context.tw = characterInfos[characterIndex].width * drawingInfo.mapScale
+                    drawingInfo.context.setTransform(matrices.shift())
+                    drawingInfo.context.fillText(text[characterIndex], 0, 0)
                   }
                 }
 
-                drawingInfo_.context_.endGroup()
+                drawingInfo.context.endGroup()
               }
             }
           }
         }
       } else {
-        dataOffset_ += numberOfPoints_ * 4 * 2
+        dataOffset += numberOfPoints * 4 * 2
       }
-    } else if (!drawingInfo_.isText_ && !drawingInfo_.isIcon_) { // Draw a line
-      drawingInfo_.context_.beginPath()
+    } else if (!drawingInfo.isText && !drawingInfo.isIcon) { // Draw a line
+      drawingInfo.context.beginPath()
 
-      let x_ = geometry_.getFloat32(dataOffset_, true)
-      dataOffset_ += 4
+      let x = geometry.getFloat32(dataOffset, true)
+      dataOffset += 4
 
-      let y_ = geometry_.getFloat32(dataOffset_, true)
-      dataOffset_ += 4
+      let y = geometry.getFloat32(dataOffset, true)
+      dataOffset += 4
 
-      drawingInfo_.context_.moveTo(Math.round((x_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_), Math.round((drawingInfo_.drawingArea_.top_ - y_) * drawingInfo_.mapScale_))
+      drawingInfo.context.moveTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.mapScale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.mapScale))
 
-      for (let pointIndex_ = 1; pointIndex_ < numberOfPoints_; pointIndex_++) {
-        x_ = geometry_.getFloat32(dataOffset_, true)
-        dataOffset_ += 4
+      for (let pointIndex = 1; pointIndex < numberOfPoints; pointIndex++) {
+        x = geometry.getFloat32(dataOffset, true)
+        dataOffset += 4
 
-        y_ = geometry_.getFloat32(dataOffset_, true)
-        dataOffset_ += 4
+        y = geometry.getFloat32(dataOffset, true)
+        dataOffset += 4
 
-        drawingInfo_.context_.lineTo(Math.round((x_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_), Math.round((drawingInfo_.drawingArea_.top_ - y_) * drawingInfo_.mapScale_))
+        drawingInfo.context.lineTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.mapScale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.mapScale))
       }
 
-      drawingInfo_.context_.stroke()
+      drawingInfo.context.stroke()
     } else {
-      dataOffset_ += numberOfPoints_ * 4 * 2
+      dataOffset += numberOfPoints * 4 * 2
     }
 
-    return dataOffset_
+    return dataOffset
   },
-  _drawPolygons_: function (drawingInfo_, polygons_) {
-    if (drawingInfo_.isFilled_) {
-      this._drawPolygonsFilled_(drawingInfo_, polygons_)
+  _drawPolygons: function (drawingInfo, polygons_) {
+    if (drawingInfo.isFilled) {
+      this._drawPolygonsFilled(drawingInfo, polygons_)
     }
 
-    if (drawingInfo_.isStroked_) {
-      this._drawPolygonsStroked_(drawingInfo_, polygons_)
+    if (drawingInfo.isStroked) {
+      this._drawPolygonsStroked(drawingInfo, polygons_)
     }
   },
-  _drawPolygonsStroked_: function (drawingInfo_, polygons_) {
-    for (const polygonRings_ of polygons_) {
-      for (const polygonPoints_ of polygonRings_) {
-        const numberOfPoints_ = polygonPoints_.length
+  _drawPolygonsStroked: function (drawingInfo, polygons) {
+    for (const polygonRings of polygons) {
+      for (const polygonPoints of polygonRings) {
+        const numberOfPoints = polygonPoints.length
 
-        let pointsDrawn_ = 0
+        let pointsDrawn = 0
 
-        let lastX_ = 0
-        let lastY_ = 0
+        let lastX = 0
+        let lastY = 0
 
-        let lastDeltaLeft_ = 0
-        let lastDeltaRight_ = 0
-        let lastDeltaTop_ = 0
-        let lastDeltaBottom_ = 0
+        let lastDeltaLeft = 0
+        let lastDeltaRight = 0
+        let lastDeltaTop = 0
+        let lastDeltaBottom = 0
 
-        const deltaScale_ = Math.min(1, drawingInfo_.mapScale_)
+        const deltaScale = Math.min(1, drawingInfo.mapScale)
 
-        for (let pointIndex_ = 0; pointIndex_ < numberOfPoints_; pointIndex_++) {
-          const x_ = polygonPoints_[pointIndex_].x
-          const y_ = polygonPoints_[pointIndex_].y
+        for (let pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
+          const x = polygonPoints[pointIndex].x
+          const y = polygonPoints[pointIndex].y
 
-          const deltaLeft_ = drawingInfo_.tileBoundingBox_ ? Math.round((x_ - drawingInfo_.tileBoundingBox_.left) * deltaScale_) : 1
-          const deltaRight_ = drawingInfo_.tileBoundingBox_ ? Math.round((x_ - drawingInfo_.tileBoundingBox_.right) * deltaScale_) : 1
-          const deltaTop_ = drawingInfo_.tileBoundingBox_ ? Math.round((drawingInfo_.tileBoundingBox_.top - y_) * deltaScale_) : 1
-          const deltaBottom_ = drawingInfo_.tileBoundingBox_ ? Math.round((drawingInfo_.tileBoundingBox_.bottom - y_) * deltaScale_) : 1
+          const deltaLeft = drawingInfo.tileBoundingBox ? Math.round((x - drawingInfo.tileBoundingBox.left) * deltaScale) : 1
+          const deltaRight = drawingInfo.tileBoundingBox ? Math.round((x - drawingInfo.tileBoundingBox.right) * deltaScale) : 1
+          const deltaTop = drawingInfo.tileBoundingBox ? Math.round((drawingInfo.tileBoundingBox.top - y) * deltaScale) : 1
+          const deltaBottom = drawingInfo.tileBoundingBox ? Math.round((drawingInfo.tileBoundingBox.bottom - y) * deltaScale) : 1
 
-          if (pointIndex_ > 0) {
+          if (pointIndex > 0) {
             if (
-              (deltaLeft_ === 0 && lastDeltaLeft_ === 0) ||
-              (deltaRight_ === 0 && lastDeltaRight_ === 0) ||
-              (deltaTop_ === 0 && lastDeltaTop_ === 0) ||
-              (deltaBottom_ === 0 && lastDeltaBottom_ === 0)
+              (deltaLeft === 0 && lastDeltaLeft === 0) ||
+              (deltaRight === 0 && lastDeltaRight === 0) ||
+              (deltaTop === 0 && lastDeltaTop === 0) ||
+              (deltaBottom === 0 && lastDeltaBottom === 0)
             ) {
-              if (pointsDrawn_ > 0) {
-                drawingInfo_.context_.stroke()
+              if (pointsDrawn > 0) {
+                drawingInfo.context.stroke()
               }
 
-              pointsDrawn_ = 0
+              pointsDrawn = 0
             } else {
-              if (pointsDrawn_ === 0) {
-                drawingInfo_.context_.beginPath()
+              if (pointsDrawn === 0) {
+                drawingInfo.context.beginPath()
 
-                drawingInfo_.context_.moveTo(Math.round((lastX_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_), Math.round((drawingInfo_.drawingArea_.top_ - lastY_) * drawingInfo_.mapScale_))
+                drawingInfo.context.moveTo(Math.round((lastX - drawingInfo.drawingArea.left) * drawingInfo.mapScale), Math.round((drawingInfo.drawingArea.top - lastY) * drawingInfo.mapScale))
               }
 
-              drawingInfo_.context_.lineTo(Math.round((x_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_), Math.round((drawingInfo_.drawingArea_.top_ - y_) * drawingInfo_.mapScale_))
+              drawingInfo.context.lineTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.mapScale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.mapScale))
 
-              pointsDrawn_++
+              pointsDrawn++
             }
           }
 
-          lastX_ = x_
-          lastY_ = y_
+          lastX = x
+          lastY = y
 
-          lastDeltaLeft_ = deltaLeft_
-          lastDeltaRight_ = deltaRight_
-          lastDeltaTop_ = deltaTop_
-          lastDeltaBottom_ = deltaBottom_
+          lastDeltaLeft = deltaLeft
+          lastDeltaRight = deltaRight
+          lastDeltaTop = deltaTop
+          lastDeltaBottom = deltaBottom
         }
 
-        if (pointsDrawn_ > 0) {
-          drawingInfo_.context_.stroke()
+        if (pointsDrawn > 0) {
+          drawingInfo.context.stroke()
         }
       }
     }
   },
-  _drawPolygonsFilled_: function (drawingInfo_, polygons_) {
-    drawingInfo_.context_.beginPath()
+  _drawPolygonsFilled: function (drawingInfo, polygons_) {
+    drawingInfo.context.beginPath()
 
-    for (const polygonRings_ of polygons_) {
-      for (const polygonPoints_ of polygonRings_) {
-        const numberOfPoints_ = polygonPoints_.length
+    for (const polygonRings of polygons_) {
+      for (const polygonPoints of polygonRings) {
+        const numberOfPoints = polygonPoints.length
 
-        for (let pointIndex_ = 0; pointIndex_ < numberOfPoints_; pointIndex_++) {
-          const x_ = polygonPoints_[pointIndex_].x
-          const y_ = polygonPoints_[pointIndex_].y
+        for (let pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
+          const x = polygonPoints[pointIndex].x
+          const y = polygonPoints[pointIndex].y
 
-          if (pointIndex_ === 0) {
-            drawingInfo_.context_.moveTo(Math.round((x_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_), Math.round((drawingInfo_.drawingArea_.top_ - y_) * drawingInfo_.mapScale_))
+          if (pointIndex === 0) {
+            drawingInfo.context.moveTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.mapScale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.mapScale))
           } else {
-            drawingInfo_.context_.lineTo(Math.round((x_ - drawingInfo_.drawingArea_.left_) * drawingInfo_.mapScale_), Math.round((drawingInfo_.drawingArea_.top_ - y_) * drawingInfo_.mapScale_))
+            drawingInfo.context.lineTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.mapScale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.mapScale))
           }
         }
       }
     }
 
-    drawingInfo_.context_.fill()
+    drawingInfo.context.fill()
   },
-  _convertGeojsonToTileLayer_: function (geojsonData_, tileLayer_, properties_) {
-    switch (geojsonData_.type) {
-      case 'FeatureCollection':
-        for (const feature_ of geojsonData_.features) {
-          this._convertGeojsonToTileLayer_(feature_, tileLayer_)
+  _convertGeojsonToTileLayer: function (geojsonData, tileLayer, properties) {
+    switch (geojsonData.type) {
+    case 'FeatureCollection':
+      for (const feature of geojsonData.features) {
+        this._convertGeojsonToTileLayer(feature, tileLayer)
+      }
+
+      break
+
+    case 'Feature':
+      this._convertGeojsonToTileLayer(geojsonData.geometry, tileLayer, geojsonData.properties)
+
+      break
+
+    case 'Point':
+      {
+        const objectData = {
+          info: {
+            Envelope: {},
+            Center: {}
+          }
         }
 
-        break
+        if (properties) {
+          objectData.info.tags = properties
+        }
 
-      case 'Feature':
-        this._convertGeojsonToTileLayer_(geojsonData_.geometry, tileLayer_, geojsonData_.properties)
+        objectData.geometry = null
 
-        break
+        const x = this._longitudeToMeters(geojsonData.coordinates[0])
+        const y = this._latitudeToMeters(geojsonData.coordinates[1])
 
-      case 'Point':
-        {
-          const objectData_ = {
-            info: {
-              Envelope: {},
-              Center: {}
+        objectData.info.Envelope.left = x
+        objectData.info.Envelope.right = x
+        objectData.info.Envelope.top = y
+        objectData.info.Envelope.bottom = y
+
+        objectData.info.Center.x = x
+        objectData.info.Center.y = y
+
+        tileLayer.push(objectData)
+      }
+
+      break
+
+    case 'LineString':
+      {
+        const objectData = {
+          info: {
+            Envelope: {},
+            Center: {}
+          }
+        }
+
+        if (properties) {
+          objectData.info.tags = properties
+        }
+
+        objectData.geometry = new DataView(new Uint8Array(4 + 4 + geojsonData.coordinates.length * 4 * 2).buffer)
+
+        let geometryDataOffset = 0
+
+        objectData.geometry.setUint32(geometryDataOffset, 2, true) // wkbType = 2 (WKBLineString)
+        geometryDataOffset += 4
+
+        objectData.geometry.setUint32(geometryDataOffset, geojsonData.coordinates.length, true)
+        geometryDataOffset += 4
+
+        let previousX = 0
+        let previousY = 0
+        let length = -1
+
+        for (const coordinate of geojsonData.coordinates) {
+          const x = this._longitudeToMeters(coordinate[0])
+          const y = this._latitudeToMeters(coordinate[1])
+
+          if (length < 0) {
+            length = 0
+          } else {
+            const deltaX = (x - previousX)
+            const deltaY = (y - previousY)
+
+            length += Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+          }
+
+          objectData.info.length = length
+
+          previousX = x
+          previousY = y
+
+          if (geometryDataOffset === 4 + 4) {
+            objectData.info.Envelope.left = x
+            objectData.info.Envelope.right = x
+            objectData.info.Envelope.top = y
+            objectData.info.Envelope.bottom = y
+          } else {
+            if (x < objectData.info.Envelope.left) {
+              objectData.info.Envelope.left = x
+            } else if (x > objectData.info.Envelope.right) {
+              objectData.info.Envelope.right = x
+            }
+
+            if (y < objectData.info.Envelope.bottom) {
+              objectData.info.Envelope.bottom = y
+            } else if (y > objectData.info.Envelope.top) {
+              objectData.info.Envelope.top = y
             }
           }
 
-          if (properties_) {
-            objectData_.info.tags = properties_
-          }
+          objectData.geometry.setFloat32(geometryDataOffset, x, true)
+          geometryDataOffset += 4
 
-          objectData_.geometry = null
-
-          const x_ = this._longitudeToMeters_(geojsonData_.coordinates[0])
-          const y_ = this._latitudeToMeters_(geojsonData_.coordinates[1])
-
-          objectData_.info.Envelope.left = x_
-          objectData_.info.Envelope.right = x_
-          objectData_.info.Envelope.top = y_
-          objectData_.info.Envelope.bottom = y_
-
-          objectData_.info.Center.x = x_
-          objectData_.info.Center.y = y_
-
-          tileLayer_.push(objectData_)
+          objectData.geometry.setFloat32(geometryDataOffset, y, true)
+          geometryDataOffset += 4
         }
 
-        break
+        objectData.info.Center.x = (objectData.info.Envelope.left + objectData.info.Envelope.right) / 2
+        objectData.info.Center.y = (objectData.info.Envelope.top + objectData.info.Envelope.bottom) / 2
 
-      case 'LineString':
-        {
-          const objectData_ = {
-            info: {
-              Envelope: {},
-              Center: {}
-            }
+        tileLayer.push(objectData)
+      }
+
+      break
+
+    case 'Polygon':
+      {
+        const objectData = {
+          info: {
+            Envelope: {},
+            Center: {}
           }
+        }
 
-          if (properties_) {
-            objectData_.info.tags = properties_
-          }
+        if (properties) {
+          objectData.info.tags = properties
+        }
 
-          objectData_.geometry = new DataView(new Uint8Array(4 + 4 + geojsonData_.coordinates.length * 4 * 2).buffer)
+        let arraySize = 4 + 4 + 4
 
-          let geometryDataOffset_ = 0
+        for (let ring of geojsonData.coordinates) {
+          arraySize += ring.length * 4 * 2
+        }
 
-          objectData_.geometry.setUint32(geometryDataOffset_, 2, true) // wkbType = 2 (WKBLineString)
-          geometryDataOffset_ += 4
+        objectData.geometry = new DataView(new Uint8Array(arraySize).buffer)
 
-          objectData_.geometry.setUint32(geometryDataOffset_, geojsonData_.coordinates.length, true)
-          geometryDataOffset_ += 4
+        let geometryDataOffset = 0
 
-          let previousX_ = 0
-          let previousY_ = 0
-          let length_ = -1
+        objectData.geometry.setUint32(geometryDataOffset, 3, true) // wkbType = 3 (WKBPolygon)
+        geometryDataOffset += 4
 
-          for (const coordinate_ of geojsonData_.coordinates) {
-            const x_ = this._longitudeToMeters_(coordinate_[0])
-            const y_ = this._latitudeToMeters_(coordinate_[1])
+        objectData.geometry.setUint32(geometryDataOffset, geojsonData.coordinates.length, true)
+        geometryDataOffset += 4
 
-            if (length_ < 0) {
-              length_ = 0
+        for (let ring of geojsonData.coordinates) {
+          objectData.geometry.setUint32(geometryDataOffset, ring.length, true)
+          geometryDataOffset += 4
+
+          for (const coordinate of ring) {
+            const x = this._longitudeToMeters(coordinate[0])
+            const y = this._latitudeToMeters(coordinate[1])
+
+            if (geometryDataOffset === 4 + 4 + 4) {
+              objectData.info.Envelope.left = x
+              objectData.info.Envelope.right = x
+              objectData.info.Envelope.top = y
+              objectData.info.Envelope.bottom = y
             } else {
-              const deltaX_ = (x_ - previousX_)
-              const deltaY_ = (y_ - previousY_)
-
-              length_ += Math.sqrt(deltaX_ * deltaX_ + deltaY_ * deltaY_)
-            }
-
-            objectData_.info.length = length_
-
-            previousX_ = x_
-            previousY_ = y_
-
-            if (geometryDataOffset_ === 4 + 4) {
-              objectData_.info.Envelope.left = x_
-              objectData_.info.Envelope.right = x_
-              objectData_.info.Envelope.top = y_
-              objectData_.info.Envelope.bottom = y_
-            } else {
-              if (x_ < objectData_.info.Envelope.left) {
-                objectData_.info.Envelope.left = x_
-              } else if (x_ > objectData_.info.Envelope.right) {
-                objectData_.info.Envelope.right = x_
+              if (x < objectData.info.Envelope.left) {
+                objectData.info.Envelope.left = x
+              } else if (x > objectData.info.Envelope.right) {
+                objectData.info.Envelope.right = x
               }
 
-              if (y_ < objectData_.info.Envelope.bottom) {
-                objectData_.info.Envelope.bottom = y_
-              } else if (y_ > objectData_.info.Envelope.top) {
-                objectData_.info.Envelope.top = y_
+              if (y < objectData.info.Envelope.bottom) {
+                objectData.info.Envelope.bottom = y
+              } else if (y > objectData.info.Envelope.top) {
+                objectData.info.Envelope.top = y
               }
             }
 
-            objectData_.geometry.setFloat32(geometryDataOffset_, x_, true)
-            geometryDataOffset_ += 4
+            objectData.geometry.setFloat32(geometryDataOffset, x, true)
+            geometryDataOffset += 4
 
-            objectData_.geometry.setFloat32(geometryDataOffset_, y_, true)
-            geometryDataOffset_ += 4
+            objectData.geometry.setFloat32(geometryDataOffset, y, true)
+            geometryDataOffset += 4
           }
-
-          objectData_.info.Center.x = (objectData_.info.Envelope.left + objectData_.info.Envelope.right) / 2
-          objectData_.info.Center.y = (objectData_.info.Envelope.top + objectData_.info.Envelope.bottom) / 2
-
-          tileLayer_.push(objectData_)
         }
 
-        break
+        objectData.info.Center.x = (objectData.info.Envelope.left + objectData.info.Envelope.right) / 2
+        objectData.info.Center.y = (objectData.info.Envelope.top + objectData.info.Envelope.bottom) / 2
 
-      case 'Polygon':
-        {
-          const objectData_ = {
-            info: {
-              Envelope: {},
-              Center: {}
-            }
-          }
+        tileLayer.push(objectData)
+      }
 
-          if (properties_) {
-            objectData_.info.tags = properties_
-          }
-
-          let arraySize = 4 + 4 + 4
-
-          for (let ring of geojsonData_.coordinates) {
-            arraySize += ring.length * 4 * 2
-          }
-
-          objectData_.geometry = new DataView(new Uint8Array(arraySize).buffer)
-
-          let geometryDataOffset_ = 0
-
-          objectData_.geometry.setUint32(geometryDataOffset_, 3, true) // wkbType = 3 (WKBPolygon)
-          geometryDataOffset_ += 4
-
-          objectData_.geometry.setUint32(geometryDataOffset_, geojsonData_.coordinates.length, true)
-          geometryDataOffset_ += 4
-
-          for (let ring of geojsonData_.coordinates) {
-            objectData_.geometry.setUint32(geometryDataOffset_, ring.length, true)
-            geometryDataOffset_ += 4
-
-            for (const coordinate_ of ring) {
-              const x_ = this._longitudeToMeters_(coordinate_[0])
-              const y_ = this._latitudeToMeters_(coordinate_[1])
-
-              if (geometryDataOffset_ === 4 + 4 + 4) {
-                objectData_.info.Envelope.left = x_
-                objectData_.info.Envelope.right = x_
-                objectData_.info.Envelope.top = y_
-                objectData_.info.Envelope.bottom = y_
-              } else {
-                if (x_ < objectData_.info.Envelope.left) {
-                  objectData_.info.Envelope.left = x_
-                } else if (x_ > objectData_.info.Envelope.right) {
-                  objectData_.info.Envelope.right = x_
-                }
-
-                if (y_ < objectData_.info.Envelope.bottom) {
-                  objectData_.info.Envelope.bottom = y_
-                } else if (y_ > objectData_.info.Envelope.top) {
-                  objectData_.info.Envelope.top = y_
-                }
-              }
-
-              objectData_.geometry.setFloat32(geometryDataOffset_, x_, true)
-              geometryDataOffset_ += 4
-
-              objectData_.geometry.setFloat32(geometryDataOffset_, y_, true)
-              geometryDataOffset_ += 4
-            }
-          }
-
-          objectData_.info.Center.x = (objectData_.info.Envelope.left + objectData_.info.Envelope.right) / 2
-          objectData_.info.Center.y = (objectData_.info.Envelope.top + objectData_.info.Envelope.bottom) / 2
-
-          tileLayer_.push(objectData_)
-        }
-
-        break
+      break
     }
   },
-  _getTileLayers_: function (tileCanvas_, tileInfo_, mapStyle_) {
+  _getTileLayers: function (tileCanvas, tileInfo, mapStyle) {
     return new Promise(resolve => {
-      const tileLayers_ = {}
+      const tileLayers = {}
 
-      let layerLayoutIdCount_ = 0
+      let layerLayoutIdCount = 0
 
-      for (const layerName_ of mapStyle_.Order) {
-        const layer_ = mapStyle_.Layers[layerName_]
+      for (const layerName of mapStyle.Order) {
+        const layer = mapStyle.Layers[layerName]
 
-        const styleType_ = this._getLayerStyleType_(layer_)
+        const styleType = this._getLayerStyleType(layer)
 
         if (
-          !layer_ ||
-          (this.options.type && this.options.type !== styleType_) ||
-          layer_.Enable === false ||
-          tileInfo_.vms2TileZ_ < (layer_.ZoomRange[0] > 0 ? layer_.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
-          tileInfo_.vms2TileZ_ >= (layer_.ZoomRange[1] + this.options.zoomRangeOffset)
+          !layer ||
+          (this.options.type && this.options.type !== styleType) ||
+          layer.Enable === false ||
+          tileInfo.vms2TileZ < (layer.ZoomRange[0] > 0 ? layer.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
+          tileInfo.vms2TileZ >= (layer.ZoomRange[1] + this.options.zoomRangeOffset)
         ) {
           continue
         }
 
-        const layerLayout_ = layer_.LayoutLayers || []
+        const layerLayout = layer.LayoutLayers || []
 
-        const layerLayoutIds_ = []
+        const layerLayoutIds = []
 
-        if (Array.isArray(layerLayout_) && layerLayout_.length > 0) {
-          layerLayoutIds_.push(layerLayout_[0])
+        if (Array.isArray(layerLayout) && layerLayout.length > 0) {
+          layerLayoutIds.push(layerLayout[0])
         } else {
-          for (const geometryType_ in layerLayout_) {
-            for (const osmKeyName_ in layerLayout_[geometryType_]) {
-              for (const osmValue_ of layerLayout_[geometryType_][osmKeyName_]) {
-                layerLayoutIds_.push(osmKeyName_ + '|' + osmValue_ + '|' + geometryType_)
+          for (const geometryType in layerLayout) {
+            for (const osmKeyName in layerLayout[geometryType]) {
+              for (const osmValue of layerLayout[geometryType][osmKeyName]) {
+                layerLayoutIds.push(osmKeyName + '|' + osmValue + '|' + geometryType)
               }
             }
           }
         }
 
-        layer_.needsAreaExtension_ = !!(this._getLayerStyleType_(layer_) === 'text' || layer_.Grid || layer_.Save)
+        layer.needsAreaExtension = !!(this._getLayerStyleType(layer) === 'text' || layer.Grid || layer.Save)
 
-        if (layer_.CustomData) {
-          if (!tileLayers_[layerName_]) {
-            tileLayers_[layerName_] = []
+        if (layer.CustomData) {
+          if (!tileLayers[layerName]) {
+            tileLayers[layerName] = []
 
-            this._convertGeojsonToTileLayer_(mapStyle_.CustomData[layer_.CustomData], tileLayers_[layerName_])
+            this._convertGeojsonToTileLayer(mapStyle.CustomData[layer.CustomData], tileLayers[layerName])
           }
         } else {
-          for (const layerLayoutId_ of layerLayoutIds_) {
-            if (!tileLayers_[layerName_]) {
-              tileLayers_[layerName_] = []
+          for (const layerLayoutId of layerLayoutIds) {
+            if (!tileLayers[layerName]) {
+              tileLayers[layerName] = []
             }
 
-            const tileLayerData_ = { tileCanvas_, tileInfo_, dataLayerId_: layerLayoutId_, layerStyle_: layer_, tileIds_: [], objects: [], tileCount_: 0 }
+            const tileLayerData = { tileCanvas, tileInfo, dataLayerId: layerLayoutId, layerStyle: layer, tileIds: [], objects: [], tileCount: 0 }
 
-            this._getTileLayer_(tileLayerData_).then(() => {
-              tileLayers_[layerName_] = tileLayers_[layerName_].concat(tileLayerData_.objects)
+            this._getTileLayer(tileLayerData).then(() => {
+              tileLayers[layerName] = tileLayers[layerName].concat(tileLayerData.objects)
 
-              layerLayoutIdCount_--
+              layerLayoutIdCount--
 
-              if (layerLayoutIdCount_ === 0) {
-                resolve(tileLayers_)
+              if (layerLayoutIdCount === 0) {
+                resolve(tileLayers)
               }
             })
 
-            layerLayoutIdCount_++
+            layerLayoutIdCount++
           }
         }
       }
 
-      if (layerLayoutIdCount_ === 0) {
-        resolve(tileLayers_)
+      if (layerLayoutIdCount === 0) {
+        resolve(tileLayers)
       }
     })
   },
-  _drawSaveLayer_: async function (drawingInfo_, mapObjects_, tileInfo_, layer_) {
-    drawingInfo_.isFilled_ = true
+  _drawSaveLayer: async function (drawingInfo, mapObjects, tileInfo, layer) {
+    drawingInfo.isFilled = true
 
-    const saveStyle_ = layer_.Save
+    const saveStyle = layer.Save
 
-    let objectScale_ = drawingInfo_.objectScale_
+    let objectScale = drawingInfo.objectScale
 
-    if (!isNaN(saveStyle_.ZoomScale)) {
-      objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, saveStyle_.ZoomScale)
+    if (!isNaN(saveStyle.ZoomScale)) {
+      objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(defaultPrintDpi * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, saveStyle.ZoomScale)
     }
 
-    if (!isNaN(saveStyle_.StrokeWidth)) {
-      drawingInfo_.context_.lineWidth = saveStyle_.StrokeWidth * objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_
+    if (!isNaN(saveStyle.StrokeWidth)) {
+      drawingInfo.context.lineWidth = saveStyle.StrokeWidth * objectScale * drawingInfo.mapScale * drawingInfo.adjustedObjectScale
 
-      drawingInfo_.context_.setLineDash([])
-      drawingInfo_.context_.lineCap = 'round'
-      drawingInfo_.context_.lineJoin = 'round'
+      drawingInfo.context.setLineDash([])
+      drawingInfo.context.lineCap = 'round'
+      drawingInfo.context.lineJoin = 'round'
 
-      drawingInfo_.isStroked_ = true
+      drawingInfo.isStroked = true
     }
 
-    for (const mapObject_ of mapObjects_) {
-      if (!mapObject_) {
+    for (const mapObject of mapObjects) {
+      if (!mapObject) {
         continue
       }
 
-      if (mapObject_.geometry === undefined) { // Tile bounding box object to avoid drawing lines along tile edges.
-        drawingInfo_.tileBoundingBox_ = mapObject_.info
+      if (mapObject.geometry === undefined) { // Tile bounding box object to avoid drawing lines along tile edges.
+        drawingInfo.tileBoundingBox = mapObject.info
 
         continue
       }
 
       if (
-        mapObject_.info.Envelope.left > drawingInfo_.boundingArea_.right_ ||
-        mapObject_.info.Envelope.right < drawingInfo_.boundingArea_.left_ ||
-        mapObject_.info.Envelope.bottom > drawingInfo_.boundingArea_.top_ ||
-        mapObject_.info.Envelope.top < drawingInfo_.boundingArea_.bottom_
+        mapObject.info.Envelope.left > drawingInfo.boundingArea.right ||
+        mapObject.info.Envelope.right < drawingInfo.boundingArea.left ||
+        mapObject.info.Envelope.bottom > drawingInfo.boundingArea.top ||
+        mapObject.info.Envelope.top < drawingInfo.boundingArea.bottom
       ) { // Note: Top > Bottom!
         continue
       }
 
-      mapObject_.info.locr_layer = layer_.layerName_
+      mapObject.info['locr_layer'] = layer.layerName
 
-      if (!mapObject_.type) {
-        if (!isNaN(mapObject_.info.length)) {
-          mapObject_.type = 'line'
-        } else if (mapObject_.geometry === null) {
-          mapObject_.type = 'point'
+      if (!mapObject.type) {
+        if (!isNaN(mapObject.info.length)) {
+          mapObject.type = 'line'
+        } else if (mapObject.geometry === null) {
+          mapObject.type = 'point'
         } else {
-          mapObject_.type = 'polygon'
+          mapObject.type = 'polygon'
         }
       }
 
-      drawingInfo_.objectData_ = mapObject_.info
+      drawingInfo.objectData = mapObject.info
 
-      this.randomGenerator_.init_seed(drawingInfo_.objectData_.Hash)
+      this.randomGenerator.init_seed(drawingInfo.objectData.Hash)
 
-      const randomColor_ = (this.randomGenerator_.random_int() & 0xffffff)
+      const randomColor = (this.randomGenerator.random_int() & 0xffffff)
 
-      drawingInfo_.saveDataIds_[randomColor_] = drawingInfo_.objectData_
+      drawingInfo.saveDataIds[randomColor] = drawingInfo.objectData
 
-      const red_ = (randomColor_ >> 16) & 0xff
-      const green_ = (randomColor_ >> 8) & 0xff
-      const blue_ = randomColor_ & 0xff
+      const red = (randomColor >> 16) & 0xff
+      const green = (randomColor >> 8) & 0xff
+      const blue = randomColor & 0xff
 
-      if (drawingInfo_.isFilled_) {
-        drawingInfo_.context_.fillStyle = '#' + this._hexify24_([red_, green_, blue_]) + 'ff'
+      if (drawingInfo.isFilled) {
+        drawingInfo.context.fillStyle = '#' + this._hexify24([red, green, blue]) + 'ff'
       }
 
-      if (drawingInfo_.isStroked_) {
-        drawingInfo_.context_.strokeStyle = '#' + this._hexify24_([red_, green_, blue_]) + 'ff'
+      if (drawingInfo.isStroked) {
+        drawingInfo.context.strokeStyle = '#' + this._hexify24([red, green, blue]) + 'ff'
       }
 
-      this._drawGeometry_(drawingInfo_, mapObject_.geometry)
+      this._drawGeometry(drawingInfo, mapObject.geometry)
     }
   },
-  _drawBaseLayer_: async function (drawingInfo_, mapObjects_, tileInfo_, layer_) {
-    drawingInfo_.isText_ = false
+  _drawBaseLayer: async function (drawingInfo, mapObjects, tileInfo, layer) {
+    drawingInfo.isText = false
 
-    if (!layer_.isGrid_ && layer_.Style && !layer_.Filters) {
-      drawingInfo_.isIcon_ = false
+    if (!layer.isGrid && layer.Style && !layer.Filters) {
+      drawingInfo.isIcon = false
 
-      const objectStyle_ = layer_.Style
+      const objectStyle = layer.Style
 
-      let objectScale_ = drawingInfo_.objectScale_
+      let objectScale = drawingInfo.objectScale
 
-      if (!isNaN(objectStyle_.ZoomScale)) {
-        objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
+      if (!isNaN(objectStyle.ZoomScale)) {
+        objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(defaultPrintDpi * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
       }
 
-      if (isNaN(objectStyle_.FillAlpha)) {
-        objectStyle_.FillAlpha = 1
+      if (isNaN(objectStyle.FillAlpha)) {
+        objectStyle.FillAlpha = 1
       }
 
-      if (objectStyle_.FillAlpha && objectStyle_.FillColor) {
-        drawingInfo_.context_.fillStyle = '#' + this._hexify32_([objectStyle_.FillColor[0], objectStyle_.FillColor[1], objectStyle_.FillColor[2], Math.round(objectStyle_.FillAlpha * 255)])
+      if (objectStyle.FillAlpha && objectStyle.FillColor) {
+        drawingInfo.context.fillStyle = '#' + this._hexify32([objectStyle.FillColor[0], objectStyle.FillColor[1], objectStyle.FillColor[2], Math.round(objectStyle.FillAlpha * 255)])
 
-        drawingInfo_.isFilled_ = true
+        drawingInfo.isFilled = true
       } else {
-        drawingInfo_.isFilled_ = false
+        drawingInfo.isFilled = false
       }
 
-      if (isNaN(objectStyle_.StrokeAlpha)) {
-        objectStyle_.StrokeAlpha = 1
+      if (isNaN(objectStyle.StrokeAlpha)) {
+        objectStyle.StrokeAlpha = 1
       }
 
-      if (!isNaN(objectStyle_.StrokeWidth)) {
-        drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * (objectStyle_.DisplayUnit === 'px' ? 1 : objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_)
+      if (!isNaN(objectStyle.StrokeWidth)) {
+        drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.mapScale * drawingInfo.adjustedObjectScale)
       }
 
-      if (objectStyle_.StrokeAlpha && objectStyle_.StrokeWidth > 0 && objectStyle_.StrokeColor) {
-        drawingInfo_.context_.strokeStyle = '#' + this._hexify32_([objectStyle_.StrokeColor[0], objectStyle_.StrokeColor[1], objectStyle_.StrokeColor[2], Math.round(objectStyle_.StrokeAlpha * 255)])
+      if (objectStyle.StrokeAlpha && objectStyle.StrokeWidth > 0 && objectStyle.StrokeColor) {
+        drawingInfo.context.strokeStyle = '#' + this._hexify32([objectStyle.StrokeColor[0], objectStyle.StrokeColor[1], objectStyle.StrokeColor[2], Math.round(objectStyle.StrokeAlpha * 255)])
 
-        drawingInfo_.isStroked_ = true
+        drawingInfo.isStroked = true
       } else {
-        drawingInfo_.isStroked_ = false
+        drawingInfo.isStroked = false
       }
 
-      if (drawingInfo_.isStroked_) {
-        if (objectStyle_.LineDash) {
-          const lineDash_ = []
+      if (drawingInfo.isStroked) {
+        if (objectStyle.LineDash) {
+          const lineDash = []
 
-          for (const dash_ of objectStyle_.LineDash) {
-            lineDash_.push(dash_ * (objectStyle_.DisplayUnit === 'px' ? 1 : objectScale_ * drawingInfo_.mapScale_))
+          for (const dash of objectStyle.LineDash) {
+            lineDash.push(dash * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.mapScale))
           }
 
-          drawingInfo_.context_.setLineDash(lineDash_)
+          drawingInfo.context.setLineDash(lineDash)
         } else {
-          drawingInfo_.context_.setLineDash([])
+          drawingInfo.context.setLineDash([])
         }
 
-        if (objectStyle_.LineCap) {
-          drawingInfo_.context_.lineCap = objectStyle_.LineCap
+        if (objectStyle.LineCap) {
+          drawingInfo.context.lineCap = objectStyle.LineCap
         } else {
-          drawingInfo_.context_.lineCap = 'round'
+          drawingInfo.context.lineCap = 'round'
         }
 
-        if (objectStyle_.LineJoin) {
-          drawingInfo_.context_.lineJoin = objectStyle_.LineJoin
+        if (objectStyle.LineJoin) {
+          drawingInfo.context.lineJoin = objectStyle.LineJoin
         } else {
-          drawingInfo_.context_.lineJoin = 'round'
+          drawingInfo.context.lineJoin = 'round'
         }
       }
 
-      if (objectStyle_.PatternFunction) {
-        if (!objectStyle_.PatternFunction_) {
-          objectStyle_.PatternFunction_ = new Function(
+      if (objectStyle.PatternFunction) {
+        if (typeof objectStyle.PatternFunction === 'string') {
+          objectStyle.PatternFunction = new Function(
             'ObjectData',
             'MapZoom',
             'RandomGenerator',
-            'return ' + objectStyle_.PatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+            'return ' + objectStyle.PatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
           )
         }
 
-        const patternName_ = objectStyle_.PatternFunction_(drawingInfo_.objectData_, tileInfo_.vms2TileZ_, this.randomGenerator_)
+        const patternName = objectStyle.PatternFunction(drawingInfo.objectData, tileInfo.vms2TileZ, this.randomGenerator)
 
-        if (patternName_) {
-          const pattern_ = await this._getPattern_(drawingInfo_.context_, patternName_)
+        if (patternName) {
+          const pattern = await this._getPattern(drawingInfo.context, patternName)
 
-          pattern_.transformMatrix = new DOMMatrix().translate(drawingInfo_.mapArea_.left_ * drawingInfo_.mapScale_, drawingInfo_.mapArea_.top_ * drawingInfo_.mapScale_).scale(drawingInfo_.patternScale_)
+          pattern.transformMatrix = new DOMMatrix().translate(drawingInfo.mapArea.left * drawingInfo.mapScale, drawingInfo.mapArea.top * drawingInfo.mapScale).scale(drawingInfo.patternScale)
 
-          pattern_.setTransform(pattern_.transformMatrix)
+          pattern.setTransform(pattern.transformMatrix)
 
-          drawingInfo_.context_.fillStyle = pattern_
+          drawingInfo.context.fillStyle = pattern
 
-          drawingInfo_.isFilled_ = true
+          drawingInfo.isFilled = true
         } else {
-          drawingInfo_.isFilled_ = false
+          drawingInfo.isFilled = false
         }
       }
 
-      for (const mapObject_ of mapObjects_) {
-        if (!mapObject_) {
+      for (const mapObject of mapObjects) {
+        if (!mapObject) {
           continue
         }
 
-        if (mapObject_.geometry === undefined) { // Tile bounding box object to avoid drawing lines along tile edges.
-          drawingInfo_.tileBoundingBox_ = mapObject_.info
+        if (mapObject.geometry === undefined) { // Tile bounding box object to avoid drawing lines along tile edges.
+          drawingInfo.tileBoundingBox = mapObject.info
 
           continue
         }
 
         if (
-          mapObject_.info.Envelope.left > drawingInfo_.boundingArea_.right_ ||
-          mapObject_.info.Envelope.right < drawingInfo_.boundingArea_.left_ ||
-          mapObject_.info.Envelope.bottom > drawingInfo_.boundingArea_.top_ ||
-          mapObject_.info.Envelope.top < drawingInfo_.boundingArea_.bottom_
+          mapObject.info.Envelope.left > drawingInfo.boundingArea.right ||
+          mapObject.info.Envelope.right < drawingInfo.boundingArea.left ||
+          mapObject.info.Envelope.bottom > drawingInfo.boundingArea.top ||
+          mapObject.info.Envelope.top < drawingInfo.boundingArea.bottom
         ) { // Note: Top > Bottom!
           continue
         }
 
-        if (!mapObject_.type) {
-          if (!isNaN(mapObject_.info.length)) {
-            mapObject_.type = 'line'
-          } else if (mapObject_.geometry === null) {
-            mapObject_.type = 'point'
+        if (!mapObject.type) {
+          if (!isNaN(mapObject.info.length)) {
+            mapObject.type = 'line'
+          } else if (mapObject.geometry === null) {
+            mapObject.type = 'point'
           } else {
-            mapObject_.type = 'polygon'
+            mapObject.type = 'polygon'
           }
         }
 
-        drawingInfo_.objectData_ = mapObject_.info
+        drawingInfo.objectData = mapObject.info
 
-        if (mapObject_.geometry && (drawingInfo_.isStroked_ || drawingInfo_.isFilled_)) {
-          this._drawGeometry_(drawingInfo_, mapObject_.geometry)
+        if (mapObject.geometry && (drawingInfo.isStroked || drawingInfo.isFilled)) {
+          this._drawGeometry(drawingInfo, mapObject.geometry)
         }
       }
 
       return
     }
 
-    let activeObjectStyle_ = null
+    let activeObjectStyle = null
 
-    for (const mapObject_ of mapObjects_) {
-      if (!mapObject_) {
+    for (const mapObject of mapObjects) {
+      if (!mapObject) {
         continue
       }
 
-      if (mapObject_.geometry === undefined) { // Tile bounding box object to avoid drawing lines along tile edges.
-        drawingInfo_.tileBoundingBox_ = mapObject_.info
-
-        continue
-      }
-
-      if (
-        mapObject_.info.Envelope.left > drawingInfo_.boundingArea_.right_ ||
-        mapObject_.info.Envelope.right < drawingInfo_.boundingArea_.left_ ||
-        mapObject_.info.Envelope.bottom > drawingInfo_.boundingArea_.top_ ||
-        mapObject_.info.Envelope.top < drawingInfo_.boundingArea_.bottom_
-      ) { // Note: Top > Bottom!
-        continue
-      }
-
-      if (!mapObject_.type) {
-        if (!isNaN(mapObject_.info.length)) {
-          mapObject_.type = 'line'
-        } else if (mapObject_.geometry === null) {
-          mapObject_.type = 'point'
-        } else {
-          mapObject_.type = 'polygon'
-        }
-      }
-
-      drawingInfo_.objectData_ = mapObject_.info
-
-      let objectStyle_ = layer_.Style
-
-      if (layer_.Filters) {
-        let objectData_ = drawingInfo_.objectData_
-
-        const x_ = objectData_.Center.x
-        const y_ = objectData_.Center.y
-
-        this.randomGenerator_.init_seed((Math.round(x_) + 0xaffeaffe) * (Math.round(y_) + 0xaffeaffe))
-
-        if (drawingInfo_.isGrid_ && drawingInfo_.saveDataCanvas_) {
-          if (!drawingInfo_.saveDataPixels_) {
-            drawingInfo_.saveDataPixels_ = drawingInfo_.saveDataCanvas_.context_.getImageData(0, 0, drawingInfo_.saveDataCanvas_.width, drawingInfo_.saveDataCanvas_.height).data
-
-            this._remapPixels_(drawingInfo_.saveDataPixels_, drawingInfo_.saveDataIds_, drawingInfo_.saveDataCanvas_.width)
-          }
-
-          const pixelX_ = Math.round((x_ - drawingInfo_.saveDataArea_.left_) * drawingInfo_.mapScale_)
-          const pixelY_ = Math.round((drawingInfo_.saveDataArea_.top_ - y_) * drawingInfo_.mapScale_)
-
-          if (pixelX_ >= 0 && pixelX_ < drawingInfo_.saveDataCanvas_.width && pixelY_ >= 0 && pixelY_ < drawingInfo_.saveDataCanvas_.height) {
-            const pixelIndex_ = (pixelX_ + pixelY_ * drawingInfo_.saveDataCanvas_.width) * 4
-
-            const red_ = drawingInfo_.saveDataPixels_[pixelIndex_]
-            const green_ = drawingInfo_.saveDataPixels_[pixelIndex_ + 1]
-            const blue_ = drawingInfo_.saveDataPixels_[pixelIndex_ + 2]
-
-            const color_ = (red_ << 16) + (green_ << 8) + blue_
-
-            objectData_ = drawingInfo_.saveDataIds_[color_]
-          } else {
-            continue
-          }
-        }
-
-        if (objectData_) {
-          for (const filter_ of layer_.Filters) {
-            if (filter_.Enable === false) {
-              continue
-            }
-
-            if (!filter_.ConditionFunction_) {
-              filter_.ConditionFunction_ = new Function(
-                'ObjectData',
-                'MapZoom',
-                'RandomGenerator',
-                'return ' + filter_.Condition.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
-              )
-            }
-
-            if (filter_.ConditionFunction_(objectData_, tileInfo_.vms2TileZ_, this.randomGenerator_)) {
-              objectStyle_ = filter_.Style
-
-              break
-            }
-          }
-        }
-      }
-
-      if (objectStyle_) {
-        let objectScale_ = drawingInfo_.objectScale_
-
-        if (!isNaN(objectStyle_.ZoomScale)) {
-          objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
-        }
-
-        if (activeObjectStyle_ !== objectStyle_) {
-          if (isNaN(objectStyle_.FillAlpha)) {
-            objectStyle_.FillAlpha = 1
-          }
-
-          if (objectStyle_.FillAlpha && objectStyle_.FillColor) {
-            drawingInfo_.context_.fillStyle = '#' + this._hexify32_([objectStyle_.FillColor[0], objectStyle_.FillColor[1], objectStyle_.FillColor[2], Math.round(objectStyle_.FillAlpha * 255)])
-
-            drawingInfo_.isFilled_ = true
-          } else {
-            drawingInfo_.isFilled_ = false
-          }
-
-          if (isNaN(objectStyle_.StrokeAlpha)) {
-            objectStyle_.StrokeAlpha = 1
-          }
-
-          if (!isNaN(objectStyle_.StrokeWidth)) {
-            drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * (objectStyle_.DisplayUnit === 'px' ? 1 : objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_)
-          }
-
-          if (objectStyle_.StrokeAlpha && objectStyle_.StrokeWidth > 0 && objectStyle_.StrokeColor) {
-            drawingInfo_.context_.strokeStyle = '#' + this._hexify32_([objectStyle_.StrokeColor[0], objectStyle_.StrokeColor[1], objectStyle_.StrokeColor[2], Math.round(objectStyle_.StrokeAlpha * 255)])
-
-            drawingInfo_.isStroked_ = true
-          } else {
-            drawingInfo_.isStroked_ = false
-          }
-
-          if (drawingInfo_.isStroked_) {
-            if (objectStyle_.LineDash) {
-              const lineDash_ = []
-
-              for (const dash_ of objectStyle_.LineDash) {
-                lineDash_.push(dash_ * (objectStyle_.DisplayUnit === 'px' ? 1 : objectScale_ * drawingInfo_.mapScale_))
-              }
-
-              drawingInfo_.context_.setLineDash(lineDash_)
-            } else {
-              drawingInfo_.context_.setLineDash([])
-            }
-
-            if (objectStyle_.LineCap) {
-              drawingInfo_.context_.lineCap = objectStyle_.LineCap
-            } else {
-              drawingInfo_.context_.lineCap = 'round'
-            }
-
-            if (objectStyle_.LineJoin) {
-              drawingInfo_.context_.lineJoin = objectStyle_.LineJoin
-            } else {
-              drawingInfo_.context_.lineJoin = 'round'
-            }
-          }
-
-          if (objectStyle_.PatternFunction) {
-            if (!objectStyle_.PatternFunction_) {
-              objectStyle_.PatternFunction_ = new Function(
-                'ObjectData',
-                'MapZoom',
-                'RandomGenerator',
-                'return ' + objectStyle_.PatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
-              )
-            }
-          }
-
-          activeObjectStyle_ = objectStyle_
-        }
-
-        drawingInfo_.isIcon_ = false
-
-        drawingInfo_.iconImage_ = null
-
-        drawingInfo_.iconWidth_ = 0
-        drawingInfo_.iconHeight_ = 0
-
-        if (activeObjectStyle_.PatternFunction) {
-          const patternName_ = activeObjectStyle_.PatternFunction_(drawingInfo_.objectData_, tileInfo_.vms2TileZ_, this.randomGenerator_)
-
-          if (patternName_) {
-            const pattern_ = await this._getPattern_(drawingInfo_.context_, patternName_)
-
-            pattern_.transformMatrix = new DOMMatrix().translate(drawingInfo_.mapArea_.left_ * drawingInfo_.mapScale_, drawingInfo_.mapArea_.top_ * drawingInfo_.mapScale_).scale(drawingInfo_.patternScale_)
-
-            pattern_.setTransform(pattern_.transformMatrix)
-
-            drawingInfo_.context_.fillStyle = pattern_
-
-            drawingInfo_.isFilled_ = true
-          } else {
-            drawingInfo_.isFilled_ = false
-          }
-        }
-
-        if (mapObject_.geometry && (drawingInfo_.isStroked_ || drawingInfo_.isFilled_)) {
-          this._drawGeometry_(drawingInfo_, mapObject_.geometry)
-        } else if (drawingInfo_.isIcon_) {
-          this._drawIcon_(drawingInfo_, mapObject_.info.Center.x, mapObject_.info.Center.y)
-        }
-      }
-    }
-  },
-  _drawObjectsLayer_: async function (drawingInfo_, mapObjects_, tileInfo_, layer_) {
-    let activeObjectStyle_ = null
-
-    for (const mapObject_ of mapObjects_) {
-      if (!mapObject_) {
-        continue
-      }
-
-      if (mapObject_.geometry === undefined) { // Tile bounding box object to avoid drawing lines along tile edges.
-        drawingInfo_.tileBoundingBox_ = mapObject_.info
+      if (mapObject.geometry === undefined) { // Tile bounding box object to avoid drawing lines along tile edges.
+        drawingInfo.tileBoundingBox = mapObject.info
 
         continue
       }
 
       if (
-        mapObject_.info.Envelope.left > drawingInfo_.boundingArea_.right_ ||
-        mapObject_.info.Envelope.right < drawingInfo_.boundingArea_.left_ ||
-        mapObject_.info.Envelope.bottom > drawingInfo_.boundingArea_.top_ ||
-        mapObject_.info.Envelope.top < drawingInfo_.boundingArea_.bottom_
+        mapObject.info.Envelope.left > drawingInfo.boundingArea.right ||
+        mapObject.info.Envelope.right < drawingInfo.boundingArea.left ||
+        mapObject.info.Envelope.bottom > drawingInfo.boundingArea.top ||
+        mapObject.info.Envelope.top < drawingInfo.boundingArea.bottom
       ) { // Note: Top > Bottom!
         continue
       }
 
-      if (!mapObject_.type) {
-        if (!isNaN(mapObject_.info.length)) {
-          mapObject_.type = 'line'
-        } else if (mapObject_.geometry === null) {
-          mapObject_.type = 'point'
+      if (!mapObject.type) {
+        if (!isNaN(mapObject.info.length)) {
+          mapObject.type = 'line'
+        } else if (mapObject.geometry === null) {
+          mapObject.type = 'point'
         } else {
-          mapObject_.type = 'polygon'
+          mapObject.type = 'polygon'
         }
       }
 
-      drawingInfo_.objectData_ = mapObject_.info
+      drawingInfo.objectData = mapObject.info
 
-      let objectStyle_ = layer_.Style
+      let objectStyle = layer.Style
 
-      if (layer_.Filters) {
-        let objectData_ = drawingInfo_.objectData_
+      if (layer.Filters) {
+        let objectData = drawingInfo.objectData
 
-        const x_ = objectData_.Center.x
-        const y_ = objectData_.Center.y
+        const x = objectData.Center.x
+        const y = objectData.Center.y
 
-        this.randomGenerator_.init_seed((Math.round(x_) + 0xaffeaffe) * (Math.round(y_) + 0xaffeaffe))
+        this.randomGenerator.init_seed((Math.round(x) + 0xaffeaffe) * (Math.round(y) + 0xaffeaffe))
 
-        if (drawingInfo_.isGrid_ && drawingInfo_.saveDataCanvas_) {
-          if (!drawingInfo_.saveDataPixels_) {
-            drawingInfo_.saveDataPixels_ = drawingInfo_.saveDataCanvas_.context_.getImageData(0, 0, drawingInfo_.saveDataCanvas_.width, drawingInfo_.saveDataCanvas_.height).data
+        if (drawingInfo.isGrid && drawingInfo.saveDataCanvas) {
+          if (!drawingInfo.saveDataPixels) {
+            drawingInfo.saveDataPixels = drawingInfo.saveDataCanvas.context.getImageData(0, 0, drawingInfo.saveDataCanvas.width, drawingInfo.saveDataCanvas.height).data
 
-            this._remapPixels_(drawingInfo_.saveDataPixels_, drawingInfo_.saveDataIds_, drawingInfo_.saveDataCanvas_.width)
+            this._remapPixels(drawingInfo.saveDataPixels, drawingInfo.saveDataIds, drawingInfo.saveDataCanvas.width)
           }
 
-          const pixelX_ = Math.round((x_ - drawingInfo_.saveDataArea_.left_) * drawingInfo_.mapScale_)
-          const pixelY_ = Math.round((drawingInfo_.saveDataArea_.top_ - y_) * drawingInfo_.mapScale_)
+          const pixelX = Math.round((x - drawingInfo.saveDataArea.left) * drawingInfo.mapScale)
+          const pixelY = Math.round((drawingInfo.saveDataArea.top - y) * drawingInfo.mapScale)
 
-          if (pixelX_ >= 0 && pixelX_ < drawingInfo_.saveDataCanvas_.width && pixelY_ >= 0 && pixelY_ < drawingInfo_.saveDataCanvas_.height) {
-            const pixelIndex_ = (pixelX_ + pixelY_ * drawingInfo_.saveDataCanvas_.width) * 4
+          if (pixelX >= 0 && pixelX < drawingInfo.saveDataCanvas.width && pixelY >= 0 && pixelY < drawingInfo.saveDataCanvas.height) {
+            const pixelIndex = (pixelX + pixelY * drawingInfo.saveDataCanvas.width) * 4
 
-            const red_ = drawingInfo_.saveDataPixels_[pixelIndex_]
-            const green_ = drawingInfo_.saveDataPixels_[pixelIndex_ + 1]
-            const blue_ = drawingInfo_.saveDataPixels_[pixelIndex_ + 2]
+            const red = drawingInfo.saveDataPixels[pixelIndex]
+            const green = drawingInfo.saveDataPixels[pixelIndex + 1]
+            const blue = drawingInfo.saveDataPixels[pixelIndex + 2]
 
-            const color_ = (red_ << 16) + (green_ << 8) + blue_
+            const color = (red << 16) + (green << 8) + blue
 
-            objectData_ = drawingInfo_.saveDataIds_[color_]
+            objectData = drawingInfo.saveDataIds[color]
           } else {
             continue
           }
         }
 
-        if (objectData_) {
-          for (const filter_ of layer_.Filters) {
-            if (filter_.Enable === false) {
+        if (objectData) {
+          for (const filter of layer.Filters) {
+            if (filter.Enable === false) {
               continue
             }
 
-            if (!filter_.ConditionFunction_) {
-              filter_.ConditionFunction_ = new Function(
-                'ObjectData',
-                'MapZoom',
-                'RandomGenerator',
-                'return ' + filter_.Condition.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
-              )
-            }
+            if (filter.Condition) {
+              if (typeof filter.Condition === 'string') {
+                filter.Condition = new Function(
+                  'ObjectData',
+                  'MapZoom',
+                  'RandomGenerator',
+                  'return ' + filter.Condition.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+                )
+              }
 
-            if (filter_.ConditionFunction_(objectData_, tileInfo_.vms2TileZ_, this.randomGenerator_)) {
-              objectStyle_ = filter_.Style
+              if (filter.Condition(objectData, tileInfo.vms2TileZ, this.randomGenerator)) {
+                objectStyle = filter.Style
 
-              break
+                break
+              }
             }
           }
         }
       }
 
-      if (objectStyle_) {
-        let objectScale_ = drawingInfo_.objectScale_
+      if (objectStyle) {
+        let objectScale = drawingInfo.objectScale
 
-        if (!isNaN(objectStyle_.ZoomScale)) {
-          objectScale_ = drawingInfo_.objectScale_ / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, objectStyle_.ZoomScale)
+        if (!isNaN(objectStyle.ZoomScale)) {
+          objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(defaultPrintDpi * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
         }
 
-        if (activeObjectStyle_ !== objectStyle_) {
-          if (isNaN(objectStyle_.FillAlpha)) {
-            objectStyle_.FillAlpha = 1
+        if (activeObjectStyle !== objectStyle) {
+          if (isNaN(objectStyle.FillAlpha)) {
+            objectStyle.FillAlpha = 1
           }
 
-          if (objectStyle_.FillAlpha && objectStyle_.FillColor) {
-            drawingInfo_.context_.fillStyle = '#' + this._hexify32_([objectStyle_.FillColor[0], objectStyle_.FillColor[1], objectStyle_.FillColor[2], Math.round(objectStyle_.FillAlpha * 255)])
+          if (objectStyle.FillAlpha && objectStyle.FillColor) {
+            drawingInfo.context.fillStyle = '#' + this._hexify32([objectStyle.FillColor[0], objectStyle.FillColor[1], objectStyle.FillColor[2], Math.round(objectStyle.FillAlpha * 255)])
 
-            drawingInfo_.isFilled_ = true
+            drawingInfo.isFilled = true
           } else {
-            drawingInfo_.isFilled_ = false
+            drawingInfo.isFilled = false
           }
 
-          if (isNaN(objectStyle_.StrokeAlpha)) {
-            objectStyle_.StrokeAlpha = 1
+          if (isNaN(objectStyle.StrokeAlpha)) {
+            objectStyle.StrokeAlpha = 1
           }
 
-          if (!isNaN(objectStyle_.StrokeWidth)) {
-            drawingInfo_.context_.lineWidth = objectStyle_.StrokeWidth * (objectStyle_.DisplayUnit === 'px' ? 1 : objectScale_ * drawingInfo_.mapScale_ * drawingInfo_.adjustedObjectScale_)
+          if (!isNaN(objectStyle.StrokeWidth)) {
+            drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.mapScale * drawingInfo.adjustedObjectScale)
           }
 
-          if (objectStyle_.StrokeAlpha && objectStyle_.StrokeWidth > 0 && objectStyle_.StrokeColor) {
-            drawingInfo_.context_.strokeStyle = '#' + this._hexify32_([objectStyle_.StrokeColor[0], objectStyle_.StrokeColor[1], objectStyle_.StrokeColor[2], Math.round(objectStyle_.StrokeAlpha * 255)])
+          if (objectStyle.StrokeAlpha && objectStyle.StrokeWidth > 0 && objectStyle.StrokeColor) {
+            drawingInfo.context.strokeStyle = '#' + this._hexify32([objectStyle.StrokeColor[0], objectStyle.StrokeColor[1], objectStyle.StrokeColor[2], Math.round(objectStyle.StrokeAlpha * 255)])
 
-            drawingInfo_.isStroked_ = true
+            drawingInfo.isStroked = true
           } else {
-            drawingInfo_.isStroked_ = false
+            drawingInfo.isStroked = false
           }
 
-          if (drawingInfo_.isStroked_) {
-            if (objectStyle_.LineDash) {
-              const lineDash_ = []
+          if (drawingInfo.isStroked) {
+            if (objectStyle.LineDash) {
+              const lineDash = []
 
-              for (const dash_ of objectStyle_.LineDash) {
-                lineDash_.push(dash_ * (objectStyle_.DisplayUnit === 'px' ? 1 : objectScale_ * drawingInfo_.mapScale_))
+              for (const dash of objectStyle.LineDash) {
+                lineDash.push(dash * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.mapScale))
               }
 
-              drawingInfo_.context_.setLineDash(lineDash_)
+              drawingInfo.context.setLineDash(lineDash)
             } else {
-              drawingInfo_.context_.setLineDash([])
+              drawingInfo.context.setLineDash([])
             }
 
-            if (objectStyle_.LineCap) {
-              drawingInfo_.context_.lineCap = objectStyle_.LineCap
+            if (objectStyle.LineCap) {
+              drawingInfo.context.lineCap = objectStyle.LineCap
             } else {
-              drawingInfo_.context_.lineCap = 'round'
+              drawingInfo.context.lineCap = 'round'
             }
 
-            if (objectStyle_.LineJoin) {
-              drawingInfo_.context_.lineJoin = objectStyle_.LineJoin
+            if (objectStyle.LineJoin) {
+              drawingInfo.context.lineJoin = objectStyle.LineJoin
             } else {
-              drawingInfo_.context_.lineJoin = 'round'
+              drawingInfo.context.lineJoin = 'round'
             }
           }
 
-          if (objectStyle_.FontFamily && objectStyle_.FontSize != null) {
-            await this._requestFontFace_(objectStyle_)
-
-            drawingInfo_.fontSize_ = objectStyle_.FontSize * objectScale_
-
-            let fontStyle_ = 'normal'
-
-            if (objectStyle_.FontStyle) {
-              fontStyle_ = objectStyle_.FontStyle
-            }
-
-            drawingInfo_.context_.font = fontStyle_ + ' ' + (drawingInfo_.fontSize_ * drawingInfo_.mapScale_) + 'px \'' + objectStyle_.FontFamily + '\''
-
-            drawingInfo_.fontStyle_ = fontStyle_
-            drawingInfo_.fontFamily_ = objectStyle_.FontFamily
-          }
-
-          if (objectStyle_.IconFunction) {
-            if (!objectStyle_.IconFunction_) {
-              objectStyle_.IconFunction_ = new Function(
-                'ObjectData',
-                'MapZoom',
-                'RandomGenerator',
-                'return ' + objectStyle_.IconFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
-              )
-            }
-          }
-
-          if (objectStyle_.PatternFunction) {
-            if (!objectStyle_.PatternFunction_) {
-              objectStyle_.PatternFunction_ = new Function(
-                'ObjectData',
-                'MapZoom',
-                'RandomGenerator',
-                'return ' + objectStyle_.PatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
-              )
-            }
-          }
-
-          activeObjectStyle_ = objectStyle_
-        }
-
-        drawingInfo_.isIcon_ = false
-        drawingInfo_.isText_ = false
-
-        drawingInfo_.iconImage_ = null
-        drawingInfo_.text_ = null
-
-        drawingInfo_.iconWidth_ = 0
-        drawingInfo_.iconHeight_ = 0
-        drawingInfo_.iconTextOffsetX_ = 0
-        drawingInfo_.iconTextOffsetY_ = 0
-
-        if (activeObjectStyle_.IconFunction) {
-          const x_ = drawingInfo_.objectData_.Center.x
-          const y_ = drawingInfo_.objectData_.Center.y
-
-          this.randomGenerator_.init_seed((Math.round(x_) + 0xaffeaffe) * (Math.round(y_) + 0xaffeaffe))
-
-          const iconName_ = activeObjectStyle_.IconFunction_(drawingInfo_.objectData_, tileInfo_.vms2TileZ_, this.randomGenerator_)
-
-          if (iconName_) {
-            let iconUrl_ = iconName_
-
-            if (!/^http.*:\/\//.test(iconName_) && !/^\.\//.test(iconName_)) {
-              iconUrl_ = this.options.assetsUrl + '/images/icons/' + iconName_.replace(/file:\/\/[^/]*\//g, '')
-            }
-
-            drawingInfo_.iconImage_ = await this._requestImage_(iconUrl_)
-
-            const iconScales_ = [1, 1]
-
-            if (activeObjectStyle_.IconScales != null) {
-              iconScales_[0] = activeObjectStyle_.IconScales[0]
-              iconScales_[1] = activeObjectStyle_.IconScales[1]
-            }
-
-            drawingInfo_.iconMirrorX_ = iconScales_[0] < 0 ? -1 : 1
-            drawingInfo_.iconMirrorY_ = iconScales_[1] < 0 ? -1 : 1
-
-            drawingInfo_.iconWidth_ = Math.abs(drawingInfo_.iconImage_.width * iconScales_[0]) * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : objectScale_)
-            drawingInfo_.iconHeight_ = Math.abs(drawingInfo_.iconImage_.height * iconScales_[1]) * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : objectScale_)
-
-            drawingInfo_.iconAngle_ = drawingInfo_.objectData_.Angle || 0
-
-            const iconImageAnchor_ = [0, 0]
-
-            if (activeObjectStyle_.IconImageAnchor) {
-              iconImageAnchor_[0] = objectStyle_.DisplayUnit === 'px' ? (activeObjectStyle_.IconImageAnchor[0] - drawingInfo_.iconImage_.width / 2) / drawingInfo_.mapScale_ : (activeObjectStyle_.IconImageAnchor[0] - 0.5) * Math.abs(drawingInfo_.iconImage_.width * iconScales_[0]) * objectScale_
-              iconImageAnchor_[1] = objectStyle_.DisplayUnit === 'px' ? (activeObjectStyle_.IconImageAnchor[1] - drawingInfo_.iconImage_.height / 2) / drawingInfo_.mapScale_ : (activeObjectStyle_.IconImageAnchor[1] - 0.5) * Math.abs(drawingInfo_.iconImage_.height * iconScales_[1]) * objectScale_
-            }
-
-            const iconImageOffsets_ = [0, 0]
-
-            if (activeObjectStyle_.IconImageOffsets) {
-              iconImageOffsets_[0] = activeObjectStyle_.IconImageOffsets[0] * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : Math.abs(drawingInfo_.iconImage_.width * iconScales_[0]) * objectScale_)
-              iconImageOffsets_[1] = activeObjectStyle_.IconImageOffsets[1] * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : Math.abs(drawingInfo_.iconImage_.height * iconScales_[1]) * objectScale_)
-            }
-
-            drawingInfo_.iconImageOffsetX_ = iconImageOffsets_[0] - iconImageAnchor_[0]
-            drawingInfo_.iconImageOffsetY_ = iconImageOffsets_[1] - iconImageAnchor_[1]
-
-            const iconTextOffset_ = [0, 0]
-
-            if (activeObjectStyle_.IconTextOffset) {
-              iconTextOffset_[0] = activeObjectStyle_.IconTextOffset[0] * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : objectScale_)
-              iconTextOffset_[1] = activeObjectStyle_.IconTextOffset[1] * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : objectScale_)
-            }
-
-            drawingInfo_.iconTextOffsetX_ = iconTextOffset_[0]
-            drawingInfo_.iconTextOffsetY_ = iconTextOffset_[1]
-
-            let iconMinimumDistance_ = 200
-
-            if (activeObjectStyle_.IconMinimumDistance) {
-              iconMinimumDistance_ = activeObjectStyle_.IconMinimumDistance
-            }
-
-            drawingInfo_.iconMinimumDistance_ = iconMinimumDistance_ * (objectStyle_.DisplayUnit === 'px' ? 1 / drawingInfo_.mapScale_ : objectScale_)
-
-            drawingInfo_.iconTextPlacement_ = activeObjectStyle_.IconTextPlacement
-          }
-
-          drawingInfo_.isIcon_ = true
-        }
-
-        if (activeObjectStyle_.TextFunction) {
-          if (!activeObjectStyle_.TextFunction_) {
-            activeObjectStyle_.TextFunction_ = new Function(
+          if (typeof objectStyle.PatternFunction === 'string') {
+            objectStyle.PatternFunction = new Function(
               'ObjectData',
               'MapZoom',
               'RandomGenerator',
-              'return ' + activeObjectStyle_.TextFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+              'return ' + objectStyle.PatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
             )
           }
 
-          drawingInfo_.text_ = activeObjectStyle_.TextFunction_(drawingInfo_.objectData_, tileInfo_.vms2TileZ_, this.randomGenerator_)
-
-          drawingInfo_.isText_ = true
+          activeObjectStyle = objectStyle
         }
 
-        if (activeObjectStyle_.PatternFunction) {
-          const patternName_ = activeObjectStyle_.PatternFunction_(drawingInfo_.objectData_, tileInfo_.vms2TileZ_, this.randomGenerator_)
+        drawingInfo.isIcon = false
 
-          if (patternName_) {
-            const pattern_ = await this._getPattern_(drawingInfo_.context_, patternName_)
+        drawingInfo.iconImage = null
 
-            pattern_.transformMatrix = new DOMMatrix().translate(drawingInfo_.mapArea_.left_ * drawingInfo_.mapScale_, drawingInfo_.mapArea_.top_ * drawingInfo_.mapScale_).scale(drawingInfo_.patternScale_)
+        drawingInfo.iconWidth = 0
+        drawingInfo.iconHeight = 0
 
-            pattern_.setTransform(pattern_.transformMatrix)
+        if (typeof activeObjectStyle.PatternFunction === 'function') {
+          const patternName = activeObjectStyle.PatternFunction(drawingInfo.objectData, tileInfo.vms2TileZ, this.randomGenerator)
 
-            drawingInfo_.context_.fillStyle = pattern_
+          if (patternName) {
+            const pattern = await this._getPattern(drawingInfo.context, patternName)
 
-            drawingInfo_.isFilled_ = true
+            pattern.transformMatrix = new DOMMatrix().translate(drawingInfo.mapArea.left * drawingInfo.mapScale, drawingInfo.mapArea.top * drawingInfo.mapScale).scale(drawingInfo.patternScale)
+
+            pattern.setTransform(pattern.transformMatrix)
+
+            drawingInfo.context.fillStyle = pattern
+
+            drawingInfo.isFilled = true
           } else {
-            drawingInfo_.isFilled_ = false
+            drawingInfo.isFilled = false
           }
         }
 
-        let displacementScale_ = [1, 1]
-
-        if (activeObjectStyle_.DisplacementScale) {
-          displacementScale_ = activeObjectStyle_.DisplacementScale
-        }
-
-        drawingInfo_.displacementScaleX_ = displacementScale_[0]
-        drawingInfo_.displacementScaleY_ = displacementScale_[1]
-
-        if (mapObject_.geometry && (drawingInfo_.isStroked_ || drawingInfo_.isFilled_)) {
-          this._drawGeometry_(drawingInfo_, mapObject_.geometry)
-        } else if (drawingInfo_.isIcon_ || drawingInfo_.isText_) {
-          this._drawIcon_(drawingInfo_, drawingInfo_.objectData_.Center.x, drawingInfo_.objectData_.Center.y)
+        if (mapObject.geometry && (drawingInfo.isStroked || drawingInfo.isFilled)) {
+          this._drawGeometry(drawingInfo, mapObject.geometry)
+        } else if (drawingInfo.isIcon) {
+          this._drawIcon(drawingInfo, mapObject.info.Center.x, mapObject.info.Center.y)
         }
       }
     }
   },
-  _getLayerStyleType_(layer_) {
-    if (layer_.Style) {
-      if (layer_.Style.IconFunction || layer_.Style.TextFunction) {
+  _drawObjectsLayer: async function (drawingInfo, mapObjects_, tileInfo, layer_) {
+    let activeObjectStyle = null
+
+    for (const mapObject of mapObjects_) {
+      if (!mapObject) {
+        continue
+      }
+
+      if (mapObject.geometry === undefined) { // Tile bounding box object to avoid drawing lines along tile edges.
+        drawingInfo.tileBoundingBox = mapObject.info
+
+        continue
+      }
+
+      if (
+        mapObject.info.Envelope.left > drawingInfo.boundingArea.right ||
+        mapObject.info.Envelope.right < drawingInfo.boundingArea.left ||
+        mapObject.info.Envelope.bottom > drawingInfo.boundingArea.top ||
+        mapObject.info.Envelope.top < drawingInfo.boundingArea.bottom
+      ) { // Note: Top > Bottom!
+        continue
+      }
+
+      if (!mapObject.type) {
+        if (!isNaN(mapObject.info.length)) {
+          mapObject.type = 'line'
+        } else if (mapObject.geometry === null) {
+          mapObject.type = 'point'
+        } else {
+          mapObject.type = 'polygon'
+        }
+      }
+
+      drawingInfo.objectData = mapObject.info
+
+      let objectStyle = layer_.Style
+
+      if (layer_.Filters) {
+        let objectData = drawingInfo.objectData
+
+        const x = objectData.Center.x
+        const y = objectData.Center.y
+
+        this.randomGenerator.init_seed((Math.round(x) + 0xaffeaffe) * (Math.round(y) + 0xaffeaffe))
+
+        if (drawingInfo.isGrid && drawingInfo.saveDataCanvas) {
+          if (!drawingInfo.saveDataPixels) {
+            drawingInfo.saveDataPixels = drawingInfo.saveDataCanvas.context.getImageData(0, 0, drawingInfo.saveDataCanvas.width, drawingInfo.saveDataCanvas.height).data
+
+            this._remapPixels(drawingInfo.saveDataPixels, drawingInfo.saveDataIds, drawingInfo.saveDataCanvas.width)
+          }
+
+          const pixelX = Math.round((x - drawingInfo.saveDataArea.left) * drawingInfo.mapScale)
+          const pixelY = Math.round((drawingInfo.saveDataArea.top - y) * drawingInfo.mapScale)
+
+          if (pixelX >= 0 && pixelX < drawingInfo.saveDataCanvas.width && pixelY >= 0 && pixelY < drawingInfo.saveDataCanvas.height) {
+            const pixelIndex = (pixelX + pixelY * drawingInfo.saveDataCanvas.width) * 4
+
+            const red = drawingInfo.saveDataPixels[pixelIndex]
+            const green = drawingInfo.saveDataPixels[pixelIndex + 1]
+            const blue = drawingInfo.saveDataPixels[pixelIndex + 2]
+
+            const color = (red << 16) + (green << 8) + blue
+
+            objectData = drawingInfo.saveDataIds[color]
+          } else {
+            continue
+          }
+        }
+
+        if (objectData) {
+          for (const filter of layer_.Filters) {
+            if (filter.Enable === false) {
+              continue
+            }
+
+            if (filter.Condition) {
+              if (typeof filter.Condition === 'string') {
+                filter.Condition = new Function(
+                  'ObjectData',
+                  'MapZoom',
+                  'RandomGenerator',
+                  'return ' + filter.Condition.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+                )
+              }
+
+              if (filter.Condition(objectData, tileInfo.vms2TileZ, this.randomGenerator)) {
+                objectStyle = filter.Style
+
+                break
+              }
+            }
+          }
+        }
+      }
+
+      if (objectStyle) {
+        let objectScale = drawingInfo.objectScale
+
+        if (!isNaN(objectStyle.ZoomScale)) {
+          objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(defaultPrintDpi * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
+        }
+
+        if (activeObjectStyle !== objectStyle) {
+          if (isNaN(objectStyle.FillAlpha)) {
+            objectStyle.FillAlpha = 1
+          }
+
+          if (objectStyle.FillAlpha && objectStyle.FillColor) {
+            drawingInfo.context.fillStyle = '#' + this._hexify32([objectStyle.FillColor[0], objectStyle.FillColor[1], objectStyle.FillColor[2], Math.round(objectStyle.FillAlpha * 255)])
+
+            drawingInfo.isFilled = true
+          } else {
+            drawingInfo.isFilled = false
+          }
+
+          if (isNaN(objectStyle.StrokeAlpha)) {
+            objectStyle.StrokeAlpha = 1
+          }
+
+          if (!isNaN(objectStyle.StrokeWidth)) {
+            drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.mapScale * drawingInfo.adjustedObjectScale)
+          }
+
+          if (objectStyle.StrokeAlpha && objectStyle.StrokeWidth > 0 && objectStyle.StrokeColor) {
+            drawingInfo.context.strokeStyle = '#' + this._hexify32([objectStyle.StrokeColor[0], objectStyle.StrokeColor[1], objectStyle.StrokeColor[2], Math.round(objectStyle.StrokeAlpha * 255)])
+
+            drawingInfo.isStroked = true
+          } else {
+            drawingInfo.isStroked = false
+          }
+
+          if (drawingInfo.isStroked) {
+            if (objectStyle.LineDash) {
+              const lineDash = []
+
+              for (const dash of objectStyle.LineDash) {
+                lineDash.push(dash * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.mapScale))
+              }
+
+              drawingInfo.context.setLineDash(lineDash)
+            } else {
+              drawingInfo.context.setLineDash([])
+            }
+
+            if (objectStyle.LineCap) {
+              drawingInfo.context.lineCap = objectStyle.LineCap
+            } else {
+              drawingInfo.context.lineCap = 'round'
+            }
+
+            if (objectStyle.LineJoin) {
+              drawingInfo.context.lineJoin = objectStyle.LineJoin
+            } else {
+              drawingInfo.context.lineJoin = 'round'
+            }
+          }
+
+          if (objectStyle.FontFamily && objectStyle.FontSize != null) {
+            await this._requestFontFace(objectStyle)
+
+            drawingInfo.fontSize = objectStyle.FontSize * objectScale
+
+            let fontStyle = 'normal'
+
+            if (objectStyle.FontStyle) {
+              fontStyle = objectStyle.FontStyle
+            }
+
+            drawingInfo.context.font = fontStyle + ' ' + (drawingInfo.fontSize * drawingInfo.mapScale) + 'px \'' + objectStyle.FontFamily + '\''
+
+            drawingInfo.fontStyle = fontStyle
+            drawingInfo.fontFamily = objectStyle.FontFamily
+          }
+
+          if (typeof objectStyle.IconFunction === 'string') {
+            objectStyle.IconFunction = new Function(
+              'ObjectData',
+              'MapZoom',
+              'RandomGenerator',
+              'return ' + objectStyle.IconFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+            )
+          }
+
+          if (typeof objectStyle.PatternFunction === 'string') {
+            objectStyle.PatternFunction = new Function(
+              'ObjectData',
+              'MapZoom',
+              'RandomGenerator',
+              'return ' + objectStyle.PatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+            )
+          }
+
+          activeObjectStyle = objectStyle
+        }
+
+        drawingInfo.isIcon = false
+        drawingInfo.isText = false
+
+        drawingInfo.iconImage = null
+        drawingInfo.text = null
+
+        drawingInfo.iconWidth = 0
+        drawingInfo.iconHeight = 0
+        drawingInfo.iconTextOffsetX = 0
+        drawingInfo.iconTextOffsetY = 0
+
+        if (typeof activeObjectStyle.IconFunction === 'function') {
+          const x = drawingInfo.objectData.Center.x
+          const y = drawingInfo.objectData.Center.y
+
+          this.randomGenerator.init_seed((Math.round(x) + 0xaffeaffe) * (Math.round(y) + 0xaffeaffe))
+
+          const iconName = activeObjectStyle.IconFunction(drawingInfo.objectData, tileInfo.vms2TileZ, this.randomGenerator)
+
+          if (iconName) {
+            let iconUrl = iconName
+
+            if (!/^http.*:\/\//.test(iconName) && !/^\.\//.test(iconName)) {
+              iconUrl = this.options.assetsUrl + '/images/icons/' + iconName.replace(/file:\/\/[^/]*\//g, '')
+            }
+
+            drawingInfo.iconImage = await this._requestImage(iconUrl)
+
+            const iconScales = [1, 1]
+
+            if (activeObjectStyle.IconScales != null) {
+              iconScales[0] = activeObjectStyle.IconScales[0]
+              iconScales[1] = activeObjectStyle.IconScales[1]
+            }
+
+            drawingInfo.iconMirrorX = iconScales[0] < 0 ? -1 : 1
+            drawingInfo.iconMirrorY = iconScales[1] < 0 ? -1 : 1
+
+            drawingInfo.iconWidth = Math.abs(drawingInfo.iconImage.width * iconScales[0]) * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : objectScale)
+            drawingInfo.iconHeight = Math.abs(drawingInfo.iconImage.height * iconScales[1]) * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : objectScale)
+
+            drawingInfo.iconAngle = drawingInfo.objectData.Angle || 0
+
+            const iconImageAnchor = [0, 0]
+
+            if (activeObjectStyle.IconImageAnchor) {
+              iconImageAnchor[0] = objectStyle.DisplayUnit === 'px' ? (activeObjectStyle.IconImageAnchor[0] - drawingInfo.iconImage.width / 2) / drawingInfo.mapScale : (activeObjectStyle.IconImageAnchor[0] - 0.5) * Math.abs(drawingInfo.iconImage.width * iconScales[0]) * objectScale
+              iconImageAnchor[1] = objectStyle.DisplayUnit === 'px' ? (activeObjectStyle.IconImageAnchor[1] - drawingInfo.iconImage.height / 2) / drawingInfo.mapScale : (activeObjectStyle.IconImageAnchor[1] - 0.5) * Math.abs(drawingInfo.iconImage.height * iconScales[1]) * objectScale
+            }
+
+            const iconImageOffsets = [0, 0]
+
+            if (activeObjectStyle.IconImageOffsets) {
+              iconImageOffsets[0] = activeObjectStyle.IconImageOffsets[0] * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : Math.abs(drawingInfo.iconImage.width * iconScales[0]) * objectScale)
+              iconImageOffsets[1] = activeObjectStyle.IconImageOffsets[1] * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : Math.abs(drawingInfo.iconImage.height * iconScales[1]) * objectScale)
+            }
+
+            drawingInfo.iconImageOffsetX = iconImageOffsets[0] - iconImageAnchor[0]
+            drawingInfo.iconImageOffsetY = iconImageOffsets[1] - iconImageAnchor[1]
+
+            const iconTextOffset = [0, 0]
+
+            if (activeObjectStyle.IconTextOffset) {
+              iconTextOffset[0] = activeObjectStyle.IconTextOffset[0] * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : objectScale)
+              iconTextOffset[1] = activeObjectStyle.IconTextOffset[1] * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : objectScale)
+            }
+
+            drawingInfo.iconTextOffsetX = iconTextOffset[0]
+            drawingInfo.iconTextOffsetY = iconTextOffset[1]
+
+            let iconMinimumDistance = 200
+
+            if (activeObjectStyle.IconMinimumDistance) {
+              iconMinimumDistance = activeObjectStyle.IconMinimumDistance
+            }
+
+            drawingInfo.iconMinimumDistance = iconMinimumDistance * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : objectScale)
+
+            drawingInfo.iconTextPlacement = activeObjectStyle.IconTextPlacement
+          }
+
+          drawingInfo.isIcon = true
+        }
+
+        if (typeof activeObjectStyle.TextFunction === 'string') {
+          activeObjectStyle.TextFunction = new Function(
+            'ObjectData',
+            'MapZoom',
+            'RandomGenerator',
+            'return ' + activeObjectStyle.TextFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+          )
+        }
+
+        if (typeof activeObjectStyle.TextFunction === 'function') {
+          drawingInfo.text = activeObjectStyle.TextFunction(drawingInfo.objectData, tileInfo.vms2TileZ, this.randomGenerator)
+
+          drawingInfo.isText = true
+        }
+
+        if (typeof activeObjectStyle.PatternFunction === 'function') {
+          const patternName = activeObjectStyle.PatternFunction(drawingInfo.objectData, tileInfo.vms2TileZ, this.randomGenerator)
+
+          if (patternName) {
+            const pattern = await this._getPattern(drawingInfo.context, patternName)
+
+            pattern.transformMatrix = new DOMMatrix().translate(drawingInfo.mapArea.left * drawingInfo.mapScale, drawingInfo.mapArea.top * drawingInfo.mapScale).scale(drawingInfo.patternScale)
+
+            pattern.setTransform(pattern.transformMatrix)
+
+            drawingInfo.context.fillStyle = pattern
+
+            drawingInfo.isFilled = true
+          } else {
+            drawingInfo.isFilled = false
+          }
+        }
+
+        let displacementScale = [1, 1]
+
+        if (activeObjectStyle.DisplacementScale) {
+          displacementScale = activeObjectStyle.DisplacementScale
+        }
+
+        drawingInfo.displacementScaleX = displacementScale[0]
+        drawingInfo.displacementScaleY = displacementScale[1]
+
+        if (mapObject.geometry && (drawingInfo.isStroked || drawingInfo.isFilled)) {
+          this._drawGeometry(drawingInfo, mapObject.geometry)
+        } else if (drawingInfo.isIcon || drawingInfo.isText) {
+          this._drawIcon(drawingInfo, drawingInfo.objectData.Center.x, drawingInfo.objectData.Center.y)
+        }
+      }
+    }
+  },
+  _getLayerStyleType: function (layer) {
+    if (layer.Style) {
+      if (layer.Style.IconFunction || layer.Style.TextFunction) {
         return 'text'
-      } else if (layer_.Filters) {
-        for (const filter of layer_.Filters) {
+      } else if (layer.Filters) {
+        for (const filter of layer.Filters) {
           if (filter.Style && (filter.Style.IconFunction || filter.Style.TextFunction)) {
             return 'text'
           }
@@ -2446,401 +2449,399 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     return 'base'
   },
-  _requestStyle_: function () {
+  _requestStyle: function () {
     return new Promise(resolve => {
       if (this.options.style.Order && Array.isArray(this.options.style.Order)) {
         resolve(this.options.style)
       } else {
-        const styleId_ = this.options.style
+        const styleId = this.options.style
 
-        if (!globalThis.vms2Context_.styleRequestQueues_[styleId_]) {
-          globalThis.vms2Context_.styleRequestQueues_[styleId_] = []
+        if (!globalThis.vms2Context.styleRequestQueues[styleId]) {
+          globalThis.vms2Context.styleRequestQueues[styleId] = []
         }
 
-        globalThis.vms2Context_.styleRequestQueues_[styleId_].push(resolve)
+        globalThis.vms2Context.styleRequestQueues[styleId].push(resolve)
 
-        if (globalThis.vms2Context_.styleRequestQueues_[styleId_].length === 1) {
-          const url_ = new URL(this.options.styleUrl.replace('{style_id}', styleId_), window.location.origin)
+        if (globalThis.vms2Context.styleRequestQueues[styleId].length === 1) {
+          const url = new URL(this.options.styleUrl.replace('{style_id}', styleId), window.location.origin)
 
-          const parameters_ = new URLSearchParams(url_.search)
+          const parameters = new URLSearchParams(url.search)
 
-          const formBody_ = []
+          const formBody = []
 
-          for (const keyValuePair_ of parameters_.entries()) {
-            formBody_.push(encodeURIComponent(keyValuePair_[0]) + '=' + encodeURIComponent(keyValuePair_[1]))
+          for (const keyValuePair of parameters.entries()) {
+            formBody.push(encodeURIComponent(keyValuePair[0]) + '=' + encodeURIComponent(keyValuePair[1]))
           }
 
-          const options_ = {
+          const options = {
             method: 'POST',
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded'
             },
-            body: formBody_.join('&')
+            body: formBody.join('&')
           }
 
-          fetch(url_.origin + url_.pathname, options_)
-            .then(response_ => response_.json())
-            .then(style_ => {
-              this.options.style = style_
+          fetch(url.origin + url.pathname, options)
+            .then(response => response.json())
+            .then(style => {
+              this.options.style = style
 
-              for (const styleRequestResolve of globalThis.vms2Context_.styleRequestQueues_[styleId_]) {
+              for (const styleRequestResolve of globalThis.vms2Context.styleRequestQueues[styleId]) {
                 styleRequestResolve(this.options.style)
               }
 
-              globalThis.vms2Context_.styleRequestQueues_[styleId_] = []
+              globalThis.vms2Context.styleRequestQueues[styleId] = []
             })
         }
       }
     })
   },
-  _drawTile_: function (tileCanvas_, tileInfo_) {
+  _drawTile: function (tileCanvas, tileInfo) {
     return new Promise(resolve => {
-      this._requestTileDbInfos_()
+      this._requestTileDbInfos()
         .then(() => {
-          this._requestStyle_()
-            .then(style_ => {
-              let mapStyle_ = {}
+          this._requestStyle()
+            .then(style => {
+              let mapStyle = {}
 
               if (this.options.styleOverride) {
-                for (const key_ in style_) {
-                  if (Object.prototype.hasOwnProperty.call(style_, key_)) {
-                    mapStyle_[key_] = style_[key_]
+                for (const key in style) {
+                  if (Object.prototype.hasOwnProperty.call(style, key)) {
+                    mapStyle[key] = style[key]
                   }
                 }
 
-                for (const key_ in this.options.styleOverride) {
-                  if (Object.prototype.hasOwnProperty.call(this.options.styleOverride, key_)) {
-                    mapStyle_[key_] = this.options.styleOverride[key_]
+                for (const key in this.options.styleOverride) {
+                  if (Object.prototype.hasOwnProperty.call(this.options.styleOverride, key)) {
+                    mapStyle[key] = this.options.styleOverride[key]
                   }
                 }
               } else {
-                mapStyle_ = style_
+                mapStyle = style
               }
 
-              if (tileInfo_.drawingContext) {
-                tileInfo_.drawingContext.width = tileCanvas_.width
-                tileInfo_.drawingContext.height = tileCanvas_.height
+              if (tileInfo.drawingContext) {
+                tileInfo.drawingContext.width = tileCanvas.width
+                tileInfo.drawingContext.height = tileCanvas.height
 
-                tileCanvas_.context_ = tileInfo_.drawingContext
+                tileCanvas.context = tileInfo.drawingContext
               }
 
-              tileInfo_.width_ = tileCanvas_.width
-              tileInfo_.height_ = tileCanvas_.height
+              tileInfo.width = tileCanvas.width
+              tileInfo.height = tileCanvas.height
 
-              let mapScale = tileInfo_.mapScale || this.options.mapScale
+              const userMapScale = tileInfo.mapScale || this.options.mapScale
 
-              tileInfo_.mapBounds_ = {}
+              tileInfo.mapBounds = {}
 
-              if (!isNaN(tileInfo_.x) && !isNaN(tileInfo_.y) && !isNaN(tileInfo_.z)) {
-                tileInfo_.mapBounds_.longitudeMin_ = this._tileToLongitude_(tileInfo_.x, tileInfo_.z, this.options.zoomPowerBase)
-                tileInfo_.mapBounds_.longitudeMax_ = this._tileToLongitude_(tileInfo_.x + 1, tileInfo_.z, this.options.zoomPowerBase)
-                tileInfo_.mapBounds_.latitudeMin_ = this._tileToLatitude_(tileInfo_.y + 1, tileInfo_.z, this.options.zoomPowerBase)
-                tileInfo_.mapBounds_.latitudeMax_ = this._tileToLatitude_(tileInfo_.y, tileInfo_.z, this.options.zoomPowerBase)
+              if (!isNaN(tileInfo.x) && !isNaN(tileInfo.y) && !isNaN(tileInfo.z)) {
+                tileInfo.mapBounds.longitudeMin = this._tileToLongitude(tileInfo.x, tileInfo.z, this.options.zoomPowerBase)
+                tileInfo.mapBounds.longitudeMax = this._tileToLongitude(tileInfo.x + 1, tileInfo.z, this.options.zoomPowerBase)
+                tileInfo.mapBounds.latitudeMin = this._tileToLatitude(tileInfo.y + 1, tileInfo.z, this.options.zoomPowerBase)
+                tileInfo.mapBounds.latitudeMax = this._tileToLatitude(tileInfo.y, tileInfo.z, this.options.zoomPowerBase)
 
-                tileInfo_.dpi_ = (this.options.dpi || DEFAULT_PRINT_DPI_) * tileInfo_.width_ / this.tileSize_
+                tileInfo.dpi = (this.options.dpi || defaultPrintDpi) * tileInfo.width / this.tileSize
               } else {
-                tileInfo_.mapBounds_.longitudeMin_ = tileInfo_.longitudeMin
-                tileInfo_.mapBounds_.longitudeMax_ = tileInfo_.longitudeMax
-                tileInfo_.mapBounds_.latitudeMin_ = tileInfo_.latitudeMin
-                tileInfo_.mapBounds_.latitudeMax_ = tileInfo_.latitudeMax
+                tileInfo.mapBounds.longitudeMin = tileInfo.longitudeMin
+                tileInfo.mapBounds.longitudeMax = tileInfo.longitudeMax
+                tileInfo.mapBounds.latitudeMin = tileInfo.latitudeMin
+                tileInfo.mapBounds.latitudeMax = tileInfo.latitudeMax
 
-                const degreesWidth_ = tileInfo_.mapBounds_.longitudeMax_ - tileInfo_.mapBounds_.longitudeMin_
+                const degreesWidth = tileInfo.mapBounds.longitudeMax - tileInfo.mapBounds.longitudeMin
 
-                const normalizedWidth_ = degreesWidth_ / 360
-                const normalizedHeight_ = this._latitudeToNormalized_(tileInfo_.mapBounds_.latitudeMin_) - this._latitudeToNormalized_(tileInfo_.mapBounds_.latitudeMax_)
+                const normalizedWidth = degreesWidth / 360
+                const normalizedHeight = this._latitudeToNormalized(tileInfo.mapBounds.latitudeMin) - this._latitudeToNormalized(tileInfo.mapBounds.latitudeMax)
 
-                const normalizedRatio_ = normalizedWidth_ / normalizedHeight_
-                const mapRatio_ = tileInfo_.width_ / tileInfo_.height_
+                const normalizedRatio = normalizedWidth / normalizedHeight
+                const mapRatio = tileInfo.width / tileInfo.height
 
-                if (mapRatio_ >= normalizedRatio_) {
-                  tileInfo_.mapBounds_.longitudeMin_ -= (degreesWidth_ * mapRatio_ / normalizedRatio_ - degreesWidth_) / 2
-                  tileInfo_.mapBounds_.longitudeMax_ += (degreesWidth_ * mapRatio_ / normalizedRatio_ - degreesWidth_) / 2
+                if (mapRatio >= normalizedRatio) {
+                  tileInfo.mapBounds.longitudeMin -= (degreesWidth * mapRatio / normalizedRatio - degreesWidth) / 2
+                  tileInfo.mapBounds.longitudeMax += (degreesWidth * mapRatio / normalizedRatio - degreesWidth) / 2
                 } else {
-                  let normalizedMin_ = this._latitudeToNormalized_(tileInfo_.mapBounds_.latitudeMin_)
-                  let normalizedMax_ = this._latitudeToNormalized_(tileInfo_.mapBounds_.latitudeMax_)
+                  let normalizedMin = this._latitudeToNormalized(tileInfo.mapBounds.latitudeMin)
+                  let normalizedMax = this._latitudeToNormalized(tileInfo.mapBounds.latitudeMax)
 
-                  normalizedMin_ += (normalizedWidth_ / mapRatio_ - normalizedHeight_) / 2
-                  normalizedMax_ -= (normalizedWidth_ / mapRatio_ - normalizedHeight_) / 2
+                  normalizedMin += (normalizedWidth / mapRatio - normalizedHeight) / 2
+                  normalizedMax -= (normalizedWidth / mapRatio - normalizedHeight) / 2
 
-                  tileInfo_.mapBounds_.latitudeMin_ = this._normalizedToLatitude_(normalizedMin_)
-                  tileInfo_.mapBounds_.latitudeMax_ = this._normalizedToLatitude_(normalizedMax_)
+                  tileInfo.mapBounds.latitudeMin = this._normalizedToLatitude(normalizedMin)
+                  tileInfo.mapBounds.latitudeMax = this._normalizedToLatitude(normalizedMax)
                 }
 
-                const tileSize_ = this.tileSize_ * tileInfo_.dpi / DEFAULT_PRINT_DPI_
+                const tileSize = this.tileSize * tileInfo.dpi / defaultPrintDpi
 
-                tileInfo_.z = Math.log(360 * tileInfo_.width_ / tileSize_ / (tileInfo_.mapBounds_.longitudeMax_ - tileInfo_.mapBounds_.longitudeMin_)) / Math.log(this.options.zoomPowerBase)
-
-                tileInfo_.dpi_ = tileInfo_.dpi
+                tileInfo.z = Math.log(360 * tileInfo.width / tileSize / (tileInfo.mapBounds.longitudeMax - tileInfo.mapBounds.longitudeMin)) / Math.log(this.options.zoomPowerBase)
               }
 
-              let tileAreaDrawingExtension = TILE_AREA_DRAWING_EXTENSION_ * mapScale
+              let tileAreaDrawingExtension = TILE_AREA_DRAWING_EXTENSION * userMapScale
 
-              tileInfo_.drawingMapBounds_ = {
-                latitudeMin_: this._tileToLatitude_(this._latitudeToTile_(tileInfo_.mapBounds_.latitudeMin_, tileInfo_.z, this.options.zoomPowerBase) + tileAreaDrawingExtension, tileInfo_.z, this.options.zoomPowerBase),
-                latitudeMax_: this._tileToLatitude_(this._latitudeToTile_(tileInfo_.mapBounds_.latitudeMax_, tileInfo_.z, this.options.zoomPowerBase) - tileAreaDrawingExtension, tileInfo_.z, this.options.zoomPowerBase),
-                longitudeMin_: this._tileToLongitude_(this._longitudeToTile_(tileInfo_.mapBounds_.longitudeMin_, tileInfo_.z, this.options.zoomPowerBase) - tileAreaDrawingExtension, tileInfo_.z, this.options.zoomPowerBase),
-                longitudeMax_: this._tileToLongitude_(this._longitudeToTile_(tileInfo_.mapBounds_.longitudeMax_, tileInfo_.z, this.options.zoomPowerBase) + tileAreaDrawingExtension, tileInfo_.z, this.options.zoomPowerBase)
+              tileInfo.drawingMapBounds = {
+                latitudeMin: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMin, tileInfo.z, this.options.zoomPowerBase) + tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase),
+                latitudeMax: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMax, tileInfo.z, this.options.zoomPowerBase) - tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase),
+                longitudeMin: this._tileToLongitude(this._longitudeToTile(tileInfo.mapBounds.longitudeMin, tileInfo.z, this.options.zoomPowerBase) - tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase),
+                longitudeMax: this._tileToLongitude(this._longitudeToTile(tileInfo.mapBounds.longitudeMax, tileInfo.z, this.options.zoomPowerBase) + tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase)
               }
 
-              let tileAreaSaveExtension = TILE_AREA_SAVE_EXTENSION_ * mapScale
+              let tileAreaSaveExtension = TILE_AREA_SAVE_EXTENSION * userMapScale
 
-              tileInfo_.saveMapBounds_ = {
-                latitudeMin_: this._tileToLatitude_(this._latitudeToTile_(tileInfo_.mapBounds_.latitudeMin_, tileInfo_.z, this.options.zoomPowerBase) + tileAreaSaveExtension, tileInfo_.z, this.options.zoomPowerBase),
-                latitudeMax_: this._tileToLatitude_(this._latitudeToTile_(tileInfo_.mapBounds_.latitudeMax_, tileInfo_.z, this.options.zoomPowerBase) - tileAreaSaveExtension, tileInfo_.z, this.options.zoomPowerBase),
-                longitudeMin_: this._tileToLongitude_(this._longitudeToTile_(tileInfo_.mapBounds_.longitudeMin_, tileInfo_.z, this.options.zoomPowerBase) - tileAreaSaveExtension, tileInfo_.z, this.options.zoomPowerBase),
-                longitudeMax_: this._tileToLongitude_(this._longitudeToTile_(tileInfo_.mapBounds_.longitudeMax_, tileInfo_.z, this.options.zoomPowerBase) + tileAreaSaveExtension, tileInfo_.z, this.options.zoomPowerBase)
+              tileInfo.saveMapBounds = {
+                latitudeMin: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMin, tileInfo.z, this.options.zoomPowerBase) + tileAreaSaveExtension, tileInfo.z, this.options.zoomPowerBase),
+                latitudeMax: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMax, tileInfo.z, this.options.zoomPowerBase) - tileAreaSaveExtension, tileInfo.z, this.options.zoomPowerBase),
+                longitudeMin: this._tileToLongitude(this._longitudeToTile(tileInfo.mapBounds.longitudeMin, tileInfo.z, this.options.zoomPowerBase) - tileAreaSaveExtension, tileInfo.z, this.options.zoomPowerBase),
+                longitudeMax: this._tileToLongitude(this._longitudeToTile(tileInfo.mapBounds.longitudeMax, tileInfo.z, this.options.zoomPowerBase) + tileAreaSaveExtension, tileInfo.z, this.options.zoomPowerBase)
               }
 
-              tileInfo_.vms2TileZ_ = Math.round(Math.log2(Math.pow(this.options.zoomPowerBase, tileInfo_.z) / mapScale))
+              tileInfo.vms2TileZ = Math.round(Math.log2(Math.pow(this.options.zoomPowerBase, tileInfo.z) / userMapScale))
 
-              this._getTileLayers_(tileCanvas_, tileInfo_, mapStyle_).then(async tileLayers_ => {
-                if (tileCanvas_.isDummy_) {
-                  return resolve(tileLayers_)
+              this._getTileLayers(tileCanvas, tileInfo, mapStyle).then(async tileLayers => {
+                if (tileCanvas.isDummy) {
+                  return resolve(tileLayers)
                 }
 
-                if (tileCanvas_.hasBeenRemoved_) {
+                if (tileCanvas.hasBeenRemoved) {
                   return resolve()
                 }
 
-                if (tileCanvas_.hasBeenCreated_) {
-                  this.tileCanvases_.push(tileCanvas_)
+                if (tileCanvas.hasBeenCreated) {
+                  this.tileCanvases.push(tileCanvas)
 
-                  tileCanvas_.hasBeenCreated_ = false
+                  tileCanvas.hasBeenCreated = false
                 }
 
-                if (!tileCanvas_.context_) {
-                  tileCanvas_.context_ = tileCanvas_.getContext('2d')
+                if (!tileCanvas.context) {
+                  tileCanvas.context = tileCanvas.getContext('2d')
 
-                  tileCanvas_.context_.patterns_ = {}
+                  tileCanvas.context.patterns = {}
 
-                  tileCanvas_.context_.beginGroup = function (name_) {
+                  tileCanvas.context.beginGroup = function (name) {
                   }
 
-                  tileCanvas_.context_.endGroup = function () {
+                  tileCanvas.context.endGroup = function () {
                   }
                 }
 
-                tileCanvas_.context_.clearRect(0, 0, tileCanvas_.width, tileCanvas_.height)
+                tileCanvas.context.clearRect(0, 0, tileCanvas.width, tileCanvas.height)
 
-                const mapArea_ = {
-                  left_: this._longitudeToMeters_(tileInfo_.mapBounds_.longitudeMin_),
-                  right_: this._longitudeToMeters_(tileInfo_.mapBounds_.longitudeMax_),
-                  bottom_: this._latitudeToMeters_(tileInfo_.mapBounds_.latitudeMin_),
-                  top_: this._latitudeToMeters_(tileInfo_.mapBounds_.latitudeMax_)
+                const mapArea = {
+                  left: this._longitudeToMeters(tileInfo.mapBounds.longitudeMin),
+                  right: this._longitudeToMeters(tileInfo.mapBounds.longitudeMax),
+                  bottom: this._latitudeToMeters(tileInfo.mapBounds.latitudeMin),
+                  top: this._latitudeToMeters(tileInfo.mapBounds.latitudeMax)
                 }
 
-                const extendedMapArea_ = {
-                  left_: this._longitudeToMeters_(tileInfo_.drawingMapBounds_.longitudeMin_),
-                  right_: this._longitudeToMeters_(tileInfo_.drawingMapBounds_.longitudeMax_),
-                  bottom_: this._latitudeToMeters_(tileInfo_.drawingMapBounds_.latitudeMin_),
-                  top_: this._latitudeToMeters_(tileInfo_.drawingMapBounds_.latitudeMax_)
+                const extendedMapArea = {
+                  left: this._longitudeToMeters(tileInfo.drawingMapBounds.longitudeMin),
+                  right: this._longitudeToMeters(tileInfo.drawingMapBounds.longitudeMax),
+                  bottom: this._latitudeToMeters(tileInfo.drawingMapBounds.latitudeMin),
+                  top: this._latitudeToMeters(tileInfo.drawingMapBounds.latitudeMax)
                 }
 
-                const saveDataArea_ = {
-                  left_: this._longitudeToMeters_(tileInfo_.saveMapBounds_.longitudeMin_),
-                  right_: this._longitudeToMeters_(tileInfo_.saveMapBounds_.longitudeMax_),
-                  bottom_: this._latitudeToMeters_(tileInfo_.saveMapBounds_.latitudeMin_),
-                  top_: this._latitudeToMeters_(tileInfo_.saveMapBounds_.latitudeMax_)
+                const saveDataArea = {
+                  left: this._longitudeToMeters(tileInfo.saveMapBounds.longitudeMin),
+                  right: this._longitudeToMeters(tileInfo.saveMapBounds.longitudeMax),
+                  bottom: this._latitudeToMeters(tileInfo.saveMapBounds.latitudeMin),
+                  top: this._latitudeToMeters(tileInfo.saveMapBounds.latitudeMax)
                 }
 
-                const drawingInfo_ = {
-                  mapArea_,
-                  extendedMapArea_,
-                  mapWidth_: tileInfo_.width_,
-                  mapHeight_: tileInfo_.height_,
+                const drawingInfo = {
+                  mapArea,
+                  extendedMapArea: extendedMapArea,
+                  mapWidth_: tileInfo.width,
+                  mapHeight: tileInfo.height,
 
-                  userMapScale_: mapScale,
-                  objectScale_: this.options.objectScale * mapScale,
+                  userMapScale: userMapScale,
+                  objectScale: this.options.objectScale * userMapScale,
 
-                  drawingArea_: mapArea_,
-                  boundingArea_: mapArea_,
+                  drawingArea: mapArea,
+                  boundingArea: mapArea,
 
-                  mapCanvas_: null,
+                  mapCanvas: null,
 
-                  saveDataArea_,
-                  saveDataCanvas_: null,
+                  saveDataArea,
+                  saveDataCanvas: null,
 
                   workCanvases_: {},
 
-                  iconPositions_: {},
+                  iconPositions: {},
 
-                  patternScale_: tileInfo_.dpi_ * mapScale / DEFAULT_PRINT_DPI_,
-                  mapScale_: tileInfo_.width_ / (mapArea_.right_ - mapArea_.left_),
-                  adjustedObjectScale_: Math.abs(tileInfo_.vms2TileZ_ < 6 ? 0.7 : 0.7 / Math.cos(tileInfo_.mapBounds_.latitudeMin_ * Math.PI / 180)),
+                  patternScale: tileInfo.dpi * 72 / defaultPrintDpi / defaultPrintDpi * userMapScale,
+                  mapScale: tileInfo.width / (mapArea.right - mapArea.left),
+                  adjustedObjectScale: Math.abs(tileInfo.vms2TileZ < 6 ? 0.7 : 0.7 / Math.cos(tileInfo.mapBounds.latitudeMin * Math.PI / 180)),
 
-                  displacementLayers_: {
+                  displacementLayers: {
                     '': {
-                      shift_: 26 - Math.round(tileInfo_.vms2TileZ_),
-                      regions_: {},
-                      allowedMapArea_: null // { left_: mapArea_.left_, right_: mapArea_.right_, top_: mapArea_.top_, bottom_: mapArea_.bottom_ } }
+                      shift: 26 - Math.round(tileInfo.vms2TileZ),
+                      regions: {},
+                      allowedMapArea: null // { left: mapArea.left, right: mapArea.right, top: mapArea.top, bottom: mapArea.bottom } }
                     }
                   },
-                  displacementLayerNames_: [''],
+                  displacementLayerNames: [''],
 
-                  saveDataIds_: {},
-                  saveDataPixels_: null
+                  saveDataIds: {},
+                  saveDataPixels: null
                 }
 
-                drawingInfo_.mapCanvas_ = tileCanvas_
+                drawingInfo.mapCanvas = tileCanvas
 
                 if (this.options.allowedMapArea) {
                   if (this.options.allowedMapArea === true) {
-                    drawingInfo_.displacementLayers_[''].allowedMapArea_ = drawingInfo_.mapArea_
+                    drawingInfo.displacementLayers[''].allowedMapArea = drawingInfo.mapArea
                   } else {
-                    drawingInfo_.displacementLayers_[''].allowedMapArea_ = {
-                      left_: this._longitudeToMeters_(this.options.allowedMapArea.longitudeMin),
-                      right_: this._longitudeToMeters_(this.options.allowedMapArea.longitudeMax),
-                      top_: this._latitudeToMeters_(this.options.allowedMapArea.latitudeMax),
-                      bottom_: this._latitudeToMeters_(this.options.allowedMapArea.latitudeMin)
+                    drawingInfo.displacementLayers[''].allowedMapArea = {
+                      left: this._longitudeToMeters(this.options.allowedMapArea.longitudeMin),
+                      right: this._longitudeToMeters(this.options.allowedMapArea.longitudeMax),
+                      top: this._latitudeToMeters(this.options.allowedMapArea.latitudeMax),
+                      bottom: this._latitudeToMeters(this.options.allowedMapArea.latitudeMin)
                     }
                   }
                 }
 
                 if (this.options.displacementIcons) {
-                  const displacementBoxes_ = []
+                  const displacementBoxes = []
 
-                  for (const displacementIcon_ of this.options.displacementIcons) {
-                    const width_ = displacementIcon_.size[0]
-                    const height_ = displacementIcon_.size[1]
+                  for (const displacementIcon of this.options.displacementIcons) {
+                    const width = displacementIcon.size[0]
+                    const height = displacementIcon.size[1]
 
-                    const anchorX_ = displacementIcon_.anchor ? displacementIcon_.anchor[0] : (width_ / 2)
-                    const anchorY_ = height_ - (displacementIcon_.anchor ? displacementIcon_.anchor[1] : (height_ / 2))
+                    const anchorX = displacementIcon.anchor ? displacementIcon.anchor[0] : (width / 2)
+                    const anchorY = height - (displacementIcon.anchor ? displacementIcon.anchor[1] : (height / 2))
 
-                    const left_ = this._longitudeToMeters_(displacementIcon_.longitude) - anchorX_ * tileInfo_.width_ / (this.tileSize_ * drawingInfo_.mapScale_)
-                    const right_ = this._longitudeToMeters_(displacementIcon_.longitude) + (width_ - anchorX_) * tileInfo_.width_ / (this.tileSize_ * drawingInfo_.mapScale_)
-                    const top_ = this._latitudeToMeters_(displacementIcon_.latitude) + (height_ - anchorY_) * tileInfo_.width_ / (this.tileSize_ * drawingInfo_.mapScale_)
-                    const bottom_ = this._latitudeToMeters_(displacementIcon_.latitude) - anchorY_ * tileInfo_.width_ / (this.tileSize_ * drawingInfo_.mapScale_)
+                    const left = this._longitudeToMeters(displacementIcon.longitude) - anchorX * tileInfo.width / (this.tileSize * drawingInfo.mapScale)
+                    const right = this._longitudeToMeters(displacementIcon.longitude) + (width - anchorX) * tileInfo.width / (this.tileSize * drawingInfo.mapScale)
+                    const top = this._latitudeToMeters(displacementIcon.latitude) + (height - anchorY) * tileInfo.width / (this.tileSize * drawingInfo.mapScale)
+                    const bottom = this._latitudeToMeters(displacementIcon.latitude) - anchorY * tileInfo.width / (this.tileSize * drawingInfo.mapScale)
 
-                    displacementBoxes_.push({ left_, right_, top_, bottom_ })
+                    displacementBoxes.push({ left, right, top, bottom })
                   }
 
-                  this._checkAndSetDisplacement_(drawingInfo_.displacementLayers_, drawingInfo_.displacementLayerNames_, displacementBoxes_)
+                  this._checkAndSetDisplacement(drawingInfo.displacementLayers, drawingInfo.displacementLayerNames, displacementBoxes)
                 }
 
                 // Process all style layers.
 
-                for (const layerName_ of mapStyle_.Order) {
-                  if (drawingInfo_.mapCanvas_.hasBeenRemoved_) {
+                for (const layerName of mapStyle.Order) {
+                  if (drawingInfo.mapCanvas.hasBeenRemoved) {
                     continue
                   }
 
-                  const layer_ = mapStyle_.Layers[layerName_]
+                  const layer = mapStyle.Layers[layerName]
 
-                  let styleType_ = this._getLayerStyleType_(layer_)
+                  let styleType = this._getLayerStyleType(layer)
 
                   if (
-                    !layer_ ||
-                    (this.options.type && this.options.type !== styleType_) ||
-                    layer_.Enable === false ||
-                    tileInfo_.vms2TileZ_ < (layer_.ZoomRange[0] > 0 ? layer_.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
-                    tileInfo_.vms2TileZ_ >= (layer_.ZoomRange[1] + this.options.zoomRangeOffset)
+                    !layer ||
+                    (this.options.type && this.options.type !== styleType) ||
+                    layer.Enable === false ||
+                    tileInfo.vms2TileZ < (layer.ZoomRange[0] > 0 ? layer.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
+                    tileInfo.vms2TileZ >= (layer.ZoomRange[1] + this.options.zoomRangeOffset)
                   ) {
                     continue
                   }
 
-                  const mapObjects_ = tileLayers_[layerName_] || []
+                  const mapObjects = tileLayers[layerName] || []
 
                   // Create grid points.
 
-                  if (layer_.Grid) {
-                    drawingInfo_.isGrid_ = true
+                  if (layer.Grid) {
+                    drawingInfo.isGrid = true
 
-                    const gridZoomScale_ = 1 / drawingInfo_.userMapScale_ / Math.pow(DEFAULT_PRINT_DPI_ * drawingInfo_.mapScale_ / drawingInfo_.userMapScale_ / tileInfo_.dpi_, layer_.Grid.ZoomScale || 1)
+                    const gridZoomScale = 1 / drawingInfo.userMapScale / Math.pow(defaultPrintDpi * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, layer.Grid.ZoomScale || 1)
 
-                    const gridSize_ = [layer_.Grid.Size[0] * drawingInfo_.objectScale_ * gridZoomScale_, layer_.Grid.Size[1] * drawingInfo_.objectScale_ * gridZoomScale_]
+                    const gridSize = [layer.Grid.Size[0] * drawingInfo.objectScale * gridZoomScale, layer.Grid.Size[1] * drawingInfo.objectScale * gridZoomScale]
 
-                    const gridOffset_ = [0, 0]
+                    const gridOffset = [0, 0]
 
-                    if (layer_.Grid.Offset) {
-                      gridOffset_[0] = layer_.Grid.Offset[0] * drawingInfo_.objectScale_ * gridZoomScale_
-                      gridOffset_[1] = layer_.Grid.Offset[1] * drawingInfo_.objectScale_ * gridZoomScale_
+                    if (layer.Grid.Offset) {
+                      gridOffset[0] = layer.Grid.Offset[0] * drawingInfo.objectScale * gridZoomScale
+                      gridOffset[1] = layer.Grid.Offset[1] * drawingInfo.objectScale * gridZoomScale
                     }
 
-                    const gridSkew_ = [0, 0]
+                    const gridSkew = [0, 0]
 
-                    if (layer_.Grid.Skew) {
-                      gridSkew_[0] = layer_.Grid.Skew[0] * drawingInfo_.objectScale_ * gridZoomScale_
-                      gridSkew_[1] = layer_.Grid.Skew[1] * drawingInfo_.objectScale_ * gridZoomScale_
+                    if (layer.Grid.Skew) {
+                      gridSkew[0] = layer.Grid.Skew[0] * drawingInfo.objectScale * gridZoomScale
+                      gridSkew[1] = layer.Grid.Skew[1] * drawingInfo.objectScale * gridZoomScale
                     }
 
-                    const randomDistribution_ = [0, 0]
+                    const randomDistribution = [0, 0]
 
-                    if (layer_.Grid.RandomDistribution) {
-                      randomDistribution_[0] = layer_.Grid.RandomDistribution[0] * drawingInfo_.objectScale_ * gridZoomScale_
-                      randomDistribution_[1] = layer_.Grid.RandomDistribution[1] * drawingInfo_.objectScale_ * gridZoomScale_
+                    if (layer.Grid.RandomDistribution) {
+                      randomDistribution[0] = layer.Grid.RandomDistribution[0] * drawingInfo.objectScale * gridZoomScale
+                      randomDistribution[1] = layer.Grid.RandomDistribution[1] * drawingInfo.objectScale * gridZoomScale
                     }
 
-                    const randomAngle_ = [0, 0]
+                    const randomAngle = [0, 0]
 
-                    if (layer_.Grid.RandomAngle) {
-                      randomAngle_[0] = layer_.Grid.RandomAngle[0] * Math.PI * 2
-                      randomAngle_[1] = layer_.Grid.RandomAngle[1] * Math.PI * 2
+                    if (layer.Grid.RandomAngle) {
+                      randomAngle[0] = layer.Grid.RandomAngle[0] * Math.PI * 2
+                      randomAngle[1] = layer.Grid.RandomAngle[1] * Math.PI * 2
                     }
 
-                    const worldTop_ = this._tileYToMeters_(0, 0)
-                    const worldLeft_ = this._tileXToMeters_(0, 0)
+                    const worldTop = this._tileYToMeters(0, 0)
+                    const worldLeft = this._tileXToMeters(0, 0)
 
-                    const gridStartIndexX_ = Math.floor((drawingInfo_.saveDataArea_.left_ - worldLeft_) / gridSize_[0]) - 1
-                    let gridIndexY_ = Math.floor((worldTop_ - drawingInfo_.saveDataArea_.top_) / gridSize_[1]) - 1
+                    const gridStartIndexX = Math.floor((drawingInfo.saveDataArea.left - worldLeft) / gridSize[0]) - 1
+                    let gridIndexY = Math.floor((worldTop - drawingInfo.saveDataArea.top) / gridSize[1]) - 1
 
-                    const gridLeft_ = gridStartIndexX_ * gridSize_[0] + worldLeft_
-                    const gridRight_ = drawingInfo_.saveDataArea_.right_
-                    const gridTop_ = worldTop_ - gridIndexY_ * gridSize_[1]
-                    const gridBottom_ = drawingInfo_.saveDataArea_.bottom_
+                    const gridLeft = gridStartIndexX * gridSize[0] + worldLeft
+                    const gridRight = drawingInfo.saveDataArea.right
+                    const gridTop = worldTop - gridIndexY * gridSize[1]
+                    const gridBottom = drawingInfo.saveDataArea.bottom
 
-                    const gridPoints_ = []
+                    const gridPoints = []
 
-                    for (let gridY_ = gridTop_; gridY_ >= gridBottom_; gridIndexY_++) {
-                      gridY_ = worldTop_ - gridIndexY_ * gridSize_[1]
+                    for (let gridY = gridTop; gridY >= gridBottom; gridIndexY++) {
+                      gridY = worldTop - gridIndexY * gridSize[1]
 
-                      const gridSkewX_ = (gridIndexY_ * gridSkew_[0]) % gridSize_[0]
+                      const gridSkewX = (gridIndexY * gridSkew[0]) % gridSize[0]
 
-                      for (let gridX_ = gridLeft_, gridIndexX_ = gridStartIndexX_; gridX_ <= gridRight_; gridIndexX_++) {
-                        gridX_ = gridIndexX_ * gridSize_[0] + worldLeft_
+                      for (let gridX = gridLeft, gridIndexX = gridStartIndexX; gridX <= gridRight; gridIndexX++) {
+                        gridX = gridIndexX * gridSize[0] + worldLeft
 
-                        this.randomGenerator_.init_seed((Math.round(gridIndexX_) + 0xaffeaffe) * (Math.round(gridIndexY_) + 0xaffeaffe))
+                        this.randomGenerator.init_seed((Math.round(gridIndexX) + 0xaffeaffe) * (Math.round(gridIndexY) + 0xaffeaffe))
 
-                        const gridSkewY_ = (gridIndexX_ * gridSkew_[1]) % gridSize_[1]
+                        const gridSkewY = (gridIndexX * gridSkew[1]) % gridSize[1]
 
-                        gridPoints_.push({
-                          x_: gridX_ + gridSkewX_ + gridOffset_[0] + randomDistribution_[0] * this.randomGenerator_.random(),
-                          y_: gridY_ - gridSkewY_ - gridOffset_[1] - randomDistribution_[1] * this.randomGenerator_.random(),
-                          angle_: randomAngle_[0] + randomAngle_[1] * this.randomGenerator_.random()
+                        gridPoints.push({
+                          x: gridX + gridSkewX + gridOffset[0] + randomDistribution[0] * this.randomGenerator.random(),
+                          y: gridY - gridSkewY - gridOffset[1] - randomDistribution[1] * this.randomGenerator.random(),
+                          angle: randomAngle[0] + randomAngle[1] * this.randomGenerator.random()
                         })
                       }
                     }
 
-                    gridPoints_.sort((a, b) => { return (b.y_ - a.y_) })
+                    gridPoints.sort((a, b) => { return (b.y - a.y) })
 
-                    for (const gridPoint_ of gridPoints_) {
-                      const center_ = {}
+                    for (const gridPoint of gridPoints) {
+                      const center = {}
 
-                      center_.x = gridPoint_.x_
-                      center_.y = gridPoint_.y_
+                      center.x = gridPoint.x
+                      center.y = gridPoint.y
 
-                      const envelope_ = {}
+                      const envelope = {}
 
-                      envelope_.left = envelope_.right = gridPoint_.x_
-                      envelope_.bottom = envelope_.top = gridPoint_.y_
+                      envelope.left = envelope.right = gridPoint.x
+                      envelope.bottom = envelope.top = gridPoint.y
 
-                      const objectInfo_ = { Center: center_, Envelope: envelope_, Angle: gridPoint_.angle_ }
+                      const objectInfo = { Center: center, Envelope: envelope, Angle: gridPoint.angle }
 
-                      mapObjects_.push({ info: objectInfo_, geometry: null })
+                      mapObjects.push({ info: objectInfo, geometry: null })
                     }
 
-                    styleType_ = 'text'
+                    styleType = 'text'
                   } else {
-                    drawingInfo_.isGrid_ = false
+                    drawingInfo.isGrid = false
                   }
 
                   // Sort map objects.
 
-                  if (layer_.SortFunction) {
-                    const sortFunction_ = new Function('a', 'b', 'return (' + layer_.SortFunction + ')')
+                  if (layer.SortFunction) {
+                    const sortFunction = new Function('a', 'b', 'return (' + layer.SortFunction + ')')
 
-                    mapObjects_.sort((a, b) => {
+                    mapObjects.sort((a, b) => {
                       if (a && b) {
-                        return sortFunction_(a.info, b.info)
+                        return sortFunction(a.info, b.info)
                       } else {
                         return 0
                       }
@@ -2849,160 +2850,161 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                   // Draw objects on all defined canvases.
 
-                  const layerCanvasNames_ = [''] // layer_.CanvasNames || [ '' ]
+                  const layerCanvasNames = [''] // layer_.CanvasNames || [ '' ]
 
-                  if (layer_.Save) {
-                    layerCanvasNames_.push('save')
+                  if (layer.Save) {
+                    layerCanvasNames.push('save')
                   }
 
-                  for (const layerCanvasName_ of layerCanvasNames_) {
-                    if (layerCanvasName_ === 'save') {
-                      if (!drawingInfo_.saveDataCanvas_) {
-                        let saveDataCanvas_ = null
+                  for (const layerCanvasName of layerCanvasNames) {
+                    if (layerCanvasName === 'save') {
+                      if (!drawingInfo.saveDataCanvas) {
+                        let saveDataCanvas = null
 
-                        for (const canvas_ of this.saveDataCanvases_) {
-                          if (!canvas_.inUse) {
-                            saveDataCanvas_ = canvas_
+                        for (const canvas of this.saveDataCanvases) {
+                          if (!canvas.inUse) {
+                            saveDataCanvas = canvas
 
                             break
                           }
                         }
 
-                        if (!drawingInfo_.mapCanvas_.isTile || !saveDataCanvas_) {
-                          saveDataCanvas_ = document.createElement('canvas')
+                        if (!drawingInfo.mapCanvas.isTile || !saveDataCanvas) {
+                          saveDataCanvas = document.createElement('canvas')
 
-                          saveDataCanvas_.width = drawingInfo_.mapCanvas_.width * (1 + 2 * TILE_AREA_SAVE_EXTENSION_)
-                          saveDataCanvas_.height = drawingInfo_.mapCanvas_.height * (1 + 2 * TILE_AREA_SAVE_EXTENSION_)
+                          saveDataCanvas.width = drawingInfo.mapCanvas.width * (1 + 2 * TILE_AREA_SAVE_EXTENSION)
+                          saveDataCanvas.height = drawingInfo.mapCanvas.height * (1 + 2 * TILE_AREA_SAVE_EXTENSION)
 
-                          saveDataCanvas_.context_ = saveDataCanvas_.getContext('2d', { willReadFrequently: true })
+                          saveDataCanvas.context = saveDataCanvas.getContext('2d', { willReadFrequently: true })
 
-                          saveDataCanvas_.context_.patterns_ = {}
+                          saveDataCanvas.context.patterns = {}
 
-                          saveDataCanvas_.context_.beginGroup = function (name_) {
+                          saveDataCanvas.context.beginGroup = function (name_) {
                           }
 
-                          saveDataCanvas_.context_.endGroup = function () {
+                          saveDataCanvas.context.endGroup = function () {
                           }
 
-                          this.saveDataCanvases_.push(saveDataCanvas_)
+                          this.saveDataCanvases.push(saveDataCanvas)
                         }
 
-                        saveDataCanvas_.context_.clearRect(0, 0, saveDataCanvas_.width, saveDataCanvas_.height)
+                        saveDataCanvas.context.clearRect(0, 0, saveDataCanvas.width, saveDataCanvas.height)
 
-                        saveDataCanvas_.inUse = true
+                        saveDataCanvas.inUse = true
 
-                        drawingInfo_.saveDataCanvas_ = saveDataCanvas_
+                        drawingInfo.saveDataCanvas = saveDataCanvas
                       }
 
-                      drawingInfo_.context_ = drawingInfo_.saveDataCanvas_.context_
+                      drawingInfo.context = drawingInfo.saveDataCanvas.context
 
-                      drawingInfo_.drawingArea_ = drawingInfo_.saveDataArea_
+                      drawingInfo.drawingArea = drawingInfo.saveDataArea
                     } else {
-                      drawingInfo_.context_ = drawingInfo_.mapCanvas_.context_
+                      drawingInfo.context = drawingInfo.mapCanvas.context
 
-                      drawingInfo_.drawingArea_ = drawingInfo_.mapArea_
+                      drawingInfo.drawingArea = drawingInfo.mapArea
                     }
 
-                    if (layerCanvasName_ !== 'save' && !layer_.Style && !layer_.Filters) {
+                    if (layerCanvasName !== 'save' && !layer.Style && !layer.Filters) {
                       continue
                     }
 
-                    if (layer_.needsAreaExtension_) {
-                      drawingInfo_.boundingArea_ = drawingInfo_.extendedMapArea_
+                    if (layer.needsAreaExtension) {
+                      drawingInfo.boundingArea = drawingInfo.extendedMapArea
                     } else {
-                      drawingInfo_.boundingArea_ = drawingInfo_.mapArea_
+                      drawingInfo.boundingArea = drawingInfo.mapArea
                     }
 
                     // Canvas preparation.
 
-                    drawingInfo_.context_.beginGroup(layerName_)
+                    drawingInfo.context.beginGroup(layerName)
 
-                    drawingInfo_.context_.setTransform(new DOMMatrix())
+                    drawingInfo.context.setTransform(new DOMMatrix())
 
-                    drawingInfo_.context_.globalCompositeOperation = layer_.CompositeOperation || 'source-over'
-                    drawingInfo_.context_.filter = layer_.CanvasFilter || 'none'
+                    drawingInfo.context.globalCompositeOperation = layer.CompositeOperation || 'source-over'
+                    drawingInfo.context.filter = layer.CanvasFilter || 'none'
 
-                    drawingInfo_.context_.fillStyle = '#00000000'
-                    drawingInfo_.context_.strokeStyle = '#00000000'
-                    drawingInfo_.context_.lineWidth = 0
-                    drawingInfo_.context_.setLineDash([])
-                    drawingInfo_.context_.textAlign = 'center'
-                    drawingInfo_.context_.textBaseline = 'middle'
+                    drawingInfo.context.fillStyle = '#00000000'
+                    drawingInfo.context.strokeStyle = '#00000000'
+                    drawingInfo.context.lineWidth = 0
+                    drawingInfo.context.setLineDash([])
+                    drawingInfo.context.textAlign = 'center'
+                    drawingInfo.context.textBaseline = 'middle'
 
-                    drawingInfo_.tileBoundingBox_ = null
+                    drawingInfo.tileBoundingBox = null
 
                     // Draw map objects.
 
-                    if (layerCanvasName_ === 'save') {
-                      layer_.layerName_ = layerName_
+                    if (layerCanvasName === 'save') {
+                      layer.layerName = layerName
 
-                      await this._drawSaveLayer_(drawingInfo_, mapObjects_, tileInfo_, layer_)
+                      await this._drawSaveLayer(drawingInfo, mapObjects, tileInfo, layer)
 
-                      drawingInfo_.saveDataPixels_ = null // Invalidate pixels
-                    } else if (styleType_ === 'text') {
-                      await this._drawObjectsLayer_(drawingInfo_, mapObjects_, tileInfo_, layer_)
+                      drawingInfo.saveDataPixels = null // Invalidate pixels
+                    } else if (styleType === 'text') {
+                      await this._drawObjectsLayer(drawingInfo, mapObjects, tileInfo, layer)
                     } else {
-                      await this._drawBaseLayer_(drawingInfo_, mapObjects_, tileInfo_, layer_)
+                      await this._drawBaseLayer(drawingInfo, mapObjects, tileInfo, layer)
                     }
 
-                    if (drawingInfo_.isGrid_) { // TODO!
-                      drawingInfo_.displacementLayers_[''].regions_ = {}
+                    if (drawingInfo.isGrid) { // TODO!
+                      drawingInfo.displacementLayers[''].regions = {}
                     }
 
-                    drawingInfo_.context_.endGroup()
+                    drawingInfo.context.endGroup()
                   }
                 }
 
-                if (drawingInfo_.saveDataCanvas_) {
-                  drawingInfo_.saveDataCanvas_.inUse = false
+                if (drawingInfo.saveDataCanvas) {
+                  drawingInfo.saveDataCanvas.inUse = false
                 }
 
-                drawingInfo_.context_ = drawingInfo_.mapCanvas_.context_
+                drawingInfo.context = drawingInfo.mapCanvas.context
 
                 // Fill water areas.
 
-                drawingInfo_.context_.beginGroup('background')
+                drawingInfo.context.beginGroup('background')
 
-                drawingInfo_.context_.setTransform(new DOMMatrix())
+                drawingInfo.context.setTransform(new DOMMatrix())
 
-                drawingInfo_.context_.globalCompositeOperation = 'destination-over'
+                drawingInfo.context.globalCompositeOperation = 'destination-over'
 
                 if (this.options.type !== 'text') {
-                  if (mapStyle_.BackgroundPatternFunction) {
-                    if (!mapStyle_.BackgroundPatternFunction_) {
-                      mapStyle_.BackgroundPatternFunction_ = new Function(
+                  if (mapStyle.BackgroundPatternFunction) {
+                    if (typeof mapStyle.BackgroundPatternFunction === 'string') {
+                      mapStyle.BackgroundPatternFunction = new Function(
                         'ObjectData',
                         'MapZoom',
                         'RandomGenerator',
-                        'return ' + mapStyle_.BackgroundPatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+                        'return ' + mapStyle.BackgroundPatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
                       )
                     }
 
-                    const patternName_ = mapStyle_.BackgroundPatternFunction_(null, tileInfo_.vms2TileZ_, this.randomGenerator_)
+                    const patternName = mapStyle.BackgroundPatternFunction(null, tileInfo.vms2TileZ, this.randomGenerator)
 
-                    if (patternName_) {
-                      const pattern_ = await this._getPattern_(drawingInfo_.context_, patternName_)
+                    if (patternName) {
+                      const pattern = await this._getPattern(drawingInfo.context, patternName)
 
-                      pattern_.transformMatrix = new DOMMatrix().translate(drawingInfo_.mapArea_.left_ * drawingInfo_.mapScale_, drawingInfo_.mapArea_.top_ * drawingInfo_.mapScale_).scale(drawingInfo_.patternScale_)
+                      pattern.transformMatrix = new DOMMatrix().translate(-drawingInfo.mapArea.left * drawingInfo.mapScale * drawingInfo.patternScale, -drawingInfo.mapArea.top * drawingInfo.mapScale * drawingInfo.patternScale).scale(drawingInfo.patternScale)
+                      //pattern_.transformMatrix = new DOMMatrix().scale(drawingInfo.patternScale)
 
-                      pattern_.setTransform(pattern_.transformMatrix)
+                      pattern.setTransform(pattern.transformMatrix)
 
-                      drawingInfo_.context_.fillStyle = pattern_
-                      drawingInfo_.context_.fillRect(0, 0, tileInfo_.width_, tileInfo_.height_)
+                      drawingInfo.context.fillStyle = pattern
+                      drawingInfo.context.fillRect(0, 0, tileInfo.width, tileInfo.height)
                     }
                   } else {
-                    if (isNaN(mapStyle_.BackgroundAlpha)) {
-                      mapStyle_.BackgroundAlpha = 1
+                    if (isNaN(mapStyle.BackgroundAlpha)) {
+                      mapStyle.BackgroundAlpha = 1
                     }
 
-                    drawingInfo_.context_.fillStyle = '#' + this._hexify32_([mapStyle_.BackgroundColor[0], mapStyle_.BackgroundColor[1], mapStyle_.BackgroundColor[2], Math.round(mapStyle_.BackgroundAlpha * 255)])
-                    drawingInfo_.context_.fillRect(0, 0, tileInfo_.width_, tileInfo_.height_)
+                    drawingInfo.context.fillStyle = '#' + this._hexify32([mapStyle.BackgroundColor[0], mapStyle.BackgroundColor[1], mapStyle.BackgroundColor[2], Math.round(mapStyle.BackgroundAlpha * 255)])
+                    drawingInfo.context.fillRect(0, 0, tileInfo.width, tileInfo.height)
                   }
                 }
 
-                drawingInfo_.context_.endGroup()
+                drawingInfo.context.endGroup()
 
-                drawingInfo_.mapCanvas_.inUse_ = false
+                drawingInfo.mapCanvas.inUse = false
 
                 resolve()
               })
@@ -3010,63 +3012,63 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         })
     })
   },
-  _getCachedTile_: function (layerId_, x_, y_, z_, tileLayer_) {
-    let detailZooms_ = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14]
+  _getCachedTile: function (layerId, x, y, z, tileLayer) {
+    let detailZooms = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14]
 
-    switch (layerId_) {
-      case 'terrain':
-      case 'depth':
-        detailZooms_ = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 12]
+    switch (layerId) {
+    case 'terrain':
+    case 'depth':
+      detailZooms = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 12]
 
-        break
+      break
 
-      case 'bathymetry':
-      case 'blue_marble':
-      case 'elevation':
-        detailZooms_ = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 10, 10, 10]
+    case 'bathymetry':
+    case 'blue_marble':
+    case 'elevation':
+      detailZooms = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 10, 10, 10]
 
-        break
+      break
     }
 
-    let detailZoom_ = detailZooms_[Math.max(Math.min(z_, 14), 0)]
+    let detailZoom = detailZooms[Math.max(Math.min(z, 14), 0)]
 
-    const ids_ = layerId_.split('|')
+    const ids = layerId.split('|')
 
-    if (!(ids_.length === 1 || ids_[2] !== 'Points')) {
-      detailZoom_ = 14
+    if (!(ids.length === 1 || ids[2] !== 'Points')) {
+      detailZoom = 14
     }
 
-    const tileWeight_ = Math.pow(4, 16 - z_)
-    let matchingTilesWeight_ = 0
+    const tileWeight = Math.pow(4, 16 - z)
+    let matchingTilesWeight = 0
 
-    const layerMap_ = globalThis.vms2Context_.tileCacheLayerMaps_[layerId_]
+    const layerMap = globalThis.vms2Context.tileCacheLayerMaps[layerId]
 
-    if (layerMap_) {
-      for (const keyValuePair_ of layerMap_) {
-        if (keyValuePair_[1].detailZoom_ !== detailZoom_) {
+    if (layerMap) {
+      for (const keyValuePair of layerMap) {
+        if (keyValuePair[1].detailZoom !== detailZoom) {
           continue
         }
 
-        const deltaZ_ = keyValuePair_[1].z_ - z_
+        const deltaZ = keyValuePair[1].z - z
 
-        let tileCoordinateDoMatch_ = false
+        let tileCoordinateMatch = false
 
-        if (deltaZ_ >= 0) {
-          tileCoordinateDoMatch_ = (keyValuePair_[1].x_ >> deltaZ_) === x_ && (keyValuePair_[1].y_ >> deltaZ_) === y_
+        if (deltaZ >= 0) {
+          tileCoordinateMatch = (keyValuePair[1].x >> deltaZ) === x && (keyValuePair[1].y >> deltaZ) === y
         } else {
-          tileCoordinateDoMatch_ = (x_ >> -deltaZ_) === keyValuePair_[1].x_ && (y_ >> -deltaZ_) === keyValuePair_[1].y_
+          tileCoordinateMatch = (x >> -deltaZ) === keyValuePair[1].x && (y >> -deltaZ) === keyValuePair[1].y
         }
 
-        if (tileCoordinateDoMatch_) {
-          if (!tileLayer_.tileIds_.includes(keyValuePair_[0])) {
-            tileLayer_.objects = tileLayer_.objects.concat(keyValuePair_[1].objects_)
+        if (tileCoordinateMatch) {
+          if (!tileLayer.tileIds.includes(keyValuePair[0])) {
+            tileLayer.objects = tileLayer.objects.concat(keyValuePair[1].objects)
 
-            tileLayer_.tileIds_.push(keyValuePair_[0])
+            tileLayer.tileIds.push(keyValuePair[0])
           }
 
-          matchingTilesWeight_ += Math.pow(4, 16 - keyValuePair_[1].z_)
+          matchingTilesWeight += Math.pow(4, 16 - keyValuePair[1].z)
 
-          if (matchingTilesWeight_ >= tileWeight_) {
+          if (matchingTilesWeight >= tileWeight) {
             return true
           }
         }
@@ -3075,123 +3077,123 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     return false
   },
-  _processTileLayerRequests_: async function (tileLayerRequestInfo_) {
-    if (!tileLayerRequestInfo_.requestInProcess_) {
-      tileLayerRequestInfo_.requestInProcess_ = true
+  _processTileLayerRequests: async function (tileLayerRequestInfo_) {
+    if (!tileLayerRequestInfo_.requestInProcess) {
+      tileLayerRequestInfo_.requestInProcess = true
 
-      while (tileLayerRequestInfo_.tileInfos_.length > 0) {
-        const tileInfo_ = tileLayerRequestInfo_.tileInfos_.shift()
+      while (tileLayerRequestInfo_.tileInfos.length > 0) {
+        const tileInfo = tileLayerRequestInfo_.tileInfos.shift()
 
-        const dataLayerId_ = tileInfo_.tileLayerData_.dataLayerId_
+        const dataLayerId = tileInfo.tileLayerData.dataLayerId
 
-        const x_ = tileInfo_.x
-        const y_ = tileInfo_.y
-        const z_ = Math.floor(tileInfo_.z)
+        const x = tileInfo.x
+        const y = tileInfo.y
+        const z = Math.floor(tileInfo.z)
 
-        const tileLayerData_ = tileInfo_.tileLayerData_
+        const tileLayerData = tileInfo.tileLayerData
 
-        if (!tileLayerData_.tileCanvas_.hasBeenRemoved_) {
-          await this._requestTile_(dataLayerId_, x_, y_, z_, tileLayerData_)
+        if (!tileLayerData.tileCanvas.hasBeenRemoved) {
+          await this._requestTile(dataLayerId, x, y, z, tileLayerData)
         }
 
-        tileLayerData_.tileCount_--
+        tileLayerData.tileCount--
 
-        if (tileLayerData_.tileCount_ === 0) {
-          tileLayerData_.resolve()
+        if (tileLayerData.tileCount === 0) {
+          tileLayerData.resolve()
         }
       }
 
-      tileLayerRequestInfo_.requestInProcess_ = false
+      tileLayerRequestInfo_.requestInProcess = false
     }
   },
-  _getTileLayer_: function (tileLayerData_) {
+  _getTileLayer: function (tileLayerData) {
     return new Promise((resolve, reject) => {
-      tileLayerData_.resolve = resolve
-      tileLayerData_.reject = reject
+      tileLayerData.resolve = resolve
+      tileLayerData.reject = reject
 
-      let fetchTileZ_ = tileLayerData_.tileInfo_.vms2TileZ_ + Math.max(-tileLayerData_.tileInfo_.vms2TileZ_, (tileLayerData_.layerStyle_.Detail || 0) + this.options.detailOffset)
+      let fetchTileZ = tileLayerData.tileInfo.vms2TileZ + Math.max(-tileLayerData.tileInfo.vms2TileZ, (tileLayerData.layerStyle.Detail || 0) + this.options.detailOffset)
 
-      let fetchTileStartX_ = Math.floor(this._longitudeToTile_(tileLayerData_.tileInfo_.mapBounds_.longitudeMin_, fetchTileZ_))
-      let fetchTileEndX = Math.floor(this._longitudeToTile_(tileLayerData_.tileInfo_.mapBounds_.longitudeMax_, fetchTileZ_))
-      let fetchTileStartY_ = Math.floor(this._latitudeToTile_(tileLayerData_.tileInfo_.mapBounds_.latitudeMax_, fetchTileZ_))
-      let fetchTileEndY_ = Math.floor(this._latitudeToTile_(tileLayerData_.tileInfo_.mapBounds_.latitudeMin_, fetchTileZ_))
+      let fetchTileStartX = Math.floor(this._longitudeToTile(tileLayerData.tileInfo.mapBounds.longitudeMin, fetchTileZ))
+      let fetchTileEndX = Math.floor(this._longitudeToTile(tileLayerData.tileInfo.mapBounds.longitudeMax, fetchTileZ))
+      let fetchTileStartY = Math.floor(this._latitudeToTile(tileLayerData.tileInfo.mapBounds.latitudeMax, fetchTileZ))
+      let fetchTileEndY = Math.floor(this._latitudeToTile(tileLayerData.tileInfo.mapBounds.latitudeMin, fetchTileZ))
 
-      if (!isNaN(tileLayerData_.tileInfo_.x) && !isNaN(tileLayerData_.tileInfo_.y) && !isNaN(tileLayerData_.tileInfo_.z)) {
-        if (tileLayerData_.layerStyle_.needsAreaExtension_) {
-          fetchTileStartX_ = Math.floor(this._longitudeToTile_(tileLayerData_.tileInfo_.drawingMapBounds_.longitudeMin_, fetchTileZ_))
-          fetchTileEndX = Math.floor(this._longitudeToTile_(tileLayerData_.tileInfo_.drawingMapBounds_.longitudeMax_, fetchTileZ_))
-          fetchTileStartY_ = Math.floor(this._latitudeToTile_(tileLayerData_.tileInfo_.drawingMapBounds_.latitudeMax_, fetchTileZ_))
-          fetchTileEndY_ = Math.floor(this._latitudeToTile_(tileLayerData_.tileInfo_.drawingMapBounds_.latitudeMin_, fetchTileZ_))
+      if (!isNaN(tileLayerData.tileInfo.x) && !isNaN(tileLayerData.tileInfo.y) && !isNaN(tileLayerData.tileInfo.z)) {
+        if (tileLayerData.layerStyle.needsAreaExtension) {
+          fetchTileStartX = Math.floor(this._longitudeToTile(tileLayerData.tileInfo.drawingMapBounds.longitudeMin, fetchTileZ))
+          fetchTileEndX = Math.floor(this._longitudeToTile(tileLayerData.tileInfo.drawingMapBounds.longitudeMax, fetchTileZ))
+          fetchTileStartY = Math.floor(this._latitudeToTile(tileLayerData.tileInfo.drawingMapBounds.latitudeMax, fetchTileZ))
+          fetchTileEndY = Math.floor(this._latitudeToTile(tileLayerData.tileInfo.drawingMapBounds.latitudeMin, fetchTileZ))
         }
       }
 
-      if (!globalThis.vms2Context_.tileLayerRequestInfos_[tileLayerData_.dataLayerId_]) {
-        globalThis.vms2Context_.tileLayerRequestInfos_[tileLayerData_.dataLayerId_] = { requestInProcess_: false, tileInfos_: [] }
+      if (!globalThis.vms2Context.tileLayerRequestInfos[tileLayerData.dataLayerId]) {
+        globalThis.vms2Context.tileLayerRequestInfos[tileLayerData.dataLayerId] = { requestInProcess: false, tileInfos: [] }
       }
 
-      const tileLayerRequestInfo_ = globalThis.vms2Context_.tileLayerRequestInfos_[tileLayerData_.dataLayerId_]
+      const tileLayerRequestInfo = globalThis.vms2Context.tileLayerRequestInfos[tileLayerData.dataLayerId]
 
-      for (let fetchTileY_ = fetchTileStartY_; fetchTileY_ <= fetchTileEndY_; fetchTileY_++) {
-        for (let fetchTileX_ = fetchTileStartX_; fetchTileX_ <= fetchTileEndX; fetchTileX_++) {
-          tileLayerRequestInfo_.tileInfos_.push({ x: fetchTileX_, y: fetchTileY_, z: fetchTileZ_, tileLayerData_ })
+      for (let fetchTileY = fetchTileStartY; fetchTileY <= fetchTileEndY; fetchTileY++) {
+        for (let fetchTileX = fetchTileStartX; fetchTileX <= fetchTileEndX; fetchTileX++) {
+          tileLayerRequestInfo.tileInfos.push({ x: fetchTileX, y: fetchTileY, z: fetchTileZ, tileLayerData })
 
-          tileLayerData_.tileCount_++
+          tileLayerData.tileCount++
         }
       }
 
-      this._processTileLayerRequests_(tileLayerRequestInfo_)
+      this._processTileLayerRequests(tileLayerRequestInfo)
     })
   },
-  _preparePolygon_: function (drawingInfo_, geometry_, dataOffset_, polygons_) {
-    const polygonRings_ = []
+  _preparePolygon: function (drawingInfo, geometry, dataOffset, polygons) {
+    const polygonRings = []
 
-    dataOffset_ += 4
+    dataOffset += 4
 
-    const numberOfRings_ = geometry_.getUint32(dataOffset_, true)
-    dataOffset_ += 4
+    const numberOfRings = geometry.getUint32(dataOffset, true)
+    dataOffset += 4
 
-    for (let ringIndex_ = 0; ringIndex_ < numberOfRings_; ringIndex_++) {
-      const polygonPoints_ = []
+    for (let ringIndex = 0; ringIndex < numberOfRings; ringIndex++) {
+      const polygonPoints = []
 
-      const numberOfPoints_ = geometry_.getUint32(dataOffset_, true)
-      dataOffset_ += 4
+      const numberOfPoints = geometry.getUint32(dataOffset, true)
+      dataOffset += 4
 
-      for (let pointIndex_ = 0; pointIndex_ < numberOfPoints_; pointIndex_++) {
-        const x_ = geometry_.getFloat32(dataOffset_, true)
-        dataOffset_ += 4
+      for (let pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
+        const x = geometry.getFloat32(dataOffset, true)
+        dataOffset += 4
 
-        const y_ = geometry_.getFloat32(dataOffset_, true)
-        dataOffset_ += 4
+        const y = geometry.getFloat32(dataOffset, true)
+        dataOffset += 4
 
-        polygonPoints_.push({ x: x_, y: y_ })
+        polygonPoints.push({ x: x, y: y })
       }
 
-      polygonRings_.push(polygonPoints_)
+      polygonRings.push(polygonPoints)
     }
 
-    polygons_.push(polygonRings_)
+    polygons.push(polygonRings)
 
-    return dataOffset_
+    return dataOffset
   },
-  _requestFontFace_: function (style_) {
+  _requestFontFace: function (style) {
     return new Promise(resolve => {
-      let fontName_ = style_.FontFamily.replace(/ /g, '') + '.ttf'
-      let fontStyle_ = 'normal'
-      let fontWeight_ = 'normal'
+      let fontName = style.FontFamily.replace(/ /g, '') + '.ttf'
+      let fontStyle = 'normal'
+      let fontWeight = 'normal'
 
-      if (style_.FontSpecs) {
-        fontName_ = style_.FontSpecs[0]
+      if (style.FontSpecs) {
+        fontName = style.FontSpecs[0]
 
-        if (style_.FontSpecs[1] === 'bold') {
-          fontWeight_ = style_.FontSpecs[1]
-        } else if (style_.FontSpecs[2]) {
-          fontStyle_ = style_.FontSpecs[1]
+        if (style.FontSpecs[1] === 'bold') {
+          fontWeight = style.FontSpecs[1]
+        } else if (style.FontSpecs[2]) {
+          fontStyle = style.FontSpecs[1]
         }
       }
 
-      if (globalThis.vms2Context_.fontFaceCache_[fontName_]) {
-        if (globalThis.vms2Context_.fontFaceCache_[fontName_].isLoading_) {
-          globalThis.vms2Context_.fontFaceCache_[fontName_].resolveFunctions_.push(resolve)
+      if (globalThis.vms2Context.fontFaceCache[fontName]) {
+        if (globalThis.vms2Context.fontFaceCache[fontName].isLoading) {
+          globalThis.vms2Context.fontFaceCache[fontName].resolveFunctions.push(resolve)
         } else {
           resolve()
         }
@@ -3199,184 +3201,140 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         return
       }
 
-      const font_ = new FontFace(style_.FontFamily, 'url(\'' + this.options.assetsUrl + '/fonts/' + fontName_ + '\')', { style: fontStyle_, weight: fontWeight_ })
+      const font = new FontFace(style.FontFamily, 'url(\'' + this.options.assetsUrl + '/fonts/' + fontName + '\')', { style: fontStyle, weight: fontWeight })
 
-      font_.load().then(() => {
-        document.fonts.add(font_)
+      font.load().then(() => {
+        document.fonts.add(font)
 
-        globalThis.vms2Context_.fontFaceCache_[fontName_].isLoading_ = false
+        globalThis.vms2Context.fontFaceCache[fontName].isLoading = false
 
-        for (const resolveFunction_ of globalThis.vms2Context_.fontFaceCache_[fontName_].resolveFunctions_) {
-          if (resolveFunction_) {
-            resolveFunction_()
+        for (const resolveFunction of globalThis.vms2Context.fontFaceCache[fontName].resolveFunctions) {
+          if (resolveFunction) {
+            resolveFunction()
           }
         }
-      }).catch(exception_ => {
-        // console.log(exception_)
-
-        for (const resolveFunction_ of globalThis.vms2Context_.fontFaceCache_[fontName_].resolveFunctions_) {
-          if (resolveFunction_) {
-            resolveFunction_()
+      }).catch(exception => {
+        for (const resolveFunction of globalThis.vms2Context.fontFaceCache[fontName].resolveFunctions) {
+          if (resolveFunction) {
+            resolveFunction()
           }
         }
       })
 
-      globalThis.vms2Context_.fontFaceCache_[fontName_] = { isLoading_: true, resolveFunctions_: [resolve] }
+      globalThis.vms2Context.fontFaceCache[fontName] = { isLoading: true, resolveFunctions: [resolve] }
     })
   },
-  _requestImage_: function (imageUrlString_) {
+  _requestImage: function (imageUrlString) {
     return new Promise((resolve, reject) => {
-      const imageCache_ = globalThis.vms2Context_.imageCache_
+      const imageCache = globalThis.vms2Context.imageCache
 
-      if (imageCache_[imageUrlString_]) {
-        if (imageCache_[imageUrlString_].isLoading_) {
-          imageCache_[imageUrlString_].resolveFunctions_.push(resolve)
+      if (imageCache[imageUrlString]) {
+        if (imageCache[imageUrlString].isLoading) {
+          imageCache[imageUrlString].resolveFunctions.push(resolve)
         } else {
-          resolve(imageCache_[imageUrlString_].image_)
+          resolve(imageCache[imageUrlString].image)
         }
 
         return
       }
 
-      const image_ = new Image()
+      const image = new Image()
 
-      image_.crossOrigin = 'anonymous'
-      image_.onerror = reject
+      image.crossOrigin = 'anonymous'
+      image.onerror = reject
 
-      const imageUrl_ = new URL(imageUrlString_, window.location.origin)
+      const imageUrl = new URL(imageUrlString, window.location.origin)
 
-      if (imageUrl_.search) {
-        fetch(imageUrlString_)
-          .then(response_ => response_.text())
-          .then(svgImage_ => {
-            image_.onload = () => {
-              imageCache_[imageUrlString_].isLoading_ = false
+      if (imageUrl.search) {
+        fetch(imageUrlString)
+          .then(response => response.text())
+          .then(svgImage => {
+            image.onload = () => {
+              imageCache[imageUrlString].isLoading = false
 
-              for (const resolveFunction_ of imageCache_[imageUrlString_].resolveFunctions_) {
-                if (resolveFunction_) {
-                  resolveFunction_(image_)
+              for (const resolveFunction of imageCache[imageUrlString].resolveFunctions) {
+                if (resolveFunction) {
+                  resolveFunction(image)
                 }
               }
             }
 
-            svgImage_ = svgImage_.replace('fill:#FFFFFF;', 'fill:#FF00FF;')
+            svgImage = svgImage.replace('fill:#FFFFFF;', 'fill:#FF00FF;')
 
-            image_.src = `data:image/svg+xml;base64,${btoa(svgImage_)}`
+            image.src = `data:image/svg+xml;base64,${btoa(svgImage)}`
           })
       } else {
-        image_.onload = () => {
-          imageCache_[imageUrlString_].isLoading_ = false
+        image.onload = () => {
+          imageCache[imageUrlString].isLoading = false
 
-          for (const resolveFunction_ of imageCache_[imageUrlString_].resolveFunctions_) {
-            if (resolveFunction_) {
-              resolveFunction_(image_)
+          for (const resolveFunction of imageCache[imageUrlString].resolveFunctions) {
+            if (resolveFunction) {
+              resolveFunction(image)
             }
           }
         }
 
-        image_.src = imageUrlString_
+        image.src = imageUrlString
       }
 
-      imageCache_[imageUrlString_] = { isLoading_: true, resolveFunctions_: [resolve], image_ }
+      imageCache[imageUrlString] = { isLoading: true, resolveFunctions: [resolve], image }
     })
   },
-  _setVoidTileArea_(x_, y_, z_) {
-    const tileLeft_ = x_ << (16 - z_)
-    const tileRight_ = (x_ + 1) << (16 - z_)
-    const tileTop_ = y_ << (16 - z_)
-    const tileBottom_ = (y_ + 1) << (16 - z_)
-
-    const voidTileAreas_ = []
-
-    voidTileAreas_.push({ tileLeft_, tileRight_, tileTop_, tileBottom_ })
-
-    for (const voidTileArea_ of this.voidTileAreas_) {
-      if (
-        voidTileArea_.tileLeft_ >= tileLeft_ &&
-        voidTileArea_.tileRight_ <= tileRight_ &&
-        voidTileArea_.tileTop_ >= tileTop_ &&
-        voidTileArea_.tileBottom_ <= tileBottom_
-      ) {
-        continue
-      }
-
-      voidTileAreas_.push(voidTileArea_)
-    }
-
-    this.voidTileAreas_ = voidTileAreas_
-  },
-  _checkVoidTileAreas_(x_, y_, z_) {
-    const tileLeft_ = x_ << (16 - z_)
-    const tileRight_ = (x_ + 1) << (16 - z_)
-    const tileTop_ = y_ << (16 - z_)
-    const tileBottom_ = (y_ + 1) << (16 - z_)
-
-    for (const voidTileArea_ of this.voidTileAreas_) {
-      if (tileLeft_ >= voidTileArea_.tileLeft_ &&
-        tileRight_ <= voidTileArea_.tileRight_ &&
-        tileTop_ >= voidTileArea_.tileTop_ &&
-        tileBottom_ <= voidTileArea_.tileBottom_) {
-        return true
-      }
-    }
-
-    return false
-  },
-  _requestTileDbInfos_: function () {
+  _requestTileDbInfos: function () {
     return new Promise(resolve => {
-      this.tileDbInfos_ = [] // Fixme!
+      this.tileDbInfos = [] // Fixme!
 
-      if (this.tileDbInfos_) {
-        resolve(this.tileDbInfos_)
+      if (this.tileDbInfos) {
+        resolve(this.tileDbInfos)
       } else {
-        const resolves_ = this.tileDbInfosResolves_
+        const resolves = this.tileDbInfosResolves
 
-        resolves_.push(resolve)
+        resolves.push(resolve)
 
-        if (resolves_.length === 1) {
-          const tileDbInfosUrlParts_ = this.options.tileUrl.split('?')
+        if (resolves.length === 1) {
+          const tileDbInfosUrlParts = this.options.tileUrl.split('?')
 
-          fetch(new URL(tileDbInfosUrlParts_[0], window.location.origin))
-            .then(response_ => response_.json())
-            .then(tileDbInfos_ => {
-              this.tileDbInfos_ = tileDbInfos_
+          fetch(new URL(tileDbInfosUrlParts[0], window.location.origin))
+            .then(response => response.json())
+            .then(tileDbInfos => {
+              this.tileDbInfos = tileDbInfos
 
-              while (resolves_.length > 0) {
-                resolves_.shift()()
+              while (resolves.length > 0) {
+                resolves.shift()()
               }
             })
         }
       }
     })
   },
-  _requestTile_: function (dataLayerId_, x_, y_, z_, tileLayerData_) {
+  _requestTile: function (dataLayerId, x, y, z, tileLayerData) {
     return new Promise(resolve => {
-      if (!this.allSystemsGo_) {
+      if (!this.allSystemsGo) {
         return resolve()
       }
 
-      x_ &= ((1 << z_) - 1)
-      y_ &= ((1 << z_) - 1)
+      x &= ((1 << z) - 1)
+      y &= ((1 << z) - 1)
 
-      const tileLatitudeMin_ = this._tileToLatitude_(y_ + 1, z_)
-      const tileLatitudeMax_ = this._tileToLatitude_(y_, z_)
-      const tileLongitudeMin_ = this._tileToLongitude_(x_, z_)
-      const tileLongitudeMax_ = this._tileToLongitude_(x_ + 1, z_)
+      const tileLatitudeMin = this._tileToLatitude(y + 1, z)
+      const tileLatitudeMax = this._tileToLatitude(y, z)
+      const tileLongitudeMin = this._tileToLongitude(x, z)
+      const tileLongitudeMax = this._tileToLongitude(x + 1, z)
 
-      for (const tileDbInfo_ of this.tileDbInfos_) {
-        if (tileDbInfo_.infos.length > 0) {
-          const boundingBox = tileDbInfo_.infos[0].bounding_box
+      for (const tileDbInfo of this.tileDbInfos) {
+        if (tileDbInfo.infos.length > 0) {
+          const boundingBox = tileDbInfo.infos[0].bounding_box
 
           if (
-            tileLatitudeMin_ >= boundingBox.latitude_min &&
-            tileLatitudeMax_ <= boundingBox.latitude_max &&
-            tileLongitudeMin_ >= boundingBox.longitude_min &&
-            tileLongitudeMax_ <= boundingBox.longitude_max
+            tileLatitudeMin >= boundingBox.latitude_min &&
+            tileLatitudeMax <= boundingBox.latitude_max &&
+            tileLongitudeMin >= boundingBox.longitude_min &&
+            tileLongitudeMax <= boundingBox.longitude_max
           ) {
-            if (tileDbInfo_.infos[0].max_detail_zoom < 14 && tileDbInfo_.infos[0].max_detail_zoom < z_) {
-              x_ >>= ((z_ & ~1) - tileDbInfo_.infos[0].max_detail_zoom)
-              y_ >>= ((z_ & ~1) - tileDbInfo_.infos[0].max_detail_zoom)
-              z_ = tileDbInfo_.infos[0].max_detail_zoom | (z_ & 1)
+            if (tileDbInfo.infos[0].max_detail_zoom < 14 && tileDbInfo.infos[0].max_detail_zoom < z) {
+              x >>= ((z & ~1) - tileDbInfo.infos[0].max_detail_zoom)
+              y >>= ((z & ~1) - tileDbInfo.infos[0].max_detail_zoom)
+              z = tileDbInfo.infos[0].max_detail_zoom | (z & 1)
             }
 
             break
@@ -3384,119 +3342,117 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         }
       }
 
-      if (this._getCachedTile_(dataLayerId_, x_, y_, z_, tileLayerData_)) {
+      if (this._getCachedTile(dataLayerId, x, y, z, tileLayerData)) {
         return resolve()
       }
 
-      let tileUrl_ = this.options.tileUrl
+      let tileUrl = this.options.tileUrl
 
-      tileUrl_ = tileUrl_.replace('{x}', x_)
-      tileUrl_ = tileUrl_.replace('{y}', y_)
-      tileUrl_ = tileUrl_.replace('{z}', z_)
+      tileUrl = tileUrl.replace('{x}', x)
+      tileUrl = tileUrl.replace('{y}', y)
+      tileUrl = tileUrl.replace('{z}', z)
 
-      const idParts_ = dataLayerId_.split('|')
+      const idParts = dataLayerId.split('|')
 
-      if (idParts_.length > 0) {
-        tileUrl_ = tileUrl_.replace('{key}', idParts_[0])
+      if (idParts.length > 0) {
+        tileUrl = tileUrl.replace('{key}', idParts[0])
 
-        if (idParts_.length > 1) {
-          tileUrl_ = tileUrl_.replace('{value}', idParts_[1])
+        if (idParts.length > 1) {
+          tileUrl = tileUrl.replace('{value}', idParts[1])
 
-          if (idParts_.length > 2) {
-            tileUrl_ = tileUrl_.replace('{type}', idParts_[2])
+          if (idParts.length > 2) {
+            tileUrl = tileUrl.replace('{type}', idParts[2])
           }
         }
       }
 
-      tileUrl_ = tileUrl_.replace('{key}', '').replace('{value}', '').replace('{type}', '')
+      tileUrl = tileUrl.replace('{key}', '').replace('{value}', '').replace('{type}', '')
 
-      tileLayerData_.tileCanvas_.abortController_ = new AbortController()
+      tileLayerData.tileCanvas.abortController = new AbortController()
 
-      fetch(new URL(tileUrl_, window.location.origin), { signal: tileLayerData_.tileCanvas_.abortController_.signal })
-        .then(response_ => {
-          if (!response_.ok) {
+      fetch(new URL(tileUrl, window.location.origin), { signal: tileLayerData.tileCanvas.abortController.signal })
+        .then(response => {
+          if (!response.ok) {
             throw new Error({
-              code: response_.status,
-              message: response_.statusText,
-              response: response_
+              code: response.status,
+              message: response.statusText,
+              response: response
             })
           }
 
           this.numberOfRequestedTiles++
 
-          return response_.arrayBuffer()
+          return response.arrayBuffer()
         })
-        .then(rawData_ => {
-          if (tileLayerData_.tileCanvas_.hasBeenRemoved_) {
+        .then(rawData => {
+          if (tileLayerData.tileCanvas.hasBeenRemoved) {
             return resolve()
           }
 
-          if (rawData_.byteLength <= 4) {
-            this._setVoidTileArea_(x_, y_, z_)
-
+          if (rawData.byteLength <= 4) {
             return resolve()
           }
 
-          const decodeData_ = { lId: dataLayerId_, datas: [] }
+          const decodeData = { lId: dataLayerId, datas: [] }
 
-          const rawDataDataView_ = new DataView(rawData_)
-          let rawDataOffset_ = 0
+          const rawDataDataView = new DataView(rawData)
+          let rawDataOffset = 0
 
-          let tileCount_ = rawDataDataView_.getUint32(rawDataOffset_, true)
-          rawDataOffset_ += 4
+          let tileCount = rawDataDataView.getUint32(rawDataOffset, true)
+          rawDataOffset += 4
 
-          while (tileCount_ > 0) {
-            const tileX_ = rawDataDataView_.getUint32(rawDataOffset_, true)
-            rawDataOffset_ += 4
+          while (tileCount > 0) {
+            const tileX = rawDataDataView.getUint32(rawDataOffset, true)
+            rawDataOffset += 4
 
-            const tileY_ = rawDataDataView_.getUint32(rawDataOffset_, true)
-            rawDataOffset_ += 4
+            const tileY = rawDataDataView.getUint32(rawDataOffset, true)
+            rawDataOffset += 4
 
-            const tileZ_ = rawDataDataView_.getUint32(rawDataOffset_, true)
-            rawDataOffset_ += 4
+            const tileZ = rawDataDataView.getUint32(rawDataOffset, true)
+            rawDataOffset += 4
 
-            const detailZoom_ = rawDataDataView_.getUint32(rawDataOffset_, true)
-            rawDataOffset_ += 4
+            const detailZoom = rawDataDataView.getUint32(rawDataOffset, true)
+            rawDataOffset += 4
 
-            const dataSize_ = rawDataDataView_.getUint32(rawDataOffset_, true)
-            rawDataOffset_ += 4
+            const dataSize = rawDataDataView.getUint32(rawDataOffset, true)
+            rawDataOffset += 4
 
-            decodeData_.datas.push({
-              x: tileX_,
-              y: tileY_,
-              z: tileZ_,
-              dZ: detailZoom_,
-              cD: this.options.disableDecode === true ? new DataView(new ArrayBuffer()) : rawData_.slice(rawDataOffset_, rawDataOffset_ + dataSize_)
+            decodeData.datas.push({
+              x: tileX,
+              y: tileY,
+              z: tileZ,
+              dZ: detailZoom,
+              cD: this.options.disableDecode === true ? new DataView(new ArrayBuffer()) : rawData.slice(rawDataOffset, rawDataOffset + dataSize)
             })
 
-            rawDataOffset_ += dataSize_
+            rawDataOffset += dataSize
 
-            tileCount_--
+            tileCount--
           }
 
-          const decodeFunction_ = () => {
-            for (const decodeWorker_ of globalThis.vms2Context_.decodeWorkers_) {
-              if (!decodeWorker_.resolveFunction_) {
-                const decodeEntry_ = globalThis.vms2Context_.decodeQueue_.shift()
+          const decodeFunction = () => {
+            for (const decodeWorker of globalThis.vms2Context.decodeWorkers) {
+              if (!decodeWorker.resolveFunction) {
+                const decodeEntry = globalThis.vms2Context.decodeQueue.shift()
 
-                if (decodeEntry_.tileLayerData_.tileCanvas_.hasBeenRemoved_) {
-                  decodeEntry_.resolve()
+                if (decodeEntry.tileLayerData.tileCanvas.hasBeenRemoved) {
+                  decodeEntry.resolve()
                 } else {
-                  decodeWorker_.postMessage(decodeEntry_.decodeData_)
+                  decodeWorker.postMessage(decodeEntry.decodeData)
 
-                  decodeWorker_.resolveFunction_ = () => {
-                    this._getCachedTile_(decodeEntry_.dataLayerId_, decodeEntry_.x_, decodeEntry_.y_, decodeEntry_.z_, decodeEntry_.tileLayerData_)
+                  decodeWorker.resolveFunction = () => {
+                    this._getCachedTile(decodeEntry.dataLayerId, decodeEntry.x, decodeEntry.y, decodeEntry.z, decodeEntry.tileLayerData)
 
-                    globalThis.vms2Context_.decodeWorkersRunning_--
+                    globalThis.vms2Context.decodeWorkersRunning--
 
-                    decodeEntry_.resolve()
+                    decodeEntry.resolve()
 
-                    if (globalThis.vms2Context_.decodeQueue_.length > 0) {
-                      decodeFunction_()
+                    if (globalThis.vms2Context.decodeQueue.length > 0) {
+                      decodeFunction()
                     }
                   }
 
-                  globalThis.vms2Context_.decodeWorkersRunning_++
+                  globalThis.vms2Context.decodeWorkersRunning++
                 }
 
                 return
@@ -3504,138 +3460,138 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             }
           }
 
-          globalThis.vms2Context_.decodeQueue_.push({ dataLayerId_, x_, y_, z_, tileLayerData_, decodeData_, resolve })
+          globalThis.vms2Context.decodeQueue.push({ dataLayerId, x, y, z, tileLayerData, decodeData, resolve })
 
-          decodeFunction_()
+          decodeFunction()
         })
-        .catch(error_ => {
-          if (error_.code === 20) {
+        .catch(error => {
+          if (error.code === 20) {
             resolve()
           } else {
-            throw error_
+            throw error
           }
         })
     })
   },
-  _skipPolygon_: function (geometry_, dataOffset_) {
-    dataOffset_ += 4
+  _skipPolygon: function (geometry, dataOffset) {
+    dataOffset += 4
 
-    const numberOfRings_ = geometry_.getUint32(dataOffset_, true)
-    dataOffset_ += 4
+    const numberOfRings = geometry.getUint32(dataOffset, true)
+    dataOffset += 4
 
-    for (let ringIndex_ = 0; ringIndex_ < numberOfRings_; ringIndex_++) {
-      dataOffset_ += 4 + geometry_.getUint32(dataOffset_, true) * 4 * 2
+    for (let ringIndex = 0; ringIndex < numberOfRings; ringIndex++) {
+      dataOffset += 4 + geometry.getUint32(dataOffset, true) * 4 * 2
     }
 
-    return dataOffset_
+    return dataOffset
   },
-  _latitudeToMeters_: function (latitude_) {
-    return Math.log(Math.tan((90 + latitude_) * Math.PI / 360)) * EARTH_EQUATORIAL_RADIUS_METERS_
+  _latitudeToMeters: function (latitude) {
+    return Math.log(Math.tan((90 + latitude) * Math.PI / 360)) * EARTH_EQUATORIAL_RADIUS_METERS
   },
-  _longitudeToMeters_: function (longitude_) {
-    return longitude_ * EARTH_EQUATORIAL_RADIUS_METERS_ * Math.PI / 180
+  _longitudeToMeters: function (longitude) {
+    return longitude * EARTH_EQUATORIAL_RADIUS_METERS * Math.PI / 180
   },
-  _latitudeToTile_: function (latitude_, z_, base_ = DEFAULT_ZOOM_POWER_BASE) {
-    return (Math.log(Math.tan((90 - latitude_) * Math.PI / 360)) / (2 * Math.PI) + 0.5) * Math.pow(base_, z_)
+  _latitudeToTile: function (latitude, z, base = DEFAULT_ZOOM_POWER_BASE) {
+    return (Math.log(Math.tan((90 - latitude) * Math.PI / 360)) / (2 * Math.PI) + 0.5) * Math.pow(base, z)
   },
-  _longitudeToTile_: function (longitude_, z_, base_ = DEFAULT_ZOOM_POWER_BASE) {
-    return (longitude_ + 180) * Math.pow(base_, z_) / 360
+  _longitudeToTile: function (longitude, z, base = DEFAULT_ZOOM_POWER_BASE) {
+    return (longitude + 180) * Math.pow(base, z) / 360
   },
-  _tileToLatitude_: function (y_, z_, base_ = DEFAULT_ZOOM_POWER_BASE) {
-    return 90 - Math.atan(Math.exp((y_ / Math.pow(base_, z_) - 0.5) * 2 * Math.PI)) * 360 / Math.PI
+  _tileToLatitude: function (y, z, base = DEFAULT_ZOOM_POWER_BASE) {
+    return 90 - Math.atan(Math.exp((y / Math.pow(base, z) - 0.5) * 2 * Math.PI)) * 360 / Math.PI
   },
-  _tileToLongitude_: function (x_, z_, base_ = DEFAULT_ZOOM_POWER_BASE) {
-    return x_ * 360 / Math.pow(base_, z_) - 180
+  _tileToLongitude: function (x, z, base = DEFAULT_ZOOM_POWER_BASE) {
+    return x * 360 / Math.pow(base, z) - 180
   },
-  _tileXToMeters_: function (x_, z_, base_ = DEFAULT_ZOOM_POWER_BASE) {
-    return (x_ / Math.pow(base_, z_) - 0.5) * EARTH_EQUATORIAL_CIRCUMFERENCE_METERS_
+  _tileXToMeters: function (x, z, base = DEFAULT_ZOOM_POWER_BASE) {
+    return (x / Math.pow(base, z) - 0.5) * EARTH_EQUATORIAL_CIRCUMFERENCE_METERS
   },
-  _tileYToMeters_: function (y_, z_, base_ = DEFAULT_ZOOM_POWER_BASE) {
-    return (0.5 - y_ / Math.pow(base_, z_)) * EARTH_EQUATORIAL_CIRCUMFERENCE_METERS_
+  _tileYToMeters: function (y, z, base = DEFAULT_ZOOM_POWER_BASE) {
+    return (0.5 - y / Math.pow(base, z)) * EARTH_EQUATORIAL_CIRCUMFERENCE_METERS
   },
-  _latitudeToNormalized_: function (latitude_) {
-    return Math.log(Math.tan((90 - latitude_) * Math.PI / 360)) / (2 * Math.PI) + 0.5
+  _latitudeToNormalized: function (latitude) {
+    return Math.log(Math.tan((90 - latitude) * Math.PI / 360)) / (2 * Math.PI) + 0.5
   },
-  _longitudeToNormalized_: function (longitude_) {
-    return (longitude_ + 180) / 360
+  _longitudeToNormalized: function (longitude) {
+    return (longitude + 180) / 360
   },
-  _normalizedToLatitude_: function (y_) {
-    return 90 - Math.atan(Math.exp((y_ - 0.5) * 2 * Math.PI)) * 360 / Math.PI
+  _normalizedToLatitude: function (y) {
+    return 90 - Math.atan(Math.exp((y - 0.5) * 2 * Math.PI)) * 360 / Math.PI
   },
-  _normalizedToLongitude_: function (x_) {
-    return x_ * 360 - 180
+  _normalizedToLongitude: function (x) {
+    return x * 360 - 180
   },
-  _hexify8_(value_) {
-    return ('00' + value_.toString(16)).slice(-2)
+  _hexify8: function (value) {
+    return ('00' + value.toString(16)).slice(-2)
   },
-  _hexify16_(values_) {
-    return ('0000' + ((values_[0] << 8) + values_[1]).toString(16)).slice(-4)
+  _hexify16: function (values) {
+    return ('0000' + ((values[0] << 8) + values[1]).toString(16)).slice(-4)
   },
-  _hexify24_(values_) {
-    return ('000000' + ((values_[0] << 16) + (values_[1] << 8) + values_[2]).toString(16)).slice(-6)
+  _hexify24: function (values) {
+    return ('000000' + ((values[0] << 16) + (values[1] << 8) + values[2]).toString(16)).slice(-6)
   },
-  _hexify32_(values_) {
-    return this._hexify24_(values_) + this._hexify8_(values_[3])
+  _hexify32: function (values) {
+    return this._hexify24(values) + this._hexify8(values[3])
   },
-  _getWorkerURL_(url_) {
-    const content_ = `importScripts("${url_}");`
+  _getWorkerURL: function (url_) {
+    const content = `importScripts("${url_}");`
 
-    return URL.createObjectURL(new Blob([content_], { type: 'text/javascript' }))
+    return URL.createObjectURL(new Blob([content], { type: 'text/javascript' }))
   },
-  async _getPattern_(context_, patternName_) {
-    if (!globalThis.vms2Context_.patternCache_[patternName_]) {
-      let patternUrl_ = patternName_
+  _getPattern: async function (context, patternName) {
+    if (!globalThis.vms2Context.patternCache[patternName]) {
+      let patternUrl = patternName
 
-      if (!patternName_.includes('http://') && !patternName_.includes('https://')) {
-        patternUrl_ = this.options.assetsUrl + '/images/patterns/' + patternName_.replace(/file:\/\/[^/]*\//g, '')
+      if (!patternName.includes('http://') && !patternName.includes('https://')) {
+        patternUrl = this.options.assetsUrl + '/images/patterns/' + patternName.replace(/file:\/\/[^/]*\//g, '')
       }
 
-      const patternImage_ = await this._requestImage_(patternUrl_)
+      const patternImage = await this._requestImage(patternUrl)
 
-      globalThis.vms2Context_.patternCache_[patternName_] = context_.createPattern(patternImage_, 'repeat')
+      globalThis.vms2Context.patternCache[patternName] = context.createPattern(patternImage, 'repeat')
 
-      globalThis.vms2Context_.patternCache_[patternName_].patternImage = patternImage_
+      globalThis.vms2Context.patternCache[patternName].patternImage = patternImage
     }
 
-    return globalThis.vms2Context_.patternCache_[patternName_]
+    return globalThis.vms2Context.patternCache[patternName]
   },
-  _remapPixels_(pixels_, saveDataIds_, width_) {
-    let lastValidRed_ = 0
-    let lastValidGreen_ = 0
-    let lastValidBlue_ = 0
+  _remapPixels: function (pixels, saveDataIds, width) {
+    let lastValidRed = 0
+    let lastValidGreen = 0
+    let lastValidBlue = 0
 
-    let lastValidColorDistance_ = 0
+    let lastValidColorDistance = 0
 
-    for (let index_ = 0; index_ < pixels_.length; index_ += 4) {
-      const alpha_ = pixels_[index_ + 2]
+    for (let index = 0; index < pixels.length; index += 4) {
+      const alpha = pixels[index + 2]
 
-      if (alpha_ > 0) {
-        let red_ = pixels_[index_]
-        let green_ = pixels_[index_ + 1]
-        let blue_ = pixels_[index_ + 2]
+      if (alpha > 0) {
+        let red = pixels[index]
+        let green = pixels[index + 1]
+        let blue = pixels[index + 2]
 
-        if (saveDataIds_[(red_ << 16) + (green_ << 8) + blue_]) {
-          lastValidRed_ = red_
-          lastValidGreen_ = green_
-          lastValidBlue_ = blue_
+        if (saveDataIds[(red << 16) + (green << 8) + blue]) {
+          lastValidRed = red
+          lastValidGreen = green
+          lastValidBlue = blue
 
-          lastValidColorDistance_ = 0
+          lastValidColorDistance = 0
         } else {
-          pixels_[index_] = lastValidRed_
-          pixels_[index_ + 1] = lastValidGreen_
-          pixels_[index_ + 2] = lastValidBlue_
+          pixels[index] = lastValidRed
+          pixels[index + 1] = lastValidGreen
+          pixels[index + 2] = lastValidBlue
 
-          lastValidColorDistance_++
+          lastValidColorDistance++
 
-          if (lastValidColorDistance_ > 10 && index_ > width_ * 4) {
-            red_ = pixels_[index_ - width_ * 4]
-            green_ = pixels_[index_ - width_ * 4 + 1]
-            blue_ = pixels_[index_ - width_ * 4 + 2]
+          if (lastValidColorDistance > 10 && index > width * 4) {
+            red = pixels[index - width * 4]
+            green = pixels[index - width * 4 + 1]
+            blue = pixels[index - width * 4 + 2]
 
-            if (saveDataIds_[(red_ << 16) + (green_ << 8) + blue_]) {
-              pixels_[index_] = red_
-              pixels_[index_ + 1] = green_
-              pixels_[index_ + 2] = blue_
+            if (saveDataIds[(red << 16) + (green << 8) + blue]) {
+              pixels[index] = red
+              pixels[index + 1] = green
+              pixels[index + 2] = blue
             }
           }
         }
@@ -3644,6 +3600,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   }
 })
 
-L.gridLayer.vms2 = function (options_) {
-  return new L.GridLayer.VMS2(options_)
+L.gridLayer.vms2 = function (options) {
+  return new L.GridLayer.VMS2(options)
 }
