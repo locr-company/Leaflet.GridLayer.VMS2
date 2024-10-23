@@ -69,24 +69,24 @@ const utf8TextDecoder = new TextDecoder('utf-8')
 
 const eRM = 6378137
 
-function tTLa(y, z) {
-  return 90 - Math.atan(Math.exp((y / Math.pow(2, z) - 0.5) * 2 * Math.PI)) * 360 / Math.PI
+function tTLa(y_, z_) {
+  return 90 - Math.atan(Math.exp((y_ / Math.pow(2, z_) - 0.5) * 2 * Math.PI)) * 360 / Math.PI
 }
 
-function tTLo(x, z) {
-  return x * 360 / Math.pow(2, z) - 180
+function tTLo(x_, z_) {
+  return x_ * 360 / Math.pow(2, z_) - 180
 }
 
-function laTM(latitude) {
-  return Math.log(Math.tan((90 + latitude) * Math.PI / 360)) * eRM
+function laTM(latitude_) {
+  return Math.log(Math.tan((90 + latitude_) * Math.PI / 360)) * eRM
 }
 
-function loTM(longitude) {
-  return longitude * eRM * Math.PI / 180
+function loTM(longitude_) {
+  return longitude_ * eRM * Math.PI / 180
 }
 
 function dTO(layerId, tileLayerDatas) {
-  let decodedData = { layerId: layerId, tDs: [] }
+  let decodedData = { lId: layerId, tDs: [] }
 
   for (let tileLayerData of tileLayerDatas) {
     let tileObjects = []
@@ -179,5 +179,5 @@ function dTO(layerId, tileLayerDatas) {
 }
 
 onmessage = e => {
-  self.postMessage(dTO(e.data.layerId, e.data.datas))
+  self.postMessage(dTO(e.data.lId, e.data.datas))
 }
