@@ -18,10 +18,12 @@ const lrRanges = [
   [126572, 126578], [126580, 126583], [126585, 126588], [126590, 126590], [126592, 126601], [126603, 126619],
   [126625, 126627], [126629, 126633], [126635, 126651]]
 
-export const unicodeDataTable = {}
+const unicodeDataTable = {}
 
 for (const range of lrRanges) {
   for (let charId = range[0]; charId <= range[1]; charId++) {
     unicodeDataTable[charId] = true
   }
 }
+
+export default unicodeDataTable

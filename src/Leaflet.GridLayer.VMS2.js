@@ -1,5 +1,6 @@
-import { unicodeDataTable as UnicodeDataTable } from './unicode.js'
-import { MapOverlay } from './map_overlay.js'
+import unicodeDataTable from './unicode.js'
+import './PrintFormat.js'
+import { MapOverlay } from './MapOverlay.js'
 
 const defaultPrintDpi = 300
 
@@ -17,18 +18,19 @@ const DEFAULT_ASSETS_URL = 'https://vms2.locr.com/api/styles/assets'
 
 const MIN_NUMBER_OF_WORKERS = 4
 
+const PRINT_SCALING_FACTOR = 2 * 3604 / 2480
+
 const devicePixelRatio = window.devicePixelRatio || 1
 
 const RandomGenerator = function () {
   this.state = 624
 }
 
-// eslint-disable-next-line camelcase
-RandomGenerator.prototype.init_seed = function (number) {
+RandomGenerator.prototype['init_seed'] = function (number) {
   this.state = number
 }
 
-RandomGenerator.prototype.random = function () {
+RandomGenerator.prototype['random'] = function () {
   let x = this.state
 
   x ^= x << 13
@@ -40,8 +42,7 @@ RandomGenerator.prototype.random = function () {
   return (x / 0xffffffff) + 0.5
 }
 
-// eslint-disable-next-line camelcase
-RandomGenerator.prototype.random_int = function () {
+RandomGenerator.prototype['random_int'] = function () {
   let x = this.state
 
   x ^= x << 13
@@ -53,20 +54,19 @@ RandomGenerator.prototype.random_int = function () {
   return x
 }
 
-// eslint-disable-next-line camelcase
-RandomGenerator.prototype.random_pick = function (elements_, elementCounts_) {
-  if (elementCounts_) {
+RandomGenerator.prototype['random_pick'] = function (elements, elementCounts) {
+  if (elementCounts) {
     const expandedElements = []
 
-    for (let elementIndex = 0; elementIndex < elements_.length; elementIndex++) {
-      for (let count = 0; count < elementCounts_[elementIndex]; count++) {
-        expandedElements.push(elements_[elementIndex])
+    for (let elementIndex = 0; elementIndex < elements.length; elementIndex++) {
+      for (let count = 0; count < elementCounts[elementIndex]; count++) {
+        expandedElements.push(elements[elementIndex])
       }
     }
 
     return expandedElements[Math.floor(this.random() * expandedElements.length)]
   } else {
-    return elements_[Math.floor(this.random() * elements_.length)]
+    return elements[Math.floor(this.random() * elements.length)]
   }
 }
 
@@ -82,7 +82,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   tileDbInfos: null,
   tileDbInfosResolves: [],
 
-  unicodeDataTable: UnicodeDataTable,
+  unicodeDataTable,
 
   tileCanvases: [],
   saveDataCanvases: [],
@@ -101,7 +101,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     styleOverride: {}
   },
 
-  initialize: function (options_) {
+  initialize: function (options) {
     if (!globalThis.vms2Context) {
       globalThis.vms2Context = {
         decodeWorkers: [],
@@ -171,13 +171,43 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
     }
 
-    L.GridLayer.prototype.initialize.call(this, options_)
+    L.GridLayer.prototype.initialize.call(this, options)
 
     this.tileSize = this.getTileSize().x
 
     this.options.tileUrl += '&key=' + this.options.accessKey
 
     this.options.zoomStep = Math.log2(this.options.zoomPowerBase)
+
+    if(this.options.printFormat) {
+      this.printFormatMaskDiv = document.createElement('div')
+
+      this.printFormatMaskDiv.id = 'printFormatMask'
+
+      this.printFormatMaskDiv.style.zIndex = 990
+      this.printFormatMaskDiv.style.position = 'absolute'
+      this.printFormatMaskDiv.style.width = '100%'
+      this.printFormatMaskDiv.style.height = '100%'
+      this.printFormatMaskDiv.style.backgroundColor = '#0008'
+
+      let mapContainer = document.getElementById('map')
+      mapContainer.appendChild(this.printFormatMaskDiv)
+    }
+
+    if(this.options.mapOverlay) {
+      this.mapOverlayDiv = document.createElement('div')
+
+      this.mapOverlayDiv.id = 'mapOverlay'
+
+      this.mapOverlayDiv.style.zIndex = 980
+      this.mapOverlayDiv.style.position = 'absolute'
+
+      this.mapOverlayDiv.innerHTML = this.options.mapOverlay.getOverlay()
+
+
+      let mapContainer = document.getElementById('map')
+      mapContainer.appendChild(this.mapOverlayDiv)
+    }
   },
   createTile: function (tileInfo, doneFunction_) {
     let tileCanvas = null
@@ -249,7 +279,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     return mapCanvas
   },
-  getMapObjects: function (tileInfo, doneFunction_) {
+  getMapObjects: function (tileInfo, doneFunction) {
     const tileCanvas = {}
 
     if (tileInfo.width && tileInfo.height) {
@@ -264,7 +294,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     this._drawTile(tileCanvas, tileInfo)
       .then(tileLayers => {
-        doneFunction_(tileLayers)
+        doneFunction(tileLayers)
       })
   },
   _pruneTilesOld: function () {
@@ -434,6 +464,54 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       tile: tileElement,
       coords: this._keyToTileCoords(key)
     })
+  },
+  onAdd: function () {
+    this._map.on('resize', this._onResize, this)
+
+    this._initContainer()
+
+    this._levels = {}
+    this._tiles = {}
+
+    this._resetView() // implicit _update() call
+
+    this._onResize() // implicit _onResize() call
+  },
+  onRemove: function (map) {
+    this._map.off('resize', this._onResize, this)
+
+    this._removeAllTiles()
+    remove(this._container)
+    // eslint-disable-next-line no-underscore-dangle
+    map._removeZoomLimit(this)
+    this._container = null
+    this._tileZoom = undefined
+  },
+  _onResize: function(event) {
+    if(this.options.printFormat) {
+      const printSize = this.options.printFormat.getSize()
+
+      const printSizeAspectRatio = printSize.width / printSize.height
+      const mapSizeAspectRatio = this._map.getSize().x / this._map.getSize().y
+
+      if(printSizeAspectRatio > mapSizeAspectRatio) {
+        this.options.mapScale = this._map.getSize().x * PRINT_SCALING_FACTOR / printSize.width
+
+        let topBorderPercent = 50 - mapSizeAspectRatio / printSizeAspectRatio * 50
+        let bottomBorderPercent = 100 - topBorderPercent
+
+        this.printFormatMaskDiv.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${topBorderPercent}%, 0% ${topBorderPercent}%, 0% ${bottomBorderPercent}%, 100% ${bottomBorderPercent}%, 100% 100%, 0% 100%)`
+      } else {
+        this.options.mapScale = this._map.getSize().y * PRINT_SCALING_FACTOR / printSize.height
+
+        let leftBorderPercent = 50 - printSizeAspectRatio / mapSizeAspectRatio * 50
+        let rightBorderPercent = 100 - leftBorderPercent
+
+        this.printFormatMaskDiv.style.clipPath = `polygon(0% 100%, 0% 0%, ${leftBorderPercent}% 0%, ${leftBorderPercent}% 100%, ${rightBorderPercent}% 100%, ${rightBorderPercent}% 0%, 100% 0%, 100% 100%)`
+      }
+  
+      this.redraw()
+    }
   },
   _checkAndSetDisplacement: function (displacementLayers, displacementLayerNames, boxes) {
     for (const box of boxes) {
