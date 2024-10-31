@@ -475,7 +475,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     this._resetView() // implicit _update() call
 
-    this._onResize() // implicit _onResize() call
+    if(this.options.printFormat) {
+      this._onResize()
+    }
   },
   onRemove: function (map) {
     this._map.off('resize', this._onResize, this)
@@ -494,6 +496,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       const printSizeAspectRatio = printSize.width / printSize.height
       const mapSizeAspectRatio = this._map.getSize().x / this._map.getSize().y
 
+      const lastMapScale = this.options.mapScale
+
       if(printSizeAspectRatio > mapSizeAspectRatio) {
         this.options.mapScale = this._map.getSize().x * PRINT_SCALING_FACTOR / printSize.width
 
@@ -508,8 +512,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         let rightBorderPercent = 100 - leftBorderPercent
 
         this.printFormatMaskDiv.style.clipPath = `polygon(0% 100%, 0% 0%, ${leftBorderPercent}% 0%, ${leftBorderPercent}% 100%, ${rightBorderPercent}% 100%, ${rightBorderPercent}% 0%, 100% 0%, 100% 100%)`
+
+        if(event) {
+          this._map.setZoom(this._map.getZoom() + Math.log(this.options.mapScale / lastMapScale) / Math.log(this.options.zoomPowerBase))
+        }
       }
-  
+      
       this.redraw()
     }
   },
