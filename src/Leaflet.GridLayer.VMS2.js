@@ -476,8 +476,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     this._resetView() // implicit _update() call
 
     if(this.options.printFormat) {
-      this.options.mapScale = 0
-
       this._onResize()
     }
   },
@@ -515,7 +513,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         this.printFormatMaskDiv.style.clipPath = `polygon(0% 100%, 0% 0%, ${leftBorderPercent}% 0%, ${leftBorderPercent}% 100%, ${rightBorderPercent}% 100%, ${rightBorderPercent}% 0%, 100% 0%, 100% 100%)`
 
-        if(lastMapScale > 0) {
+        if(event) {
           this._map.setZoom(this._map.getZoom() + Math.log(this.options.mapScale / lastMapScale) / Math.log(this.options.zoomPowerBase))
         }
       }
