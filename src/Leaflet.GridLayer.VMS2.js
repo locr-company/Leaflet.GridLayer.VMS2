@@ -189,9 +189,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       this.printFormatMaskDiv.style.width = '100%'
       this.printFormatMaskDiv.style.height = '100%'
       this.printFormatMaskDiv.style.backgroundColor = '#0008'
-
-      let mapContainer = document.getElementById('map')
-      mapContainer.appendChild(this.printFormatMaskDiv)
     }
 
     if(this.options.mapOverlay) {
@@ -203,10 +200,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       this.mapOverlayDiv.style.position = 'absolute'
 
       this.mapOverlayDiv.innerHTML = this.options.mapOverlay.getOverlay()
-
-
-      let mapContainer = document.getElementById('map')
-      mapContainer.appendChild(this.mapOverlayDiv)
     }
   },
   createTile: function (tileInfo, doneFunction_) {
@@ -466,6 +459,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     })
   },
   onAdd: function () {
+    if(this.options.printFormat && this.printFormatMaskDiv) {
+      this._map.getContainer().appendChild(this.printFormatMaskDiv)
+    }
+    if(this.options.mapOverlay && this.mapOverlayDiv) {
+      this._map.getContainer().appendChild(this.mapOverlayDiv)
+    }
+
     this._map.on('resize', this._onResize, this)
 
     this._initContainer()
