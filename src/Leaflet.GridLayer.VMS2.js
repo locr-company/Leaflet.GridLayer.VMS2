@@ -504,14 +504,18 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         let topBorderPercent = 50 - mapSizeAspectRatio / printSizeAspectRatio * 50
         let bottomBorderPercent = 100 - topBorderPercent
 
-        this.printFormatMaskDiv.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${topBorderPercent}%, 0% ${topBorderPercent}%, 0% ${bottomBorderPercent}%, 100% ${bottomBorderPercent}%, 100% 100%, 0% 100%)`
+        if (this.printFormatMaskDiv) {
+          this.printFormatMaskDiv.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${topBorderPercent}%, 0% ${topBorderPercent}%, 0% ${bottomBorderPercent}%, 100% ${bottomBorderPercent}%, 100% 100%, 0% 100%)`
+        }
       } else {
         this.options.mapScale = this._map.getSize().y * PRINT_SCALING_FACTOR / printSize.height
 
         let leftBorderPercent = 50 - printSizeAspectRatio / mapSizeAspectRatio * 50
         let rightBorderPercent = 100 - leftBorderPercent
 
-        this.printFormatMaskDiv.style.clipPath = `polygon(0% 100%, 0% 0%, ${leftBorderPercent}% 0%, ${leftBorderPercent}% 100%, ${rightBorderPercent}% 100%, ${rightBorderPercent}% 0%, 100% 0%, 100% 100%)`
+        if (this.printFormatMaskDiv) {
+          this.printFormatMaskDiv.style.clipPath = `polygon(0% 100%, 0% 0%, ${leftBorderPercent}% 0%, ${leftBorderPercent}% 100%, ${rightBorderPercent}% 100%, ${rightBorderPercent}% 0%, 100% 0%, 100% 100%)`
+        }
 
         if(event) {
           this._map.setZoom(this._map.getZoom() + Math.log(this.options.mapScale / lastMapScale) / Math.log(this.options.zoomPowerBase))
