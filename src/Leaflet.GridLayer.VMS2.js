@@ -495,15 +495,15 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   },
   _onResize: function(event) {
     if (this.options.printFormat) {
-      const printSize = this.options.printFormat.getSize()
+      const printFormatSize = this.options.printFormat.getSize()
 
-      const printSizeAspectRatio = printSize.width / printSize.height
+      const printSizeAspectRatio = printFormatSize.width / printFormatSize.height
       const mapSizeAspectRatio = this._map.getSize().x / this._map.getSize().y
 
       const lastMapScale = this.options.mapScale
 
       if (printSizeAspectRatio > mapSizeAspectRatio) {
-        this.options.mapScale = this._map.getSize().x * PRINT_SCALING_FACTOR / printSize.width
+        this.options.mapScale = this._map.getSize().x * PRINT_SCALING_FACTOR / printFormatSize.width
 
         let topBorderPercent = 50 - mapSizeAspectRatio / printSizeAspectRatio * 50
         let bottomBorderPercent = 100 - topBorderPercent
@@ -512,7 +512,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           this.printFormatMaskDiv.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${topBorderPercent}%, 0% ${topBorderPercent}%, 0% ${bottomBorderPercent}%, 100% ${bottomBorderPercent}%, 100% 100%, 0% 100%)`
         }
       } else {
-        this.options.mapScale = this._map.getSize().y * PRINT_SCALING_FACTOR / printSize.height
+        this.options.mapScale = this._map.getSize().y * PRINT_SCALING_FACTOR / printFormatSize.height
 
         let leftBorderPercent = 50 - printSizeAspectRatio / mapSizeAspectRatio * 50
         let rightBorderPercent = 100 - leftBorderPercent
@@ -523,15 +523,23 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       if (this._map) {
+        let printFormatScale = 1
+
+        if(this.lastPrintFormatSize) {
+          printFormatScale = Math.sqrt(printFormatSize.width * printFormatSize.height) / Math.sqrt(this.lastPrintFormatSize.width * this.lastPrintFormatSize.height)
+        }
+
+        this.lastPrintFormatSize = printFormatSize
+
         const center = this._map.getCenter()
-        const newZoom = this._map.getZoom() + Math.log(this.options.mapScale / lastMapScale) / Math.log(this.options.zoomPowerBase)
+        const newZoom = this._map.getZoom() + Math.log(this.options.mapScale * printFormatScale / lastMapScale) / Math.log(this.options.zoomPowerBase)
 
         // eslint-disable-next-line no-underscore-dangle
         this._map._resetView(center, newZoom, true)
       }
 
       if(this.options.mapOverlay) {
-        this.mapOverlayDiv.innerHTML = this.options.mapOverlay.getOverlay({ width: printSize.width, height: printSize.height })
+        this.mapOverlayDiv.innerHTML = this.options.mapOverlay.getOverlay({ width: printFormatSize.width, height: printFormatSize.height })
       }
 
       this.redraw()
