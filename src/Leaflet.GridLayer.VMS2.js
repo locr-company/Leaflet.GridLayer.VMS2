@@ -2,12 +2,12 @@ import unicodeDataTable from './unicode.js'
 import './PrintFormat.js'
 import { MapOverlay } from './MapOverlay.js'
 
-const defaultPrintDpi = 300
-
 const EARTH_EQUATORIAL_RADIUS_METERS = 6378137
 const EARTH_EQUATORIAL_CIRCUMFERENCE_METERS = 2 * Math.PI * EARTH_EQUATORIAL_RADIUS_METERS
 const TILE_AREA_DRAWING_EXTENSION = 1
 const TILE_AREA_SAVE_EXTENSION = 0.25
+
+const DEFAULT_PRINT_DPI = 300
 
 const DEFAULT_ZOOM_POWER_BASE = 2
 const DEFAULT_STYLE_ID = '4201'
@@ -16,9 +16,7 @@ const DEFAULT_STYLE_URL = 'https://vms2.locr.com/api/style/{style_id}'
 const DEFAULT_TILE_URL = 'https://vms2.locr.com/api/tile/{z}/{y}/{x}?k={key}&v={value}&t={type}'
 const DEFAULT_ASSETS_URL = 'https://vms2.locr.com/api/styles/assets'
 
-const MIN_NUMBER_OF_WORKERS = 4
-
-const PRINT_SCALING_FACTOR = 2 * 3604 / 2480
+const DEFAULT_MIN_NUMBER_OF_WORKERS = 6
 
 const devicePixelRatio = window.devicePixelRatio || 1
 
@@ -128,7 +126,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       globalThis.vms2Context.fontCharacterCanvas = document.createElement('canvas')
       globalThis.vms2Context.fontCharacterContext = globalThis.vms2Context.fontCharacterCanvas.getContext('2d')
 
-      const maxNumberOfWorkers = Math.max(navigator.hardwareConcurrency - 1, MIN_NUMBER_OF_WORKERS)
+      const maxNumberOfWorkers = Math.max(navigator.hardwareConcurrency - 1, DEFAULT_MIN_NUMBER_OF_WORKERS)
 
       for (let count = 0; count < maxNumberOfWorkers; count++) {
         const decodeWorker = new Worker(this._getWorkerURL(new URL('decoder.js', import.meta.url)))
@@ -201,7 +199,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       this.mapOverlayDiv.style.width = '100%'
       this.mapOverlayDiv.style.height = '100%'
 
-      this.mapOverlayDiv.innerHTML = this.options.mapOverlay.getOverlay()
+      this.mapOverlayDiv.innerHTML = this.options.mapOverlay.getSvgOverlay()
     }
   },
   createTile: function (tileInfo, doneFunction_) {
@@ -236,7 +234,68 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     return tileCanvas
   },
-  getMapCanvas: async function (tileInfo) {
+  getPrintCanvas: async function () {
+    if(!this.options.printFormat || !this._map) {
+      throw(new Error('Missing essential parameters!'))
+    }
+
+    const printFormatSize = this.options.printFormat.getSize()
+
+    const mapInfo = {
+      dpi: printFormatSize.dpi,
+      style: this.options.style,
+
+      latitudeMin: this._map.getBounds().getSouth(),
+      longitudeMin: this._map.getBounds().getWest(),
+      latitudeMax: this._map.getBounds().getNorth(),
+      longitudeMax: this._map.getBounds().getEast(),
+
+      width: printFormatSize.width,
+      height: printFormatSize.height,
+
+      mapScale: printFormatSize.printScale,
+
+      objectScale: this.options.objectScale,
+      detailOffset: this.options.detailOffset,
+      zoomRangeOffset: this.options.zoomRangeOffset
+    }
+
+    const mapCanvas = await this.getMapCanvas(mapInfo)
+
+    if(this.options.mapOverlay) {
+      let printCanvas = document.createElement('canvas')
+
+      printCanvas.width = printFormatSize.width
+      printCanvas.height = printFormatSize.height
+
+      let printCanvasContext = printCanvas.getContext('2d')
+
+      printCanvasContext.drawImage(mapCanvas, 0, 0)
+
+      const domParser = new DOMParser()
+      const mapOverlaySvgElement = domParser.parseFromString(this.mapOverlayDiv.innerHTML, 'image/svg+xml').documentElement
+
+      mapOverlaySvgElement.setAttribute('width', printFormatSize.width)
+      mapOverlaySvgElement.setAttribute('height', printFormatSize.height)
+
+      const mapOverlayImage = new Image()
+      const xmlSerializer = new XMLSerializer()
+      const mapOverlaySvgBlobUrl = URL.createObjectURL(new Blob([xmlSerializer.serializeToString(mapOverlaySvgElement)], { type: 'image/svg+xml;charset=utf-8' })) 
+
+      mapOverlayImage.src = mapOverlaySvgBlobUrl
+
+      await mapOverlayImage.decode()
+
+      URL.revokeObjectURL(mapOverlaySvgBlobUrl)
+
+      printCanvasContext.drawImage(mapOverlayImage, 0, 0)
+
+      return printCanvas
+    }
+
+    return mapCanvas
+  },
+  getMapCanvas: async function (mapInfo) {
     /*
      * Start of billing related code block. Do not change or skip it, neither block its function.
      * It must be executed when this function is being called.
@@ -245,7 +304,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     if (this.options.accessKey) {
       const meta = {
         function: this.getMapCanvas.name,
-        tileInfo: tileInfo
+        mapInfo: mapInfo
       }
 
       const metaJson = JSON.stringify(meta)
@@ -260,16 +319,16 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     let mapCanvas = null
 
-    if (tileInfo.width && tileInfo.height) {
+    if (mapInfo.width && mapInfo.height) {
       mapCanvas = document.createElement('canvas')
 
-      mapCanvas.width = tileInfo.width
-      mapCanvas.height = tileInfo.height
+      mapCanvas.width = mapInfo.width
+      mapCanvas.height = mapInfo.height
 
       mapCanvas.inUse = true
       mapCanvas.hasBeenRemoved = false
 
-      await this._drawTile(mapCanvas, tileInfo)
+      await this._drawTile(mapCanvas, mapInfo)
     }
 
     return mapCanvas
@@ -503,7 +562,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       const lastMapScale = this.options.mapScale
 
       if (printSizeAspectRatio > mapSizeAspectRatio) {
-        this.options.mapScale = this._map.getSize().x * PRINT_SCALING_FACTOR / printFormatSize.width
+        this.options.mapScale = this._map.getSize().x * printFormatSize.printScale / printFormatSize.width
 
         let topBorderPercent = 50 - mapSizeAspectRatio / printSizeAspectRatio * 50
         let bottomBorderPercent = 100 - topBorderPercent
@@ -512,7 +571,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           this.printFormatMaskDiv.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${topBorderPercent}%, 0% ${topBorderPercent}%, 0% ${bottomBorderPercent}%, 100% ${bottomBorderPercent}%, 100% 100%, 0% 100%)`
         }
       } else {
-        this.options.mapScale = this._map.getSize().y * PRINT_SCALING_FACTOR / printFormatSize.height
+        this.options.mapScale = this._map.getSize().y * printFormatSize.printScale / printFormatSize.height
 
         let leftBorderPercent = 50 - printSizeAspectRatio / mapSizeAspectRatio * 50
         let rightBorderPercent = 100 - leftBorderPercent
@@ -539,7 +598,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       if(this.options.mapOverlay) {
-        this.mapOverlayDiv.innerHTML = this.options.mapOverlay.getOverlay({ width: printFormatSize.width, height: printFormatSize.height })
+        this.mapOverlayDiv.innerHTML = this.options.mapOverlay.getSvgOverlay({ width: printFormatSize.width, height: printFormatSize.height })
       }
 
       this.redraw()
@@ -1809,7 +1868,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     let objectScale = drawingInfo.objectScale
 
     if (!isNaN(saveStyle.ZoomScale)) {
-      objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(defaultPrintDpi * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, saveStyle.ZoomScale)
+      objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, saveStyle.ZoomScale)
     }
 
     if (!isNaN(saveStyle.StrokeWidth)) {
@@ -1888,7 +1947,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       let objectScale = drawingInfo.objectScale
 
       if (!isNaN(objectStyle.ZoomScale)) {
-        objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(defaultPrintDpi * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
+        objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
       }
 
       if (isNaN(objectStyle.FillAlpha)) {
@@ -2111,7 +2170,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         let objectScale = drawingInfo.objectScale
 
         if (!isNaN(objectStyle.ZoomScale)) {
-          objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(defaultPrintDpi * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
+          objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
         }
 
         if (activeObjectStyle !== objectStyle) {
@@ -2314,7 +2373,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         let objectScale = drawingInfo.objectScale
 
         if (!isNaN(objectStyle.ZoomScale)) {
-          objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(defaultPrintDpi * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
+          objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
         }
 
         if (activeObjectStyle !== objectStyle) {
@@ -2650,7 +2709,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 tileInfo.mapBounds.latitudeMin = this._tileToLatitude(tileInfo.y + 1, tileInfo.z, this.options.zoomPowerBase)
                 tileInfo.mapBounds.latitudeMax = this._tileToLatitude(tileInfo.y, tileInfo.z, this.options.zoomPowerBase)
 
-                tileInfo.dpi = (this.options.dpi || defaultPrintDpi) * tileInfo.width / this.tileSize
+                tileInfo.dpi = (this.options.dpi || DEFAULT_PRINT_DPI) * tileInfo.width / this.tileSize
               } else {
                 tileInfo.mapBounds.longitudeMin = tileInfo.longitudeMin
                 tileInfo.mapBounds.longitudeMax = tileInfo.longitudeMax
@@ -2679,7 +2738,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   tileInfo.mapBounds.latitudeMax = this._normalizedToLatitude(normalizedMax)
                 }
 
-                const tileSize = this.tileSize * tileInfo.dpi / defaultPrintDpi
+                const tileSize = this.tileSize * tileInfo.dpi / DEFAULT_PRINT_DPI
 
                 tileInfo.z = Math.log(360 * tileInfo.width / tileSize / (tileInfo.mapBounds.longitudeMax - tileInfo.mapBounds.longitudeMin)) / Math.log(this.options.zoomPowerBase)
               }
@@ -2775,7 +2834,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                   iconPositions: {},
 
-                  patternScale: tileInfo.dpi * 72 / defaultPrintDpi / defaultPrintDpi * userMapScale,
+                  patternScale: tileInfo.dpi * 72 / DEFAULT_PRINT_DPI / DEFAULT_PRINT_DPI * userMapScale,
                   mapScale: tileInfo.width / (mapArea.right - mapArea.left),
                   adjustedObjectScale: Math.abs(tileInfo.vms2TileZ < 6 ? 0.7 : 0.7 / Math.cos(tileInfo.mapBounds.latitudeMin * Math.PI / 180)),
 
@@ -2856,7 +2915,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   if (layer.Grid) {
                     drawingInfo.isGrid = true
 
-                    const gridZoomScale = 1 / drawingInfo.userMapScale / Math.pow(defaultPrintDpi * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, layer.Grid.ZoomScale || 1)
+                    const gridZoomScale = 1 / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, layer.Grid.ZoomScale || 1)
 
                     const gridSize = [layer.Grid.Size[0] * drawingInfo.objectScale * gridZoomScale, layer.Grid.Size[1] * drawingInfo.objectScale * gridZoomScale]
 
