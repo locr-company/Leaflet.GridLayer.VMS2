@@ -5,6 +5,8 @@ class PrintFormat {
   static CM_PER_INCH = 2.54
   static MM_PER_INCH = 25.4
 
+  static DEFAULT_PRINT_SCALE = 2 * 3604 / 2480
+
   unitTypeConversionFunctions = {
     'px': (width, height, dpi) => ({ width, height }),
     'cm': (width, height, dpi) => ({ width: width * dpi / PrintFormat.CM_PER_INCH, height: height * dpi / PrintFormat.CM_PER_INCH }),
@@ -18,6 +20,8 @@ class PrintFormat {
   height = 0
 
   dpi = PrintFormat.DEFAULT_PRINT_DPI
+
+  printScale = PrintFormat.DEFAULT_PRINT_SCALE
 
   constructor(printSizeInfo) {
     if (typeof printSizeInfo !== 'object' || printSizeInfo === null) {
@@ -33,6 +37,8 @@ class PrintFormat {
     }
 
     this.dpi = printSizeInfo.dpi || PrintFormat.DEFAULT_PRINT_DPI
+
+    this.printScale = printSizeInfo.printScale || PrintFormat.DEFAULT_PRINT_SCALE
 
     let unitTypeConversionFunction = this.unitTypeConversionFunctions[PrintFormat.DEFAULT_UNIT_TYPE]
 
@@ -54,7 +60,8 @@ class PrintFormat {
     return { 
       width: this.width, 
       height: this.height, 
-      dpi: this.dpi 
+      dpi: this.dpi,
+      printScale: this.printScale 
     }
   }
 }
