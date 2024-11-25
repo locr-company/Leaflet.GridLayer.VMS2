@@ -1,120 +1,145 @@
 class MapOverlay {
-  mapParameters = {}
+  width
+  height
+  dpi
 
   layers = []
 
-  svgSource = ''
-
-  haversineDistanceInKm(lat1, lon1, lat2, lon2) {
-    const R = 6371
-    const φ1 = lat1 * Math.PI / 180 // φ, λ in radians
-    const φ2 = lat2 * Math.PI / 180
-    const Δφ = (lat2 - lat1) * Math.PI / 180
-    const Δλ = (lon2 - lon1) * Math.PI / 180
-
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-
-    const d = R * c
-
-    return d
-  }
-
-  latitudeToNormalized(latitude) {
-    return Math.log(Math.tan((90 - latitude) * Math.PI / 360)) / (2 * Math.PI) + 0.5
-  }
-
-  longitudeToNormalized(longitude) {
-    return (longitude + 180) / 360
-  }
-
-  normalizedToLatitude(y) {
-    return 90 - Math.atan(Math.exp((y - 0.5) * 2 * Math.PI)) * 360 / Math.PI
-  }
-
-  normalizedToLongitude(x) {
-    return x * 360 - 180
-  }
-
-  tileToLatitude(y, z) {
-    return 90 - Math.atan(Math.exp((y / (1 << z) - 0.5) * 2 * Math.PI)) * 360 / Math.PI
-  }
-
-  tileToLongitude(x, z) {
-    return x * 360 / (1 << z) - 180
-  }
-
   constructor(mapInfo) {
-    if (isNaN(mapInfo.latitudeMin) || isNaN(mapInfo.latitudeMax) || isNaN(mapInfo.longitudeMin) || isNaN(mapInfo.longitudeMax) || isNaN(mapInfo.width) || isNaN(mapInfo.height) || isNaN(mapInfo.dpi)) {
+    if (isNaN(mapInfo.width) || isNaN(mapInfo.height) || isNaN(mapInfo.dpi)) {
       throw new ReferenceError('missing essential parameters')
     }
 
-    this.mapParameters.latitudeMin = mapInfo.latitudeMin
-    this.mapParameters.latitudeMax = mapInfo.latitudeMax
-    this.mapParameters.longitudeMin = mapInfo.longitudeMin
-    this.mapParameters.longitudeMax = mapInfo.longitudeMax
+    this.width = mapInfo.width
+    this.height = mapInfo.height
+    this.dpi = mapInfo.dpi
+  }
 
-    this.mapParameters.width = mapInfo.width
-    this.mapParameters.height = mapInfo.height
+  add(layer) {
+    this.layers.push(layer)
+  }
 
-    this.mapParameters.dpi = mapInfo.dpi
+  getSvgOverlay(size) {
+    const width = size?.width || this.width
+    const height = size?.height || this.height
 
-    const degreesWidth = this.mapParameters.longitudeMax - this.mapParameters.longitudeMin
+    let svgText = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">`
 
-    const normalizedWidth = degreesWidth / 360
-    const normalizedHeight = this.latitudeToNormalized(this.mapParameters.latitudeMin) - this.latitudeToNormalized(this.mapParameters.latitudeMax)
-
-    const normalizedRatio = normalizedWidth / normalizedHeight
-    const mapRatio = this.mapParameters.width / this.mapParameters.height
-
-    if (mapRatio >= normalizedRatio) {
-      this.mapParameters.longitudeMin -= (degreesWidth * mapRatio / normalizedRatio - degreesWidth) / 2
-      this.mapParameters.longitudeMax += (degreesWidth * mapRatio / normalizedRatio - degreesWidth) / 2
-    } else {
-      let normalizedMin = this.latitudeToNormalized(this.mapParameters.latitudeMin)
-      let normalizedMax = this.latitudeToNormalized(this.mapParameters.latitudeMax)
-
-      normalizedMin += (normalizedWidth / mapRatio - normalizedHeight) / 2
-      normalizedMax -= (normalizedWidth / mapRatio - normalizedHeight) / 2
-
-      this.mapParameters.latitudeMin = this.normalizedToLatitude(normalizedMin)
-      this.mapParameters.latitudeMax = this.normalizedToLatitude(normalizedMax)
+    for (const overlayLayer of this.layers) {
+      svgText += overlayLayer.getSvgSource()
     }
 
-    // Prepare text clipping area
+    svgText += '</svg>'
 
-    const totalPixels = this.mapParameters.width * 360 / (this.mapParameters.longitudeMax - this.mapParameters.longitudeMin)
-
-    this.mapParameters.latitudeMin = this.normalizedToLatitude(this.latitudeToNormalized(this.mapParameters.latitudeMin) + this.mapParameters.borderBottom / totalPixels)
-    this.mapParameters.latitudeMax = this.normalizedToLatitude(this.latitudeToNormalized(this.mapParameters.latitudeMax) - this.mapParameters.borderTop / totalPixels)
-    this.mapParameters.longitudeMin = this.normalizedToLongitude(this.longitudeToNormalized(this.mapParameters.longitudeMin) - this.mapParameters.borderLeft / totalPixels)
-    this.mapParameters.longitudeMax = this.normalizedToLongitude(this.longitudeToNormalized(this.mapParameters.longitudeMax) + this.mapParameters.borderRight / totalPixels)
-  }
-
-  add(mapOverlayLayer) {
-    this.svgSource = mapOverlayLayer.svgSource
-  }
-
-  getOverlay() {
-    return this.svgSource
+    return svgText
   }
 }
 
-class MapOverlayLayer{
-  svgSource = ''
+class SvgMapOverlayLayer {
+  svgText = ''
 
-  constructor(svgSource) {
-    this.svgSource = svgSource
+  constructor(layerData) {
+    switch (typeof layerData) {
+    case 'string':
+      this.svgText = layerData
+
+      break
+
+    case 'object':
+      for (const svgElementName in layerData) {
+        const svgElement = layerData[svgElementName]
+
+        switch (typeof svgElement) {
+        case 'string':
+          this.svgText += svgElement
+
+          break
+
+        case 'object':
+          for (const svgParameterName in svgElement) {
+
+          }
+
+
+          break
+        }
+      }
+      break
+    }
+    /*
+    if (typeof layerData === 'string') {
+      this.svgText = layerData
+    } else if (Array.isArray(layerData)) {
+      if (layerData.style) {
+ 
+      }
+ 
+ 
+      for (const elementName in layerData) {
+        if (layerData[elementName])
+      }
+ 
+      if (layerData.style) {
+ 
+      }
+    } else {
+      throw new ReferenceError('missing essential parameters')
+    }
+    */
+  }
+
+  getSvgSource() {
+    return this.svgText
   }
 }
 
-class SvgMapOverlayLayer extends MapOverlayLayer{
-  constructor(svgSource) {
-    super(svgSource)
+class ImageMapOverlayLayer extends SvgMapOverlayLayer {
+  constructor(imageInfo) {
+    if (!imageInfo.href || !imageInfo.x || !imageInfo.y) {
+      throw new ReferenceError('missing essential parameters')
+    }
+
+    super()
+
+    let svgText = '<image '
+
+    for (const [key, value] of Object.entries(imageInfo)) {
+      svgText += `${key}="${value}" `
+    }
+
+    svgText += `/>`
+
+    super.svgText = svgText
   }
 }
 
-export { MapOverlay, SvgMapOverlayLayer }
+class TextMapOverlayLayer extends SvgMapOverlayLayer {
+  constructor(textInfo) {
+    if (!textInfo.text || !textInfo.x || !textInfo.y) {
+      throw new ReferenceError('missing essential parameters')
+    }
+
+    super()
+
+    let svgText = '<text '
+
+    for (const [key, value] of Object.entries(textInfo)) {
+      if (key == 'text') {
+        continue
+      }
+
+      svgText += `${key}="${value}" `
+    }
+
+    svgText += `>${textInfo.text}</text>`
+
+    super.svgText = svgText
+  }
+}
+
+export {
+  MapOverlay,
+  SvgMapOverlayLayer,
+  ImageMapOverlayLayer,
+  TextMapOverlayLayer
+}
