@@ -235,20 +235,47 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     return tileCanvas
   },
   getPrintCanvas: async function () {
-    if(!this.options.printFormat || !this._map) {
-      throw(new Error('Missing essential parameters!'))
+    if (!this.options.printFormat || !this._map) {
+      throw (new Error('Missing essential parameters!'))
     }
 
     const printFormatSize = this.options.printFormat.getSize()
+
+    let latitudeMin = this._map.getBounds().getSouth()
+    let longitudeMin = this._map.getBounds().getWest()
+    let latitudeMax = this._map.getBounds().getNorth()
+    let longitudeMax = this._map.getBounds().getEast()
+
+    const mapDegreesWidth = longitudeMax - longitudeMin
+
+    const normalizedWidth = mapDegreesWidth / 360
+    const normalizedHeight = this._latitudeToNormalized(latitudeMin) - this._latitudeToNormalized(latitudeMax)
+
+    const mapRatio = normalizedWidth / normalizedHeight
+    const printRatio = printFormatSize.width / printFormatSize.height
+
+    if (printRatio <= mapRatio) {
+      longitudeMin -= (mapDegreesWidth * printRatio / mapRatio - mapDegreesWidth) / 2
+      longitudeMax += (mapDegreesWidth * printRatio / mapRatio - mapDegreesWidth) / 2
+    } else {
+      let normalizedMin = this._latitudeToNormalized(latitudeMin)
+      let normalizedMax = this._latitudeToNormalized(latitudeMax)
+
+      normalizedMin += (normalizedWidth / printRatio - normalizedHeight) / 2
+      normalizedMax -= (normalizedWidth / printRatio - normalizedHeight) / 2
+
+      latitudeMin = this._normalizedToLatitude(normalizedMin)
+      latitudeMax = this._normalizedToLatitude(normalizedMax)
+    }
 
     const mapInfo = {
       dpi: printFormatSize.dpi,
       style: this.options.style,
 
-      latitudeMin: this._map.getBounds().getSouth(),
-      longitudeMin: this._map.getBounds().getWest(),
-      latitudeMax: this._map.getBounds().getNorth(),
-      longitudeMax: this._map.getBounds().getEast(),
+      latitudeMin,
+      longitudeMin,
+      latitudeMax,
+      longitudeMax,
 
       width: printFormatSize.width,
       height: printFormatSize.height,
@@ -262,7 +289,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     const mapCanvas = await this.getMapCanvas(mapInfo)
 
-    if(this.options.mapOverlay) {
+    if (this.options.mapOverlay) {
       let printCanvas = document.createElement('canvas')
 
       printCanvas.width = printFormatSize.width
@@ -280,7 +307,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
       const mapOverlayImage = new Image()
       const xmlSerializer = new XMLSerializer()
-      const mapOverlaySvgBlobUrl = URL.createObjectURL(new Blob([xmlSerializer.serializeToString(mapOverlaySvgElement)], { type: 'image/svg+xml;charset=utf-8' })) 
+      const mapOverlaySvgBlobUrl = URL.createObjectURL(new Blob([xmlSerializer.serializeToString(mapOverlaySvgElement)], { type: 'image/svg+xml;charset=utf-8' }))
 
       mapOverlayImage.src = mapOverlaySvgBlobUrl
 
@@ -309,7 +336,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
       const metaJson = JSON.stringify(meta)
 
-      fetch('https://vms2.locr.com/api/vms2/ping?key=' + this.options.accessKey + '&meta=' + encodeURIComponent(metaJson))
+      fetch('https://vms2.locr.com/api/vms2/ping', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ key: this.options.accessKey, meta: metaJson })
+      })
     }
     /*
      * End of billing related code block. Do not change or skip it, neither block its function.
@@ -430,14 +463,14 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
           if (
             !(
-            // eslint-disable-next-line no-underscore-dangle
+              // eslint-disable-next-line no-underscore-dangle
               tile.bounds._southWest.lat < mapBounds._northEast.lat &&
-                // eslint-disable-next-line no-underscore-dangle
-                tile.bounds._northEast.lat > mapBounds._southWest.lat &&
-                // eslint-disable-next-line no-underscore-dangle
-                tile.bounds._southWest.lng < mapBounds._northEast.lng &&
-                // eslint-disable-next-line no-underscore-dangle
-                tile.bounds._northEast.lng > mapBounds._southWest.lng
+              // eslint-disable-next-line no-underscore-dangle
+              tile.bounds._northEast.lat > mapBounds._southWest.lat &&
+              // eslint-disable-next-line no-underscore-dangle
+              tile.bounds._southWest.lng < mapBounds._northEast.lng &&
+              // eslint-disable-next-line no-underscore-dangle
+              tile.bounds._northEast.lng > mapBounds._southWest.lng
             )
           ) {
             tile.retain = false
@@ -459,14 +492,14 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
           if (!tile2.current && tile2.retain) {
             if (
-            // eslint-disable-next-line no-underscore-dangle
+              // eslint-disable-next-line no-underscore-dangle
               tile2.bounds._northEast.lat < tile1.bounds._northEast.lat &&
-                // eslint-disable-next-line no-underscore-dangle
-                tile2.bounds._southWest.lat > tile1.bounds._southWest.lat &&
-                // eslint-disable-next-line no-underscore-dangle
-                tile2.bounds._northEast.lng < tile1.bounds._northEast.lng &&
-                // eslint-disable-next-line no-underscore-dangle
-                tile2.bounds._southWest.lng > tile1.bounds._southWest.lng
+              // eslint-disable-next-line no-underscore-dangle
+              tile2.bounds._southWest.lat > tile1.bounds._southWest.lat &&
+              // eslint-disable-next-line no-underscore-dangle
+              tile2.bounds._northEast.lng < tile1.bounds._northEast.lng &&
+              // eslint-disable-next-line no-underscore-dangle
+              tile2.bounds._southWest.lng > tile1.bounds._southWest.lng
             ) {
               tile2.retain = false
             }
@@ -538,7 +571,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     if (this.options.printFormat) {
       this.options.mapScale = 1
-      
+
       this._onResize()
     }
   },
@@ -552,7 +585,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     this._container = null
     this._tileZoom = undefined
   },
-  _onResize: function(event) {
+  _onResize: function (event) {
     if (this.options.printFormat) {
       const printFormatSize = this.options.printFormat.getSize()
 
@@ -584,7 +617,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       if (this._map) {
         let printFormatScale = 1
 
-        if(this.lastPrintFormatSize) {
+        if (this.lastPrintFormatSize) {
           printFormatScale = Math.sqrt(printFormatSize.width * printFormatSize.height) / Math.sqrt(this.lastPrintFormatSize.width * this.lastPrintFormatSize.height)
         }
 
@@ -597,7 +630,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         this._map._resetView(center, newZoom, true)
       }
 
-      if(this.options.mapOverlay) {
+      if (this.options.mapOverlay) {
         this.mapOverlayDiv.innerHTML = this.options.mapOverlay.getSvgOverlay({ width: printFormatSize.width, height: printFormatSize.height })
       }
 
@@ -628,9 +661,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         if (displacementLayer.allowedMapArea) {
           if (
             box.left < displacementLayer.allowedMapArea.left ||
-              box.right > displacementLayer.allowedMapArea.right ||
-              box.top > displacementLayer.allowedMapArea.top ||
-              box.bottom < displacementLayer.allowedMapArea.bottom
+            box.right > displacementLayer.allowedMapArea.right ||
+            box.top > displacementLayer.allowedMapArea.top ||
+            box.bottom < displacementLayer.allowedMapArea.bottom
           ) {
             return false
           }
@@ -645,9 +678,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           for (const hashedBox of displacementLayer.regions[topLeftHash]) {
             if (
               box.left > hashedBox.right ||
-                box.right < hashedBox.left ||
-                box.bottom > hashedBox.top ||
-                box.top < hashedBox.bottom
+              box.right < hashedBox.left ||
+              box.bottom > hashedBox.top ||
+              box.top < hashedBox.bottom
             ) { // Note: Top > Bottom!
               continue
             }
@@ -660,9 +693,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           for (const hashedBox of displacementLayer.regions[topRightHash]) {
             if (
               box.left > hashedBox.right ||
-                box.right < hashedBox.left ||
-                box.bottom > hashedBox.top ||
-                box.top < hashedBox.bottom
+              box.right < hashedBox.left ||
+              box.bottom > hashedBox.top ||
+              box.top < hashedBox.bottom
             ) { // Note: Top > Bottom!
               continue
             }
@@ -675,9 +708,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           for (const hashedBox of displacementLayer.regions[bottomLeftHash]) {
             if (
               box.left > hashedBox.right ||
-                box.right < hashedBox.left ||
-                box.bottom > hashedBox.top ||
-                box.top < hashedBox.bottom
+              box.right < hashedBox.left ||
+              box.bottom > hashedBox.top ||
+              box.top < hashedBox.bottom
             ) { // Note: Top > Bottom!
               continue
             }
@@ -690,9 +723,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           for (const hashedBox of displacementLayer.regions[bottomRightHash]) {
             if (
               box.left > hashedBox.right ||
-                box.right < hashedBox.left ||
-                box.bottom > hashedBox.top ||
-                box.top < hashedBox.bottom
+              box.right < hashedBox.left ||
+              box.bottom > hashedBox.top ||
+              box.top < hashedBox.bottom
             ) { // Note: Top > Bottom!
               continue
             }
@@ -1154,7 +1187,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       if (drawingInfo.isIcon && drawingInfo.iconImage) {
         if (
           (iconDisplacementBox && this._checkAndSetDisplacement(drawingInfo.displacementLayers, drawingInfo.displacementLayerNames, [iconDisplacementBox])) ||
-            !iconDisplacementBox
+          !iconDisplacementBox
         ) {
           const iconX = drawingInfo.iconImageOffsetX - drawingInfo.iconWidth * drawingInfo.iconMirrorX / 2
           const iconY = drawingInfo.iconImageOffsetY - drawingInfo.iconHeight * drawingInfo.iconMirrorY / 2
@@ -1181,11 +1214,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           if (
             !(
               iconLeft > drawingInfo.boundingArea.right ||
-                iconRight < drawingInfo.boundingArea.left ||
-                iconTop < drawingInfo.boundingArea.bottom ||
-                iconBottom > drawingInfo.boundingArea.top
+              iconRight < drawingInfo.boundingArea.left ||
+              iconTop < drawingInfo.boundingArea.bottom ||
+              iconBottom > drawingInfo.boundingArea.top
             ) ||
-              drawingInfo.isGrid
+            drawingInfo.isGrid
           ) { // Note: Top > Bottom! Allow every location if there is a grid!
             if (drawingInfo.iconAngle !== 0) {
               drawingInfo.context.setTransform(new DOMMatrix().translate((x - drawingInfo.drawingArea.left) * drawingInfo.mapScale, (drawingInfo.drawingArea.top - y) * drawingInfo.mapScale).rotate(drawingInfo.iconAngle * 180 / Math.PI))
@@ -1531,9 +1564,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           if (pointIndex > 0) {
             if (
               (deltaLeft === 0 && lastDeltaLeft === 0) ||
-                (deltaRight === 0 && lastDeltaRight === 0) ||
-                (deltaTop === 0 && lastDeltaTop === 0) ||
-                (deltaBottom === 0 && lastDeltaBottom === 0)
+              (deltaRight === 0 && lastDeltaRight === 0) ||
+              (deltaTop === 0 && lastDeltaTop === 0) ||
+              (deltaBottom === 0 && lastDeltaBottom === 0)
             ) {
               if (pointsDrawn > 0) {
                 drawingInfo.context.stroke()
@@ -1800,10 +1833,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         if (
           !layer ||
-            (this.options.type && this.options.type !== styleType) ||
-            layer.Enable === false ||
-            tileInfo.vms2TileZ < (layer.ZoomRange[0] > 0 ? layer.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
-            tileInfo.vms2TileZ >= (layer.ZoomRange[1] + this.options.zoomRangeOffset)
+          (this.options.type && this.options.type !== styleType) ||
+          layer.Enable === false ||
+          tileInfo.vms2TileZ < (layer.ZoomRange[0] > 0 ? layer.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
+          tileInfo.vms2TileZ >= (layer.ZoomRange[1] + this.options.zoomRangeOffset)
         ) {
           continue
         }
@@ -1894,9 +1927,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
       if (
         mapObject.info.Envelope.left > drawingInfo.boundingArea.right ||
-          mapObject.info.Envelope.right < drawingInfo.boundingArea.left ||
-          mapObject.info.Envelope.bottom > drawingInfo.boundingArea.top ||
-          mapObject.info.Envelope.top < drawingInfo.boundingArea.bottom
+        mapObject.info.Envelope.right < drawingInfo.boundingArea.left ||
+        mapObject.info.Envelope.bottom > drawingInfo.boundingArea.top ||
+        mapObject.info.Envelope.top < drawingInfo.boundingArea.bottom
       ) { // Note: Top > Bottom!
         continue
       }
@@ -2044,9 +2077,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         if (
           mapObject.info.Envelope.left > drawingInfo.boundingArea.right ||
-            mapObject.info.Envelope.right < drawingInfo.boundingArea.left ||
-            mapObject.info.Envelope.bottom > drawingInfo.boundingArea.top ||
-            mapObject.info.Envelope.top < drawingInfo.boundingArea.bottom
+          mapObject.info.Envelope.right < drawingInfo.boundingArea.left ||
+          mapObject.info.Envelope.bottom > drawingInfo.boundingArea.top ||
+          mapObject.info.Envelope.top < drawingInfo.boundingArea.bottom
         ) { // Note: Top > Bottom!
           continue
         }
@@ -2086,9 +2119,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
       if (
         mapObject.info.Envelope.left > drawingInfo.boundingArea.right ||
-          mapObject.info.Envelope.right < drawingInfo.boundingArea.left ||
-          mapObject.info.Envelope.bottom > drawingInfo.boundingArea.top ||
-          mapObject.info.Envelope.top < drawingInfo.boundingArea.bottom
+        mapObject.info.Envelope.right < drawingInfo.boundingArea.left ||
+        mapObject.info.Envelope.bottom > drawingInfo.boundingArea.top ||
+        mapObject.info.Envelope.top < drawingInfo.boundingArea.bottom
       ) { // Note: Top > Bottom!
         continue
       }
@@ -2289,9 +2322,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
       if (
         mapObject.info.Envelope.left > drawingInfo.boundingArea.right ||
-          mapObject.info.Envelope.right < drawingInfo.boundingArea.left ||
-          mapObject.info.Envelope.bottom > drawingInfo.boundingArea.top ||
-          mapObject.info.Envelope.top < drawingInfo.boundingArea.bottom
+        mapObject.info.Envelope.right < drawingInfo.boundingArea.left ||
+        mapObject.info.Envelope.bottom > drawingInfo.boundingArea.top ||
+        mapObject.info.Envelope.top < drawingInfo.boundingArea.bottom
       ) { // Note: Top > Bottom!
         continue
       }
@@ -2900,10 +2933,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                   if (
                     !layer ||
-                      (this.options.type && this.options.type !== styleType) ||
-                      layer.Enable === false ||
-                      tileInfo.vms2TileZ < (layer.ZoomRange[0] > 0 ? layer.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
-                      tileInfo.vms2TileZ >= (layer.ZoomRange[1] + this.options.zoomRangeOffset)
+                    (this.options.type && this.options.type !== styleType) ||
+                    layer.Enable === false ||
+                    tileInfo.vms2TileZ < (layer.ZoomRange[0] > 0 ? layer.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
+                    tileInfo.vms2TileZ >= (layer.ZoomRange[1] + this.options.zoomRangeOffset)
                   ) {
                     continue
                   }
@@ -3496,9 +3529,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
           if (
             tileLatitudeMin >= boundingBox.latitude_min &&
-              tileLatitudeMax <= boundingBox.latitude_max &&
-              tileLongitudeMin >= boundingBox.longitude_min &&
-              tileLongitudeMax <= boundingBox.longitude_max
+            tileLatitudeMax <= boundingBox.latitude_max &&
+            tileLongitudeMin >= boundingBox.longitude_min &&
+            tileLongitudeMax <= boundingBox.longitude_max
           ) {
             if (tileDbInfo.infos[0].max_detail_zoom < 14 && tileDbInfo.infos[0].max_detail_zoom < z) {
               x >>= ((z & ~1) - tileDbInfo.infos[0].max_detail_zoom)
