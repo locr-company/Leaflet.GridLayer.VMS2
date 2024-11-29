@@ -23,7 +23,7 @@ class MapOverlay {
     const width = size?.width || this.width
     const height = size?.height || this.height
 
-    let svgText = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">`
+    let svgText = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">`
 
     for (const overlayLayer of this.layers) {
       svgText += overlayLayer.getSvgSource()
