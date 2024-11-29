@@ -180,7 +180,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     if (this.options.printFormat) {
       this.printFormatMaskDiv = document.createElement('div')
 
-      this.printFormatMaskDiv.id = 'printFormatMask'
+      this.printFormatMaskDiv.id = 'vms2-print-format-mask'
 
       this.printFormatMaskDiv.style.zIndex = 990
       this.printFormatMaskDiv.style.position = 'absolute'
@@ -192,7 +192,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     if (this.options.mapOverlay) {
       this.mapOverlayDiv = document.createElement('div')
 
-      this.mapOverlayDiv.id = 'mapOverlay'
+      this.mapOverlayDiv.id = 'vms2-map-overlay'
 
       this.mapOverlayDiv.style.zIndex = 980
       this.mapOverlayDiv.style.position = 'absolute'
@@ -553,13 +553,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     })
   },
   onAdd: function () {
-    if (this.options.printFormat && this.printFormatMaskDiv) {
-      this._map.getContainer().appendChild(this.printFormatMaskDiv)
-    }
-    if (this.options.mapOverlay && this.mapOverlayDiv) {
-      this._map.getContainer().appendChild(this.mapOverlayDiv)
-    }
-
     this._map.on('resize', this._onResize, this)
 
     this._initContainer()
@@ -569,11 +562,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     this._resetView() // implicit _update() call
 
-    if (this.options.printFormat) {
-      this.options.mapScale = 1
-
-      this._onResize()
-    }
+    this._map.fire('resize')
   },
   onRemove: function (map) {
     this._map.off('resize', this._onResize, this)
@@ -587,12 +576,20 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   },
   _onResize: function (event) {
     if (this._map && this.options.printFormat) {
+      if (this.options.printFormat && this.printFormatMaskDiv && !this.printFormatMaskDiv.isConnected) {
+        this._map.getContainer().appendChild(this.printFormatMaskDiv)
+      }
+
+      if (this.options.mapOverlay && this.mapOverlayDiv && !this.mapOverlayDiv.isConnected) {
+        this._map.getContainer().appendChild(this.mapOverlayDiv)
+      }
+ 
       const printFormatSize = this.options.printFormat.getSize()
 
       const printSizeAspectRatio = printFormatSize.width / printFormatSize.height
       const mapSizeAspectRatio = this._map.getSize().x / this._map.getSize().y
 
-      const lastMapScale = this.options.mapScale
+      const previousMapScale = this.options.mapScale
 
       if (printSizeAspectRatio > mapSizeAspectRatio) {
         this.options.mapScale = this._map.getSize().x * printFormatSize.printScale / printFormatSize.width
@@ -623,7 +620,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       this.lastPrintFormatSize = printFormatSize
 
       const center = this._map.getCenter()
-      const newZoom = this._map.getZoom() + Math.log(this.options.mapScale * printFormatScale / lastMapScale) / Math.log(this.options.zoomPowerBase)
+      const newZoom = this._map.getZoom() + Math.log(this.options.mapScale * printFormatScale / previousMapScale) / Math.log(this.options.zoomPowerBase)
 
       // eslint-disable-next-line no-underscore-dangle
       this._map._resetView(center, newZoom, true)
