@@ -177,30 +177,24 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     this.options.zoomStep = Math.log2(this.options.zoomPowerBase)
 
-    if (this.options.printFormat) {
-      this.printFormatMaskDiv = document.createElement('div')
+    this.printFormatMaskDiv = document.createElement('div')
 
-      this.printFormatMaskDiv.id = 'vms2-print-format-mask'
+    this.printFormatMaskDiv.id = 'vms2-print-format-mask'
 
-      this.printFormatMaskDiv.style.zIndex = 990
-      this.printFormatMaskDiv.style.position = 'absolute'
-      this.printFormatMaskDiv.style.width = '100%'
-      this.printFormatMaskDiv.style.height = '100%'
-      this.printFormatMaskDiv.style.backgroundColor = '#0008'
-    }
+    this.printFormatMaskDiv.style.zIndex = 990
+    this.printFormatMaskDiv.style.position = 'absolute'
+    this.printFormatMaskDiv.style.width = '100%'
+    this.printFormatMaskDiv.style.height = '100%'
+    this.printFormatMaskDiv.style.backgroundColor = '#0008'
 
-    if (this.options.mapOverlay) {
-      this.mapOverlayDiv = document.createElement('div')
+    this.mapOverlayDiv = document.createElement('div')
 
-      this.mapOverlayDiv.id = 'vms2-map-overlay'
+    this.mapOverlayDiv.id = 'vms2-map-overlay'
 
-      this.mapOverlayDiv.style.zIndex = 980
-      this.mapOverlayDiv.style.position = 'absolute'
-      this.mapOverlayDiv.style.width = '100%'
-      this.mapOverlayDiv.style.height = '100%'
-
-      this.mapOverlayDiv.innerHTML = this.options.mapOverlay.getSvgOverlay()
-    }
+    this.mapOverlayDiv.style.zIndex = 980
+    this.mapOverlayDiv.style.position = 'absolute'
+    this.mapOverlayDiv.style.width = '100%'
+    this.mapOverlayDiv.style.height = '100%'
   },
   createTile: function (tileInfo, doneFunction_) {
     let tileCanvas = null
