@@ -586,7 +586,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     this._tileZoom = undefined
   },
   _onResize: function (event) {
-    if (this.options.printFormat) {
+    if (this._map && this.options.printFormat) {
       const printFormatSize = this.options.printFormat.getSize()
 
       const printSizeAspectRatio = printFormatSize.width / printFormatSize.height
@@ -597,8 +597,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       if (printSizeAspectRatio > mapSizeAspectRatio) {
         this.options.mapScale = this._map.getSize().x * printFormatSize.printScale / printFormatSize.width
 
-        let topBorderPercent = 50 - mapSizeAspectRatio / printSizeAspectRatio * 50
-        let bottomBorderPercent = 100 - topBorderPercent
+        const topBorderPercent = 50 - mapSizeAspectRatio / printSizeAspectRatio * 50
+        const bottomBorderPercent = 100 - topBorderPercent
 
         if (this.printFormatMaskDiv) {
           this.printFormatMaskDiv.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${topBorderPercent}%, 0% ${topBorderPercent}%, 0% ${bottomBorderPercent}%, 100% ${bottomBorderPercent}%, 100% 100%, 0% 100%)`
@@ -606,29 +606,27 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       } else {
         this.options.mapScale = this._map.getSize().y * printFormatSize.printScale / printFormatSize.height
 
-        let leftBorderPercent = 50 - printSizeAspectRatio / mapSizeAspectRatio * 50
-        let rightBorderPercent = 100 - leftBorderPercent
+        const leftBorderPercent = 50 - printSizeAspectRatio / mapSizeAspectRatio * 50
+        const rightBorderPercent = 100 - leftBorderPercent
 
         if (this.printFormatMaskDiv) {
           this.printFormatMaskDiv.style.clipPath = `polygon(0% 100%, 0% 0%, ${leftBorderPercent}% 0%, ${leftBorderPercent}% 100%, ${rightBorderPercent}% 100%, ${rightBorderPercent}% 0%, 100% 0%, 100% 100%)`
         }
       }
 
-      if (this._map) {
-        let printFormatScale = 1
+      let printFormatScale = 1
 
-        if (this.lastPrintFormatSize) {
-          printFormatScale = Math.sqrt(printFormatSize.width * printFormatSize.height) / Math.sqrt(this.lastPrintFormatSize.width * this.lastPrintFormatSize.height)
-        }
-
-        this.lastPrintFormatSize = printFormatSize
-
-        const center = this._map.getCenter()
-        const newZoom = this._map.getZoom() + Math.log(this.options.mapScale * printFormatScale / lastMapScale) / Math.log(this.options.zoomPowerBase)
-
-        // eslint-disable-next-line no-underscore-dangle
-        this._map._resetView(center, newZoom, true)
+      if (this.lastPrintFormatSize) {
+        printFormatScale = Math.sqrt(printFormatSize.width * printFormatSize.height) / Math.sqrt(this.lastPrintFormatSize.width * this.lastPrintFormatSize.height)
       }
+
+      this.lastPrintFormatSize = printFormatSize
+
+      const center = this._map.getCenter()
+      const newZoom = this._map.getZoom() + Math.log(this.options.mapScale * printFormatScale / lastMapScale) / Math.log(this.options.zoomPowerBase)
+
+      // eslint-disable-next-line no-underscore-dangle
+      this._map._resetView(center, newZoom, true)
 
       if (this.options.mapOverlay) {
         this.mapOverlayDiv.innerHTML = this.options.mapOverlay.getSvgOverlay({ width: printFormatSize.width, height: printFormatSize.height })
