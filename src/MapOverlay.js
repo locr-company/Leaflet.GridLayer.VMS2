@@ -114,26 +114,38 @@ class ImageMapOverlayLayer extends SvgMapOverlayLayer {
 }
 
 class TextMapOverlayLayer extends SvgMapOverlayLayer {
+  /**
+   * @param {{text: string, x: string|number, y: string|number, [key: string]: any}} textInfo
+   */
   constructor(textInfo) {
-    if (!textInfo.text || !textInfo.x || !textInfo.y) {
-      throw new ReferenceError('missing essential parameters')
+    if (textInfo === undefined || textInfo === null || textInfo.constructor !== Object) {
+      throw new TypeError('textInfo must be an object')
+    }
+    if (typeof textInfo.text !== 'string') {
+      throw new TypeError('textInfo.text must be a string')
+    }
+    if (typeof textInfo.x !== 'string' && typeof textInfo.x !== 'number') {
+      throw new TypeError('textInfo.x must be a string or a number')
+    }
+    if (typeof textInfo.y !== 'string' && typeof textInfo.y !== 'number') {
+      throw new TypeError('textInfo.y must be a string or a number')
     }
 
     super()
 
-    let svgText = '<text '
+    const svgText = document.createElement('text')
 
     for (const [key, value] of Object.entries(textInfo)) {
-      if (key == 'text') {
+      if (key === 'text') {
         continue
       }
 
-      svgText += `${key}="${value}" `
+      svgText.setAttribute(key, value)
     }
 
-    svgText += `>${textInfo.text}</text>`
+    svgText.innerText = textInfo.text
 
-    super.svgText = svgText
+    super.svgText = svgText.outerHTML
   }
 }
 
