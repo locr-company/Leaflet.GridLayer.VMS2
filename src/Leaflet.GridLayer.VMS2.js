@@ -186,6 +186,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     this.printFormatMaskDiv.style.width = '100%'
     this.printFormatMaskDiv.style.height = '100%'
     this.printFormatMaskDiv.style.backgroundColor = '#0008'
+    this.printFormatMaskDiv.style.pointerEvents = 'none'
 
     this.mapOverlayDiv = document.createElement('div')
 
@@ -195,6 +196,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     this.mapOverlayDiv.style.position = 'absolute'
     this.mapOverlayDiv.style.width = '100%'
     this.mapOverlayDiv.style.height = '100%'
+    this.mapOverlayDiv.style.pointerEvents = 'none'
   },
   createTile: function (tileInfo, doneFunction_) {
     let tileCanvas = null
