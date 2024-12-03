@@ -621,12 +621,18 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       // eslint-disable-next-line no-underscore-dangle
       this._map._resetView(center, newZoom, true)
 
-      if (this.options.mapOverlay) {
-        this.mapOverlayDiv.innerHTML = this.options.mapOverlay.getSvgOverlay({ width: printFormatSize.width, height: printFormatSize.height })
-      }
+      this.invalidateMapOverlay()
 
       this.redraw()
     }
+  },
+  invalidateMapOverlay: function () {
+    if (!this.options.printFormat) {
+      return
+    }
+
+    const printFormatSize = this.options.printFormat.getSize()
+    this.mapOverlayDiv.innerHTML = this.options.mapOverlay?.getSvgOverlay({ width: printFormatSize.width, height: printFormatSize.height }) || ''
   },
   _checkAndSetDisplacement: function (displacementLayers, displacementLayerNames, boxes) {
     for (const box of boxes) {
