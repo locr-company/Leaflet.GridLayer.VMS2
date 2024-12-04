@@ -231,133 +231,133 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     return tileCanvas
   },
   getPrintCanvas: async function () {
-    if (!this.options.printFormat || !this._map) {
-      throw (new Error('Missing essential parameters!'))
-    }
+    return new Promise((resolve, reject) => {
+      if (!this.options.printFormat || !this._map) {
+        throw (new Error('Missing essential parameters!'))
+      }
 
-    const printFormatSize = this.options.printFormat.getSize()
+      const printFormatSize = this.options.printFormat.getSize()
 
-    let latitudeMin = this._map.getBounds().getSouth()
-    let longitudeMin = this._map.getBounds().getWest()
-    let latitudeMax = this._map.getBounds().getNorth()
-    let longitudeMax = this._map.getBounds().getEast()
+      let latitudeMin = this._map.getBounds().getSouth()
+      let longitudeMin = this._map.getBounds().getWest()
+      let latitudeMax = this._map.getBounds().getNorth()
+      let longitudeMax = this._map.getBounds().getEast()
 
-    const mapDegreesWidth = longitudeMax - longitudeMin
+      const mapDegreesWidth = longitudeMax - longitudeMin
 
-    const normalizedWidth = mapDegreesWidth / 360
-    const normalizedHeight = this._latitudeToNormalized(latitudeMin) - this._latitudeToNormalized(latitudeMax)
+      const normalizedWidth = mapDegreesWidth / 360
+      const normalizedHeight = this._latitudeToNormalized(latitudeMin) - this._latitudeToNormalized(latitudeMax)
 
-    const mapRatio = normalizedWidth / normalizedHeight
-    const printRatio = printFormatSize.width / printFormatSize.height
+      const mapRatio = normalizedWidth / normalizedHeight
+      const printRatio = printFormatSize.width / printFormatSize.height
 
-    if (printRatio <= mapRatio) {
-      longitudeMin -= (mapDegreesWidth * printRatio / mapRatio - mapDegreesWidth) / 2
-      longitudeMax += (mapDegreesWidth * printRatio / mapRatio - mapDegreesWidth) / 2
-    } else {
-      let normalizedMin = this._latitudeToNormalized(latitudeMin)
-      let normalizedMax = this._latitudeToNormalized(latitudeMax)
+      if (printRatio <= mapRatio) {
+        longitudeMin -= (mapDegreesWidth * printRatio / mapRatio - mapDegreesWidth) / 2
+        longitudeMax += (mapDegreesWidth * printRatio / mapRatio - mapDegreesWidth) / 2
+      } else {
+        let normalizedMin = this._latitudeToNormalized(latitudeMin)
+        let normalizedMax = this._latitudeToNormalized(latitudeMax)
 
-      normalizedMin += (normalizedWidth / printRatio - normalizedHeight) / 2
-      normalizedMax -= (normalizedWidth / printRatio - normalizedHeight) / 2
+        normalizedMin += (normalizedWidth / printRatio - normalizedHeight) / 2
+        normalizedMax -= (normalizedWidth / printRatio - normalizedHeight) / 2
 
-      latitudeMin = this._normalizedToLatitude(normalizedMin)
-      latitudeMax = this._normalizedToLatitude(normalizedMax)
-    }
+        latitudeMin = this._normalizedToLatitude(normalizedMin)
+        latitudeMax = this._normalizedToLatitude(normalizedMax)
+      }
 
-    const mapInfo = {
-      dpi: printFormatSize.dpi,
-      style: this.options.style,
+      const mapInfo = {
+        dpi: printFormatSize.dpi,
+        style: this.options.style,
 
-      latitudeMin,
-      longitudeMin,
-      latitudeMax,
-      longitudeMax,
+        latitudeMin,
+        longitudeMin,
+        latitudeMax,
+        longitudeMax,
 
-      width: printFormatSize.width,
-      height: printFormatSize.height,
+        width: printFormatSize.width,
+        height: printFormatSize.height,
 
-      mapScale: printFormatSize.printScale,
+        mapScale: printFormatSize.printScale,
 
-      objectScale: this.options.objectScale,
-      detailOffset: this.options.detailOffset,
-      zoomRangeOffset: this.options.zoomRangeOffset
-    }
+        objectScale: this.options.objectScale,
+        detailOffset: this.options.detailOffset,
+        zoomRangeOffset: this.options.zoomRangeOffset
+      }
 
-    const mapCanvas = await this.getMapCanvas(mapInfo)
+      this.getMapCanvas(mapInfo)
+        .then(mapCanvas => {
+          if (this.options.mapOverlay) {
+            let printCanvas = document.createElement('canvas')
 
-    if (this.options.mapOverlay) {
-      let printCanvas = document.createElement('canvas')
+            printCanvas.width = printFormatSize.width
+            printCanvas.height = printFormatSize.height
 
-      printCanvas.width = printFormatSize.width
-      printCanvas.height = printFormatSize.height
+            let printCanvasContext = printCanvas.getContext('2d')
 
-      let printCanvasContext = printCanvas.getContext('2d')
+            printCanvasContext.drawImage(mapCanvas, 0, 0)
 
-      printCanvasContext.drawImage(mapCanvas, 0, 0)
+            const domParser = new DOMParser()
+            const mapOverlaySvgElement = domParser.parseFromString(this.mapOverlayDiv.innerHTML, 'image/svg+xml').documentElement
 
-      const domParser = new DOMParser()
-      const mapOverlaySvgElement = domParser.parseFromString(this.mapOverlayDiv.innerHTML, 'image/svg+xml').documentElement
+            mapOverlaySvgElement.setAttribute('width', printFormatSize.width)
+            mapOverlaySvgElement.setAttribute('height', printFormatSize.height)
 
-      mapOverlaySvgElement.setAttribute('width', printFormatSize.width)
-      mapOverlaySvgElement.setAttribute('height', printFormatSize.height)
+            const mapOverlayImage = new Image()
+            const xmlSerializer = new XMLSerializer()
 
-      const mapOverlayImage = new Image()
-      const xmlSerializer = new XMLSerializer()
+            let svgString = xmlSerializer.serializeToString(mapOverlaySvgElement)
 
-      let svgString = xmlSerializer.serializeToString(mapOverlaySvgElement)
+            const urlStringMatches = [...svgString.matchAll(/url\('(https?:\/\/[^\s']+)'/g)].concat([...svgString.matchAll(/href="(https?:\/\/[^\s"]+)"/g)])
 
-      const hrefMatches = [...svgString.matchAll(/href="(https?:\/\/[^\s"]+)"/g)]
+            function fetchAndConvertToDataURL(urlString) {
+              return new Promise((resolve, reject) => {
+                fetch(urlString)
+                  .then(response => response.blob())
+                  .then(blob => {
+                    const reader = new FileReader()
 
-      function fetchAndConvertImageToDataURL(urlString) {
-        return new Promise((resolve, reject) => {
-          fetch(urlString)
-            .then(response => response.blob())
-            .then(blob => {
-              const reader = new FileReader()
+                    reader.onloadend = function () {
+                      if (reader.result) {
+                        svgString = svgString.replace(urlString, reader.result)
+                      }
 
-              reader.onloadend = function () {
-                if(reader.result) {
-                  svgString = svgString.replace(urlString, reader.result)
-                }
+                      resolve()
+                    }
 
-                resolve()
-              }
+                    reader.onerror = function (event) {
+                      reject(event.target.error)
+                    }
 
-              reader.onerror = function(event) {
-                reject(event.target.error)
-              }
+                    reader.readAsDataURL(blob)
+                  })
+              })
+            }
 
-              reader.readAsDataURL(blob)
-            })
+            const fetchPromises = []
+
+            for (const urlStringMatch of urlStringMatches) {
+              fetchPromises.push(fetchAndConvertToDataURL(urlStringMatch[1]))
+            }
+
+            Promise.all(fetchPromises)
+              .then(() => {
+                const mapOverlaySvgBlobUrl = URL.createObjectURL(new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' }))
+
+                mapOverlayImage.src = mapOverlaySvgBlobUrl
+
+                mapOverlayImage.addEventListener('load',() => {
+                  URL.revokeObjectURL(mapOverlaySvgBlobUrl)
+
+                  printCanvasContext.drawImage(mapOverlayImage, 0, 0)
+  
+                  resolve(printCanvas)
+                })
+              })
+          } else {
+            resolve(mapCanvas)
+          }
         })
-      }
-
-      const fetchPromises = []
-
-      for (const hrefMatch of hrefMatches) {
-        fetchPromises.push(fetchAndConvertImageToDataURL(hrefMatch[1]))
-      }
-
-      try {
-        await Promise.all(fetchPromises)
-      } catch(error) {
-        throw error
-      }
-
-      const mapOverlaySvgBlobUrl = URL.createObjectURL(new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' }))
-
-      mapOverlayImage.src = mapOverlaySvgBlobUrl
-
-      await mapOverlayImage.decode()
-
-      URL.revokeObjectURL(mapOverlaySvgBlobUrl)
-
-      printCanvasContext.drawImage(mapOverlayImage, 0, 0)
-
-      return printCanvas
-    }
-
-    return mapCanvas
+    })
   },
   getMapCanvas: async function (mapInfo) {
     /*
