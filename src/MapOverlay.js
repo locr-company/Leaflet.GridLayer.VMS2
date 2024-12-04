@@ -15,8 +15,36 @@ class MapOverlay {
     this.dpi = mapInfo.dpi
   }
 
+  /**
+   * @param {SvgMapOverlayLayer} layer
+   */
   add(layer) {
     this.layers.push(layer)
+  }
+
+  /**
+   * @param {SvgMapOverlayLayer} layer
+   */
+  addOrReplace(layer) {
+    const domParser = new DOMParser()
+
+    const parsedLayerDom = domParser.parseFromString(layer.getSvgSource(), 'application/xml')
+    const layerId = parsedLayerDom.documentElement.id || ''
+    if (layerId === '') {
+      this.add(layer)
+      return
+    }
+
+    for (const layerIndex in this.layers) {
+      const currentLayer = this.layers[layerIndex]
+      const currentParsedLayerDom = domParser.parseFromString(currentLayer.getSvgSource(), 'application/xml')
+      if (currentParsedLayerDom.documentElement.id === layerId) {
+        this.layers[layerIndex] = layer
+        return
+      }
+    }
+
+    this.add(layer)
   }
 
   getSvgOverlay(size) {
