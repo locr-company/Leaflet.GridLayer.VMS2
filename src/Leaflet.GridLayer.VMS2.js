@@ -303,7 +303,48 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
       const mapOverlayImage = new Image()
       const xmlSerializer = new XMLSerializer()
-      const mapOverlaySvgBlobUrl = URL.createObjectURL(new Blob([xmlSerializer.serializeToString(mapOverlaySvgElement)], { type: 'image/svg+xml;charset=utf-8' }))
+
+      let svgString = xmlSerializer.serializeToString(mapOverlaySvgElement)
+
+      const hrefMatches = [...svgString.matchAll(/href="(https?:\/\/[^\s"]+)"/g)]
+
+      function fetchAndConvertImageToDataURL(urlString) {
+        return new Promise((resolve, reject) => {
+          fetch(urlString)
+            .then(response => response.blob())
+            .then(blob => {
+              const reader = new FileReader()
+
+              reader.onloadend = function () {
+                if(reader.result) {
+                  svgString = svgString.replace(urlString, reader.result)
+                }
+
+                resolve()
+              }
+
+              reader.onerror = function(event) {
+                reject(event.target.error)
+              }
+
+              reader.readAsDataURL(blob)
+            })
+        })
+      }
+
+      const fetchPromises = []
+
+      for (const hrefMatch of hrefMatches) {
+        fetchPromises.push(fetchAndConvertImageToDataURL(hrefMatch[1]))
+      }
+
+      try {
+        await Promise.all(fetchPromises)
+      } catch(error) {
+        throw error
+      }
+
+      const mapOverlaySvgBlobUrl = URL.createObjectURL(new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' }))
 
       mapOverlayImage.src = mapOverlaySvgBlobUrl
 
@@ -579,7 +620,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       if (this.options.mapOverlay && this.mapOverlayDiv && !this.mapOverlayDiv.isConnected) {
         this._map.getContainer().appendChild(this.mapOverlayDiv)
       }
- 
+
       const printFormatSize = this.options.printFormat.getSize()
 
       const printSizeAspectRatio = printFormatSize.width / printFormatSize.height
