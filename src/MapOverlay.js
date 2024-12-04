@@ -16,14 +16,14 @@ class MapOverlay {
   }
 
   /**
-   * @param {SvgMapOverlayLayer} layer
+   * @param {SvgLayer} layer
    */
   add(layer) {
     this.layers.push(layer)
   }
 
   /**
-   * @param {SvgMapOverlayLayer} layer
+   * @param {SvgLayer} layer
    */
   addOrReplace(layer) {
     const domParser = new DOMParser()
@@ -63,7 +63,7 @@ class MapOverlay {
   }
 }
 
-class SvgMapOverlayLayer {
+class SvgLayer {
   svgText = ''
 
   constructor(layerData) {
@@ -94,26 +94,6 @@ class SvgMapOverlayLayer {
       }
       break
     }
-    /*
-    if (typeof layerData === 'string') {
-      this.svgText = layerData
-    } else if (Array.isArray(layerData)) {
-      if (layerData.style) {
- 
-      }
- 
- 
-      for (const elementName in layerData) {
-        if (layerData[elementName])
-      }
- 
-      if (layerData.style) {
- 
-      }
-    } else {
-      throw new ReferenceError('missing essential parameters')
-    }
-    */
   }
 
   getSvgSource() {
@@ -121,7 +101,7 @@ class SvgMapOverlayLayer {
   }
 }
 
-class ImageMapOverlayLayer extends SvgMapOverlayLayer {
+class ImageSvgLayer extends SvgLayer {
   constructor(imageInfo) {
     if (!imageInfo.href || !imageInfo.x || !imageInfo.y) {
       throw new ReferenceError('missing essential parameters')
@@ -137,11 +117,11 @@ class ImageMapOverlayLayer extends SvgMapOverlayLayer {
 
     svgText += `/>`
 
-    super.svgText = svgText
+    this.svgText += svgText
   }
 }
 
-class TextMapOverlayLayer extends SvgMapOverlayLayer {
+class TextSvgLayer extends SvgLayer {
   /**
    * @param {{text: string, x: string|number, y: string|number, [key: string]: any}} textInfo
    */
@@ -161,25 +141,25 @@ class TextMapOverlayLayer extends SvgMapOverlayLayer {
 
     super()
 
-    const svgText = document.createElement('text')
+    let svgText = '<text '
 
     for (const [key, value] of Object.entries(textInfo)) {
       if (key === 'text') {
         continue
       }
 
-      svgText.setAttribute(key, value)
+      svgText += `${key}="${value}" `
     }
 
-    svgText.innerText = textInfo.text
+    svgText += `>${textInfo.text}</text>`
 
-    super.svgText = svgText.outerHTML
+    this.svgText += svgText
   }
 }
 
 export {
   MapOverlay,
-  SvgMapOverlayLayer,
-  ImageMapOverlayLayer,
-  TextMapOverlayLayer
+  SvgLayer,
+  ImageSvgLayer,
+  TextSvgLayer
 }
