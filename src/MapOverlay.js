@@ -15,8 +15,36 @@ class MapOverlay {
     this.dpi = mapInfo.dpi
   }
 
+  /**
+   * @param {SvgMapOverlayLayer} layer
+   */
   add(layer) {
     this.layers.push(layer)
+  }
+
+  /**
+   * @param {SvgMapOverlayLayer} layer
+   */
+  addOrReplace(layer) {
+    const domParser = new DOMParser()
+
+    const parsedLayerDom = domParser.parseFromString(layer.getSvgSource(), 'application/xml')
+    const layerId = parsedLayerDom.documentElement.id || ''
+    if (layerId === '') {
+      this.add(layer)
+      return
+    }
+
+    for (const layerIndex in this.layers) {
+      const currentLayer = this.layers[layerIndex]
+      const currentParsedLayerDom = domParser.parseFromString(currentLayer.getSvgSource(), 'application/xml')
+      if (currentParsedLayerDom.documentElement.id === layerId) {
+        this.layers[layerIndex] = layer
+        return
+      }
+    }
+
+    this.add(layer)
   }
 
   getSvgOverlay(size) {
@@ -114,26 +142,38 @@ class ImageMapOverlayLayer extends SvgMapOverlayLayer {
 }
 
 class TextMapOverlayLayer extends SvgMapOverlayLayer {
+  /**
+   * @param {{text: string, x: string|number, y: string|number, [key: string]: any}} textInfo
+   */
   constructor(textInfo) {
-    if (!textInfo.text || !textInfo.x || !textInfo.y) {
-      throw new ReferenceError('missing essential parameters')
+    if (textInfo === undefined || textInfo === null || textInfo.constructor !== Object) {
+      throw new TypeError('textInfo must be an object')
+    }
+    if (typeof textInfo.text !== 'string') {
+      throw new TypeError('textInfo.text must be a string')
+    }
+    if (typeof textInfo.x !== 'string' && typeof textInfo.x !== 'number') {
+      throw new TypeError('textInfo.x must be a string or a number')
+    }
+    if (typeof textInfo.y !== 'string' && typeof textInfo.y !== 'number') {
+      throw new TypeError('textInfo.y must be a string or a number')
     }
 
     super()
 
-    let svgText = '<text '
+    const svgText = document.createElement('text')
 
     for (const [key, value] of Object.entries(textInfo)) {
-      if (key == 'text') {
+      if (key === 'text') {
         continue
       }
 
-      svgText += `${key}="${value}" `
+      svgText.setAttribute(key, value)
     }
 
-    svgText += `>${textInfo.text}</text>`
+    svgText.innerText = textInfo.text
 
-    super.svgText = svgText
+    super.svgText = svgText.outerHTML
   }
 }
 
