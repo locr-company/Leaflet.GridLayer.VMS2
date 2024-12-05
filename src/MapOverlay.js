@@ -142,7 +142,21 @@ class TextSvgLayer extends SvgLayer {
     super()
 
     const svgText = document.createElement('text')
-    svgText.textContent = textInfo.text
+
+    const lineSplittedText = textInfo.text.split('\n')
+    if (lineSplittedText.length > 1) {
+      for (const lineIndex in lineSplittedText) {
+        const tspan = document.createElement('tspan')
+        tspan.textContent = lineSplittedText[lineIndex]
+        tspan.setAttribute('x', textInfo.x)
+        if (lineIndex > 0) {
+          tspan.setAttribute('dy', `1.2em`)
+        }
+        svgText.appendChild(tspan)
+      }
+    } else {
+      svgText.textContent = textInfo.text
+    }
 
     for (const [key, value] of Object.entries(textInfo)) {
       if (key === 'text') {

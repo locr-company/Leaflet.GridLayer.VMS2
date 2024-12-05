@@ -84,5 +84,36 @@ describe('MapOverlay', () => {
       expect(textLayer.getSvgSource()).to.be.equals(expectedSvg.outerHTML)
       expect(textLayer.getSvgSource()).to.be.equals('<text x="1&amp;0&quot;0" y="20<0>">&lt;Hello&gt;, "&amp;world"!</text>')
     })
+
+    it('constructor with multiple lines of text', () => {
+      const textInfo = {
+        text: 'Hello\nWorld!\nHow are you?',
+        x: '100',
+        y: '200'
+      }
+
+      const expectedSvg = document.createElement('text')
+      const lineSplittedText = textInfo.text.split('\n')
+      if (lineSplittedText.length > 1) {
+        for (const lineIndex in lineSplittedText) {
+          const tspan = document.createElement('tspan')
+          tspan.textContent = lineSplittedText[lineIndex]
+          tspan.setAttribute('x', textInfo.x)
+          if (lineIndex > 0) {
+            tspan.setAttribute('dy', `1.2em`)
+          }
+          expectedSvg.appendChild(tspan)
+        }
+      } else {
+        expectedSvg.textContent = textInfo.text
+      }
+      expectedSvg.setAttribute('x', textInfo.x)
+      expectedSvg.setAttribute('y', textInfo.y)
+
+      const textLayer = new TextSvgLayer(textInfo)
+
+      expect(textLayer.getSvgSource()).to.be.equals(expectedSvg.outerHTML)
+      expect(textLayer.getSvgSource()).to.be.equals('<text x="100" y="200"><tspan x="100">Hello</tspan><tspan x="100" dy="1.2em">World!</tspan><tspan x="100" dy="1.2em">How are you?</tspan></text>')
+    })
   })
 })
