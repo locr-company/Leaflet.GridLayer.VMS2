@@ -141,19 +141,18 @@ class TextSvgLayer extends SvgLayer {
 
     super()
 
-    let svgText = '<text '
+    const svgText = document.createElement('text')
+    svgText.textContent = textInfo.text
 
     for (const [key, value] of Object.entries(textInfo)) {
       if (key === 'text') {
         continue
       }
 
-      svgText += `${key}="${value}" `
+      svgText.setAttribute(key, value)
     }
 
-    svgText += `>${textInfo.text}</text>`
-
-    this.svgText += svgText
+    this.svgText = svgText.outerHTML
   }
 }
 
