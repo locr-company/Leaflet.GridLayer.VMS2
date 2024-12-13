@@ -1,6 +1,7 @@
 import unicodeDataTable from './unicode.js'
 import './PrintFormat.js'
 import { MapOverlay } from './MapOverlay.js'
+import PrintFormat from './PrintFormat.js'
 
 const EARTH_EQUATORIAL_RADIUS_METERS = 6378137
 const EARTH_EQUATORIAL_CIRCUMFERENCE_METERS = 2 * Math.PI * EARTH_EQUATORIAL_RADIUS_METERS
@@ -197,6 +198,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     this.mapOverlayDiv.style.width = '100%'
     this.mapOverlayDiv.style.height = '100%'
     this.mapOverlayDiv.style.pointerEvents = 'none'
+
+    this.mapOverlayMarkerDatas = []
   },
   createTile: function (tileInfo, doneFunction_) {
     let tileCanvas = null
@@ -230,13 +233,37 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     return tileCanvas
   },
+  setPrintFormat(printFormat) {
+    this.printFormat = printFormat
+
+    if(this._map) {
+      this._map.invalidateSize()
+
+      this._map.fire('resize')
+    }
+  },
+  setMapOverlay(mapOverlay) {
+    this.mapOverlay = mapOverlay
+
+    for(const marker of this.mapOverlayMarkerDatas) {
+      this._map.removeLayer(marker)
+    }
+
+    this.mapOverlayMarkerDatas = []
+
+    if(this._map) {
+      this._map.invalidateSize()
+
+      this._map.fire('resize')
+    }
+  },
   getPrintCanvas: async function () {
     return new Promise((resolve, reject) => {
-      if (!this.options.printFormat || !this._map) {
+      if (!this.printFormat || !this._map) {
         throw (new Error('Missing essential parameters!'))
       }
 
-      const printFormatSize = this.options.printFormat.getSize()
+      const printFormatSize = this.printFormat.getSize()
 
       let latitudeMin = this._map.getBounds().getSouth()
       let longitudeMin = this._map.getBounds().getWest()
@@ -251,9 +278,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       const mapRatio = normalizedWidth / normalizedHeight
       const printRatio = printFormatSize.width / printFormatSize.height
 
+      let markerScale = 1
+
       if (printRatio <= mapRatio) {
         longitudeMin -= (mapDegreesWidth * printRatio / mapRatio - mapDegreesWidth) / 2
         longitudeMax += (mapDegreesWidth * printRatio / mapRatio - mapDegreesWidth) / 2
+
+        markerScale = printFormatSize.width / this._map.getSize().x
       } else {
         let normalizedMin = this._latitudeToNormalized(latitudeMin)
         let normalizedMax = this._latitudeToNormalized(latitudeMax)
@@ -263,6 +294,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         latitudeMin = this._normalizedToLatitude(normalizedMin)
         latitudeMax = this._normalizedToLatitude(normalizedMax)
+
+        markerScale = printFormatSize.height / this._map.getSize().y
       }
 
       const mapInfo = {
@@ -286,7 +319,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
       this.getMapCanvas(mapInfo)
         .then(mapCanvas => {
-          if (this.options.mapOverlay) {
+          if (this.mapOverlay) {
             let printCanvas = document.createElement('canvas')
 
             printCanvas.width = printFormatSize.width
@@ -302,6 +335,26 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             mapOverlaySvgElement.setAttribute('width', printFormatSize.width)
             mapOverlaySvgElement.setAttribute('height', printFormatSize.height)
 
+            const poiDatas = this.mapOverlay.getPoiDatas()
+
+            for(const poiData of poiDatas) {
+              if(poiData.marker) {
+                const markerPoint = this._map.project(poiData.marker.getLatLng())
+                const pixelOrigin = this._map.project([latitudeMax, longitudeMin])
+
+                const iconSvgElement = document.createElementNS('http://www.w3.org/2000/svg', 'image')
+                
+                iconSvgElement.setAttribute('href', poiData.iconData.iconUrl)
+                iconSvgElement.setAttribute('x', (markerPoint.x - poiData.iconData.iconAnchor[0] - pixelOrigin.x) * printFormatSize.printScale / this.options.mapScale)
+                iconSvgElement.setAttribute('y', (markerPoint.y - poiData.iconData.iconAnchor[1] - pixelOrigin.y) * printFormatSize.printScale / this.options.mapScale)
+                iconSvgElement.setAttribute('width', poiData.iconData.iconSize[0] * printFormatSize.printScale / this.options.mapScale)
+                iconSvgElement.setAttribute('height', poiData.iconData.iconSize[1] * printFormatSize.printScale / this.options.mapScale)
+
+                const firstChild = mapOverlaySvgElement.firstChild
+                mapOverlaySvgElement.insertBefore(iconSvgElement, firstChild)                
+              }
+            }
+      
             const mapOverlayImage = new Image()
             const xmlSerializer = new XMLSerializer()
 
@@ -611,17 +664,74 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     this._container = null
     this._tileZoom = undefined
   },
+  _updateMapOverlayMarkerDatas: function (printFormatScale) {
+    let newMarkerScale
+
+    if(printFormatScale) {
+      newMarkerScale = printFormatScale
+    } else {
+      newMarkerScale = this.options.mapScale
+    }
+
+    if(this.currentMarkerScale != newMarkerScale) {
+      for(const marker of this.mapOverlayMarkerDatas) {
+        this._map.removeLayer(marker)
+      }
+  
+      this.mapOverlayMarkerDatas = []
+
+      this.currentMarkerScale = this.options.mapScale
+    }
+
+    if(this.mapOverlayMarkerDatas.length == 0) {
+      const poiDatas = this.mapOverlay.getPoiDatas()
+
+      for(const poiData of poiDatas) {
+        const iconData = JSON.parse(JSON.stringify(poiData.iconData))
+
+        iconData.iconSize[0] *= this.currentMarkerScale 
+        iconData.iconSize[1] *= this.currentMarkerScale 
+        iconData.iconAnchor[0] *= this.currentMarkerScale 
+        iconData.iconAnchor[1] *= this.currentMarkerScale 
+        
+        const latitude = poiData.marker?.getLatLng().lat ?? iconData.latitude
+        const longitude = poiData.marker?.getLatLng().lng ?? iconData.longitude
+        const marker = L.marker([latitude, longitude], { icon: L.icon(iconData) })
+
+        marker.addTo(this._map)
+        marker.dragging.enable()
+
+        this.mapOverlayMarkerDatas.push(marker)
+
+        poiData.marker = marker
+      }
+    }
+  },
   _onResize: function (event) {
-    if (this._map && this.options.printFormat) {
-      if (this.options.printFormat && this.printFormatMaskDiv && !this.printFormatMaskDiv.isConnected) {
+    if (this.printFormat) {
+      if (!this.printFormatMaskDiv.isConnected) {
         this._map.getContainer().appendChild(this.printFormatMaskDiv)
       }
+    } else {
+      if (this.printFormatMaskDiv.isConnected) {
+        this.printFormatMaskDiv.remove()
+      }
+    }
 
-      if (this.options.mapOverlay && this.mapOverlayDiv && !this.mapOverlayDiv.isConnected) {
+    if (this.mapOverlay) {
+      if (!this.mapOverlayDiv.isConnected) {
         this._map.getContainer().appendChild(this.mapOverlayDiv)
       }
 
-      const printFormatSize = this.options.printFormat.getSize()
+      this._updateMapOverlayMarkerDatas()
+    } else {
+      if (this.mapOverlayDiv.isConnected) {
+        this.mapOverlayDiv.remove()
+      }
+    }
+
+    if (this.printFormat) {
+      const printFormatSize = this.printFormat.getSize()
 
       const printSizeAspectRatio = printFormatSize.width / printFormatSize.height
       const mapSizeAspectRatio = this._map.getSize().x / this._map.getSize().y
@@ -634,18 +744,14 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         const topBorderPercent = 50 - mapSizeAspectRatio / printSizeAspectRatio * 50
         const bottomBorderPercent = 100 - topBorderPercent
 
-        if (this.printFormatMaskDiv) {
-          this.printFormatMaskDiv.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${topBorderPercent}%, 0% ${topBorderPercent}%, 0% ${bottomBorderPercent}%, 100% ${bottomBorderPercent}%, 100% 100%, 0% 100%)`
-        }
+        this.printFormatMaskDiv.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${topBorderPercent}%, 0% ${topBorderPercent}%, 0% ${bottomBorderPercent}%, 100% ${bottomBorderPercent}%, 100% 100%, 0% 100%)`
       } else {
         this.options.mapScale = this._map.getSize().y * printFormatSize.printScale / printFormatSize.height
 
         const leftBorderPercent = 50 - printSizeAspectRatio / mapSizeAspectRatio * 50
         const rightBorderPercent = 100 - leftBorderPercent
 
-        if (this.printFormatMaskDiv) {
-          this.printFormatMaskDiv.style.clipPath = `polygon(0% 100%, 0% 0%, ${leftBorderPercent}% 0%, ${leftBorderPercent}% 100%, ${rightBorderPercent}% 100%, ${rightBorderPercent}% 0%, 100% 0%, 100% 100%)`
-        }
+        this.printFormatMaskDiv.style.clipPath = `polygon(0% 100%, 0% 0%, ${leftBorderPercent}% 0%, ${leftBorderPercent}% 100%, ${rightBorderPercent}% 100%, ${rightBorderPercent}% 0%, 100% 0%, 100% 100%)`
       }
 
       let printFormatScale = 1
@@ -653,27 +759,23 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       if (this.lastPrintFormatSize) {
         printFormatScale = Math.sqrt(printFormatSize.width * printFormatSize.height) / Math.sqrt(this.lastPrintFormatSize.width * this.lastPrintFormatSize.height)
       }
-
+      
       this.lastPrintFormatSize = printFormatSize
-
+      
       const center = this._map.getCenter()
       const newZoom = this._map.getZoom() + Math.log(this.options.mapScale * printFormatScale / previousMapScale) / Math.log(this.options.zoomPowerBase)
+
+      if(this.mapOverlay) {
+        this._updateMapOverlayMarkerDatas(printFormatScale)
+      }
 
       // eslint-disable-next-line no-underscore-dangle
       this._map._resetView(center, newZoom, true)
 
-      this.invalidateMapOverlay()
+      this.mapOverlayDiv.innerHTML = this.mapOverlay?.getSvgOverlay({ width: printFormatSize.width, height: printFormatSize.height }) ?? ''
 
       this.redraw()
     }
-  },
-  invalidateMapOverlay: function () {
-    if (!this.options.printFormat) {
-      return
-    }
-
-    const printFormatSize = this.options.printFormat.getSize()
-    this.mapOverlayDiv.innerHTML = this.options.mapOverlay?.getSvgOverlay({ width: printFormatSize.width, height: printFormatSize.height }) || ''
   },
   _checkAndSetDisplacement: function (displacementLayers, displacementLayerNames, boxes) {
     for (const box of boxes) {
