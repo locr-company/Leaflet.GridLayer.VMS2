@@ -1,25 +1,25 @@
 class MapOverlay {
-  width
-  height
-  dpi
+  #width
+  #height
+  #dpi
 
-  layers = []
+  #layers = []
 
-  constructor(mapInfo) {
-    if (isNaN(mapInfo.width) || isNaN(mapInfo.height) || isNaN(mapInfo.dpi)) {
+  constructor(mapData) {
+    if (isNaN(mapData.width) || isNaN(mapData.height) || isNaN(mapData.dpi)) {
       throw new ReferenceError('missing essential parameters')
     }
 
-    this.width = mapInfo.width
-    this.height = mapInfo.height
-    this.dpi = mapInfo.dpi
+    this.#width = mapData.width
+    this.#height = mapData.height
+    this.#dpi = mapData.dpi
   }
 
   /**
    * @param {SvgLayer} layer
    */
   add(layer) {
-    this.layers.push(layer)
+    this.#layers.push(layer)
   }
 
   /**
@@ -48,56 +48,44 @@ class MapOverlay {
   }
 
   getSvgOverlay(size) {
-    const width = size?.width || this.width
-    const height = size?.height || this.height
+    const width = size?.width || this.#width
+    const height = size?.height || this.#height
 
-    let svgText = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">`
+    let svgString = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">`
 
-    for (const overlayLayer of this.layers) {
-      svgText += overlayLayer.getSvgSource()
+    for (const layer of this.#layers) {
+      svgString += layer.getSvgSource()
     }
 
-    svgText += '</svg>'
+    svgString += '</svg>'
 
-    return svgText
+    return svgString
+  }
+
+  getPoiDatas() {
+    const poiDatas = []
+
+    for (const layer of this.#layers) {
+      if(layer instanceof PoiLayer) {
+        poiDatas.push(layer.getPoiData())
+      }
+    }
+
+    return poiDatas
   }
 }
 
 class SvgLayer {
-  svgText = ''
+  svgString = ''
 
-  constructor(layerData) {
-    switch (typeof layerData) {
-    case 'string':
-      this.svgText = layerData
-
-      break
-
-    case 'object':
-      for (const svgElementName in layerData) {
-        const svgElement = layerData[svgElementName]
-
-        switch (typeof svgElement) {
-        case 'string':
-          this.svgText += svgElement
-
-          break
-
-        case 'object':
-          for (const svgParameterName in svgElement) {
-
-          }
-
-
-          break
-        }
-      }
-      break
+  constructor(svgString) {
+    if(svgString) {
+      this.svgString = svgString
     }
   }
 
   getSvgSource() {
-    return this.svgText
+    return this.svgString
   }
 }
 
@@ -109,15 +97,15 @@ class ImageSvgLayer extends SvgLayer {
 
     super()
 
-    let svgText = '<image '
+    let svgString = '<image '
 
     for (const [key, value] of Object.entries(imageInfo)) {
-      svgText += `${key}="${value}" `
+      svgString += `${key}="${value}" `
     }
 
-    svgText += `/>`
+    svgString += `/>`
 
-    this.svgText += svgText
+    this.svgString += svgString
   }
 }
 
@@ -141,21 +129,24 @@ class TextSvgLayer extends SvgLayer {
 
     super()
 
-    const svgText = document.createElement('text')
+    const svgString = document.createElement('text')
 
     const lineSplittedText = textInfo.text.split('\n')
+
     if (lineSplittedText.length > 1) {
       for (const lineIndex in lineSplittedText) {
         const tspan = document.createElement('tspan')
         tspan.textContent = lineSplittedText[lineIndex]
         tspan.setAttribute('x', textInfo.x)
+    
         if (lineIndex > 0) {
-          tspan.setAttribute('dy', `1.2em`)
+          tspan.setAttribute('dy', '1.2em')
         }
-        svgText.appendChild(tspan)
+    
+        svgString.appendChild(tspan)
       }
     } else {
-      svgText.textContent = textInfo.text
+      svgString.textContent = textInfo.text
     }
 
     for (const [key, value] of Object.entries(textInfo)) {
@@ -163,10 +154,26 @@ class TextSvgLayer extends SvgLayer {
         continue
       }
 
-      svgText.setAttribute(key, value)
+      svgString.setAttribute(key, value)
     }
 
-    this.svgText = svgText.outerHTML
+    this.svgString = svgString.outerHTML
+  }
+}
+
+class PoiLayer {
+  #poiData
+
+  constructor(iconData) {
+    this.#poiData = { iconData }
+  }
+
+  getPoiData() {
+    return this.#poiData
+  }
+
+  getSvgSource() {
+    return ''
   }
 }
 
@@ -174,5 +181,6 @@ export {
   MapOverlay,
   SvgLayer,
   ImageSvgLayer,
-  TextSvgLayer
+  TextSvgLayer,
+  PoiLayer
 }
