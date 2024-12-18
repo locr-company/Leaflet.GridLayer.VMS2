@@ -81,6 +81,9 @@ class PrintFormat {
     this.#height = convertedValues.height
   }
 
+  /**
+   * @returns {{width: number, height: number, dpi: number, printScale: number}}
+   */
   getSize() {
     return {
       width: this.#width,
