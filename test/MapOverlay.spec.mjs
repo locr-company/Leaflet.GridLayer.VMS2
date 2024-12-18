@@ -2,9 +2,65 @@ import assert from 'assert'
 import { expect } from 'chai'
 import 'jsdom-global/register.js'
 
-import { SvgLayer, TextSvgLayer } from '../src/MapOverlay.js'
+import MapOverlay, { SvgLayer, TextSvgLayer } from '../src/MapOverlay.js'
 
 describe('MapOverlay', () => {
+  describe('default (MapOverlay)', () => {
+    it('constructs a MapOverlay object', () => {
+      const mapOverlay = new MapOverlay({ width: 100, height: 200 })
+
+      expect(mapOverlay.width).to.be.equals(100)
+      expect(mapOverlay.height).to.be.equals(200)
+    })
+
+    it('constructs a MapOverlay object with valid numerical string values', () => {
+      const mapOverlay = new MapOverlay({ width: '100', height: '200' })
+
+      expect(mapOverlay.width).to.be.equals(100)
+      expect(mapOverlay.height).to.be.equals(200)
+    })
+
+    it('constructor with no mapData throws an error', () => {
+      assert.throws(() => new MapOverlay(), TypeError)
+    })
+
+    it('constructor with null mapData throws an error', () => {
+      assert.throws(() => new MapOverlay(null), TypeError)
+    })
+
+    it('constructor with non-object mapData throws an error', () => {
+      assert.throws(() => new MapOverlay('string'), TypeError)
+    })
+
+    it('constructor with no width property throws an error', () => {
+      assert.throws(() => new MapOverlay({}), ReferenceError)
+    })
+
+    it('constructor with no height property throws an error', () => {
+      assert.throws(() => new MapOverlay({ width: 100 }), ReferenceError)
+    })
+
+    it('constructor with non-number width property throws an error', () => {
+      assert.throws(() => new MapOverlay({ width: 'a', height: 200 }), ReferenceError)
+    })
+
+    it('constructor with non-number height property throws an error', () => {
+      assert.throws(() => new MapOverlay({ width: 100, height: 'b' }), ReferenceError)
+    })
+
+    it('constructor with invalid width property throws an error', () => {
+      assert.throws(() => new MapOverlay({ width: 0, height: 200 }), RangeError)
+      assert.throws(() => new MapOverlay({ width: -1, height: 200 }), RangeError)
+      assert.throws(() => new MapOverlay({ width: -1000000, height: 200 }), RangeError)
+    })
+
+    it('constructor with invalid height property throws an error', () => {
+      assert.throws(() => new MapOverlay({ width: 100, height: 0 }), RangeError)
+      assert.throws(() => new MapOverlay({ width: 100, height: -1 }), RangeError)
+      assert.throws(() => new MapOverlay({ width: 100, height: -1000000 }), RangeError)
+    })
+  })
+
   describe('SvgLayer', () => {
     it('constructs an empty SVG layer', () => {
       const svgLayer = new SvgLayer()
