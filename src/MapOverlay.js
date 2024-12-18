@@ -1,4 +1,4 @@
-class MapOverlay {
+export default class MapOverlay {
   #width
   #height
   #dpi
