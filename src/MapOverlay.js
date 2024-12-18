@@ -1,18 +1,42 @@
 export default class MapOverlay {
-  #width
-  #height
-  #dpi
+  #width = 0
+  #height = 0
 
   #layers = []
 
+  /**
+   * @param {{width: number, height: number}} mapData
+   */
   constructor(mapData) {
-    if (isNaN(mapData.width) || isNaN(mapData.height) || isNaN(mapData.dpi)) {
-      throw new ReferenceError('missing essential parameters')
+    if (typeof mapData !== 'object' || mapData === null) {
+      throw new TypeError('mapData must be an object')
+    }
+
+    if (isNaN(mapData.width) || isNaN(mapData.height)) {
+      throw new ReferenceError('width and height values need to be defined')
+    }
+
+    if (typeof mapData.width !== 'number') {
+      mapData.width = parseFloat(mapData.width)
+    }
+    if (typeof mapData.height !== 'number') {
+      mapData.height = parseFloat(mapData.height)
+    }
+
+    if (mapData.width <= 0 || mapData.height <= 0) {
+      throw new RangeError('width and height values need to be greater than 0')
     }
 
     this.#width = mapData.width
     this.#height = mapData.height
-    this.#dpi = mapData.dpi
+  }
+
+  get width() {
+    return this.#width
+  }
+
+  get height() {
+    return this.#height
   }
 
   /**
