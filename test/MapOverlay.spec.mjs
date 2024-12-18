@@ -2,7 +2,7 @@ import assert from 'assert'
 import { expect } from 'chai'
 import 'jsdom-global/register.js'
 
-import { TextSvgLayer } from "../src/MapOverlay.js"
+import { TextSvgLayer } from '../src/MapOverlay.js'
 
 describe('MapOverlay', () => {
   describe('TextSvgLayer', () => {
