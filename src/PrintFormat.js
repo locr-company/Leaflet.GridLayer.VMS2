@@ -1,11 +1,11 @@
 class PrintFormat {
-  static DEFAULT_PRINT_DPI = 300
-  static DEFAULT_UNIT_TYPE = 'px'
+  static get DEFAULT_PRINT_DPI() { return 300 }
+  static get DEFAULT_UNIT_TYPE() { return 'px' }
 
-  static CM_PER_INCH = 2.54
-  static MM_PER_INCH = 25.4
+  static get CM_PER_INCH() { return 2.54 }
+  static get MM_PER_INCH() { return 25.4 }
 
-  static DEFAULT_PRINT_SCALE = 2 * 3604 / 2480
+  static get DEFAULT_PRINT_SCALE() { return 2 * 3604 / 2480 }
 
   #unitTypeConversionFunctions = {
     'px': (width, height, dpi) => ({ width, height }),
@@ -23,6 +23,9 @@ class PrintFormat {
 
   #printScale = PrintFormat.DEFAULT_PRINT_SCALE
 
+  /**
+   * @param {{width: number, height: number, dpi?: number, printScale?: number, unitType?: 'px'|'cm'|'mm'|'in'|'pt'|'pc'}} printSizeInfo
+   */
   constructor(printSizeInfo) {
     if (typeof printSizeInfo !== 'object' || printSizeInfo === null) {
       throw new TypeError('printSizeInfo must be an object')
@@ -32,21 +35,43 @@ class PrintFormat {
       throw new ReferenceError('width and height values need to be defined')
     }
 
+    if (typeof printSizeInfo.width !== 'number') {
+      printSizeInfo.width = parseFloat(printSizeInfo.width)
+    }
+    if (typeof printSizeInfo.height !== 'number') {
+      printSizeInfo.height = parseFloat(printSizeInfo.height)
+    }
+
     if (printSizeInfo.width <= 0 || printSizeInfo.height <= 0) {
       throw new RangeError('width and height values need to be greater than 0')
     }
 
-    this.#dpi = printSizeInfo.dpi || PrintFormat.DEFAULT_PRINT_DPI
+    if (!isNaN(printSizeInfo.dpi)) {
+      if (typeof printSizeInfo.dpi !== 'number') {
+        printSizeInfo.dpi = parseInt(printSizeInfo.dpi)
+      }
+      if (printSizeInfo.dpi <= 0) {
+        throw new RangeError('dpi value needs to be greater than 0')
+      }
+      this.#dpi = printSizeInfo.dpi
+    }
 
-    this.#printScale = printSizeInfo.printScale || PrintFormat.DEFAULT_PRINT_SCALE
+    if (!isNaN(printSizeInfo.printScale)) {
+      if (typeof printSizeInfo.printScale !== 'number') {
+        printSizeInfo.printScale = parseInt(printSizeInfo.printScale)
+      }
+      if (printSizeInfo.printScale <= 0) {
+        throw new RangeError('printScale value needs to be greater than 0')
+      }
+      this.#printScale = printSizeInfo.printScale
+    }
 
     let unitTypeConversionFunction = this.#unitTypeConversionFunctions[PrintFormat.DEFAULT_UNIT_TYPE]
 
     if (printSizeInfo.unitType) {
       unitTypeConversionFunction = this.#unitTypeConversionFunctions[printSizeInfo.unitType]
-
       if (unitTypeConversionFunction === undefined) {
-        throw new RangeError('invalid unit type')
+        throw new ReferenceError('invalid unit type')
       }
     }
 
@@ -57,11 +82,11 @@ class PrintFormat {
   }
 
   getSize() {
-    return { 
-      width: this.#width, 
-      height: this.#height, 
+    return {
+      width: this.#width,
+      height: this.#height,
       dpi: this.#dpi,
-      printScale: this.#printScale 
+      printScale: this.#printScale
     }
   }
 }
