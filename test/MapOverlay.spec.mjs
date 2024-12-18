@@ -2,9 +2,28 @@ import assert from 'assert'
 import { expect } from 'chai'
 import 'jsdom-global/register.js'
 
-import { TextSvgLayer } from '../src/MapOverlay.js'
+import { SvgLayer, TextSvgLayer } from '../src/MapOverlay.js'
 
 describe('MapOverlay', () => {
+  describe('SvgLayer', () => {
+    it('constructs an empty SVG layer', () => {
+      const svgLayer = new SvgLayer()
+
+      expect(svgLayer.getSvgSource()).to.be.equals('')
+    })
+
+    it('constructs an SVG layer with a source', () => {
+      const svgString = '<circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" />'
+      const svgLayer = new SvgLayer(svgString)
+
+      expect(svgLayer.getSvgSource()).to.be.equals(svgString)
+    })
+
+    it('constructor with a number as svgString throws an error', () => {
+      assert.throws(() => new SvgLayer(1), TypeError)
+    })
+  })
+
   describe('TextSvgLayer', () => {
     it('constructs a basic text SVG layer', () => {
       const textInfo = {

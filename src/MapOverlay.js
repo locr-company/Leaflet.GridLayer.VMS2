@@ -78,10 +78,19 @@ class MapOverlay {
 class SvgLayer {
   svgString = ''
 
+  /**
+   * @param {string} svgString
+   */
   constructor(svgString) {
-    if(svgString) {
-      this.svgString = svgString
+    if (svgString === undefined || svgString === null) {
+      return
     }
+
+    if (typeof svgString !== 'string') {
+      throw new TypeError('svgString must be a string')
+    }
+
+    this.svgString = svgString
   }
 
   getSvgSource() {
@@ -127,8 +136,6 @@ class TextSvgLayer extends SvgLayer {
       throw new TypeError('textInfo.y must be a string or a number')
     }
 
-    super()
-
     const svgString = document.createElement('text')
 
     const lineSplittedText = textInfo.text.split('\n')
@@ -157,7 +164,7 @@ class TextSvgLayer extends SvgLayer {
       svgString.setAttribute(key, value)
     }
 
-    this.svgString = svgString.outerHTML
+    super(svgString.outerHTML)
   }
 }
 
