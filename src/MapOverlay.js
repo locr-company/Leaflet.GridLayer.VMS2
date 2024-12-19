@@ -31,18 +31,29 @@ export default class MapOverlay {
     this.#height = mapData.height
   }
 
+  /**
+   * @returns {number}
+   */
   get width() {
     return this.#width
   }
 
+  /**
+   * @returns {number}
+   */
   get height() {
     return this.#height
   }
 
   /**
    * @param {SvgLayer} layer
+   * @returns {void}
    */
   add(layer) {
+    if (!(layer instanceof SvgLayer)) {
+      throw new TypeError('layer must be an instance of SvgLayer')
+    }
+
     this.#layers.push(layer)
   }
 
@@ -71,9 +82,29 @@ export default class MapOverlay {
     this.add(layer)
   }
 
+  /**
+   * @param {{width?: number, height?: number}|undefined} size
+   * @returns {string}
+   */
   getSvgOverlay(size) {
-    const width = size?.width || this.#width
-    const height = size?.height || this.#height
+    let width = this.#width
+    let height = this.#height
+    if (size !== undefined && size !== null && size.constructor === Object) {
+      if (isNaN(size.width)) {
+        if (size.width !== undefined && size.width !== null) {
+          throw new TypeError('size.width must be a number')
+        }
+      } else {
+        width = parseFloat(size.width)
+      }
+      if (isNaN(size.height)) {
+        if (size.height !== undefined && size.height !== null) {
+          throw new TypeError('size.height must be a number')
+        }
+      } else {
+        height = parseFloat(size.height)
+      }
+    }
 
     let svgString = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">`
 
@@ -117,6 +148,9 @@ class SvgLayer {
     this.svgString = svgString
   }
 
+  /**
+   * @returns {string}
+   */
   getSvgSource() {
     return this.svgString
   }

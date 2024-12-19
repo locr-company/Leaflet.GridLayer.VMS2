@@ -1,4 +1,4 @@
-class PrintFormat {
+export default class PrintFormat {
   static get DEFAULT_PRINT_DPI() { return 300 }
   static get DEFAULT_UNIT_TYPE() { return 'px' }
 
@@ -93,5 +93,3 @@ class PrintFormat {
     }
   }
 }
-
-export default PrintFormat

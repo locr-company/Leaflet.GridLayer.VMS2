@@ -59,6 +59,47 @@ describe('MapOverlay', () => {
       assert.throws(() => new MapOverlay({ width: 100, height: -1 }), RangeError)
       assert.throws(() => new MapOverlay({ width: 100, height: -1000000 }), RangeError)
     })
+
+    it('getSvgOverlay with no layers', () => {
+      const mapData = { width: 100, height: 200 }
+      const mapOverlay = new MapOverlay(mapData)
+
+      const expectedSvg1 = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${mapData.width} ${mapData.height}" preserveAspectRatio="xMidYMid meet"></svg>`
+      expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvg1)
+
+      const getSvgOverlaySizeOption = { width: 50, height: 50 }
+      const expectedSvg2 = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${getSvgOverlaySizeOption.width} ${getSvgOverlaySizeOption.height}" preserveAspectRatio="xMidYMid meet"></svg>`
+      expect(mapOverlay.getSvgOverlay(getSvgOverlaySizeOption)).to.be.equals(expectedSvg2)
+    })
+
+    it('getSvgOverlay with a SvgLayer object', () => {
+      const mapData = { width: 100, height: 200 }
+      const mapOverlay = new MapOverlay(mapData)
+      const rawSvg = '<g><text x="50%" y="85%">Hello World!</text></g>'
+      const svgLayer = new SvgLayer(rawSvg)
+
+      mapOverlay.add(svgLayer)
+
+      expect(mapOverlay.getSvgOverlay()).to.be.equals(`<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${mapData.width} ${mapData.height}" preserveAspectRatio="xMidYMid meet">${rawSvg}</svg>`)
+    })
+
+    it('getSvgOverlay with an invalid width option', () => {
+      const mapOverlay = new MapOverlay({ width: 100, height: 200 })
+
+      assert.throws(() => mapOverlay.getSvgOverlay({ width: 'a' }), TypeError)
+    })
+
+    it('getSvgOverlay with an invalid height option', () => {
+      const mapOverlay = new MapOverlay({ width: 100, height: 200 })
+
+      assert.throws(() => mapOverlay.getSvgOverlay({ height: 'b' }), TypeError)
+    })
+
+    it('add method with a non-SvgLayer object throws an error', () => {
+      const mapOverlay = new MapOverlay({ width: 100, height: 200 })
+
+      assert.throws(() => mapOverlay.add({}), TypeError)
+    })
   })
 
   describe('SvgLayer', () => {
