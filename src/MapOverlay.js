@@ -136,7 +136,7 @@ export default class MapOverlay {
 }
 
 class SvgLayer {
-  svgString = ''
+  #svgString = ''
 
   /**
    * @param {string} svgString
@@ -150,34 +150,42 @@ class SvgLayer {
       throw new TypeError('svgString must be a string')
     }
 
-    this.svgString = svgString
+    this.#svgString = svgString
   }
 
   /**
    * @returns {string}
    */
   getSvgSource() {
-    return this.svgString
+    return this.#svgString
   }
 }
 
 class ImageSvgLayer extends SvgLayer {
+  /**
+   * @param {{href: string, x: string|number, y: string|number, [key: string]: any}} imageInfo
+   */
   constructor(imageInfo) {
-    if (!imageInfo.href || !imageInfo.x || !imageInfo.y) {
-      throw new ReferenceError('missing essential parameters')
+    if (imageInfo === undefined || imageInfo === null || imageInfo.constructor !== Object) {
+      throw new TypeError('imageInfo must be an object')
+    }
+    if (typeof imageInfo.href !== 'string') {
+      throw new TypeError('imageInfo.href must be a string')
+    }
+    if (typeof imageInfo.x !== 'string' && typeof imageInfo.x !== 'number') {
+      throw new TypeError('imageInfo.x must be a string or a number')
+    }
+    if (typeof imageInfo.y !== 'string' && typeof imageInfo.y !== 'number') {
+      throw new TypeError('imageInfo.y must be a string or a number')
     }
 
-    super()
-
-    let svgString = '<image '
+    const svgImageElement = document.createElement('image')
 
     for (const [key, value] of Object.entries(imageInfo)) {
-      svgString += `${key}="${value}" `
+      svgImageElement.setAttribute(key, value)
     }
 
-    svgString += `/>`
-
-    this.svgString += svgString
+    super(svgImageElement.outerHTML)
   }
 }
 
@@ -199,7 +207,7 @@ class TextSvgLayer extends SvgLayer {
       throw new TypeError('textInfo.y must be a string or a number')
     }
 
-    const svgString = document.createElement('text')
+    const svgTextElement = document.createElement('text')
 
     const lineSplittedText = textInfo.text.split('\n')
 
@@ -213,10 +221,10 @@ class TextSvgLayer extends SvgLayer {
           tspan.setAttribute('dy', '1.2em')
         }
     
-        svgString.appendChild(tspan)
+        svgTextElement.appendChild(tspan)
       }
     } else {
-      svgString.textContent = textInfo.text
+      svgTextElement.textContent = textInfo.text
     }
 
     for (const [key, value] of Object.entries(textInfo)) {
@@ -224,10 +232,10 @@ class TextSvgLayer extends SvgLayer {
         continue
       }
 
-      svgString.setAttribute(key, value)
+      svgTextElement.setAttribute(key, value)
     }
 
-    super(svgString.outerHTML)
+    super(svgTextElement.outerHTML)
   }
 }
 
