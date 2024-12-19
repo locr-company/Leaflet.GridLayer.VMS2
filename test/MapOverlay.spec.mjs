@@ -3,7 +3,7 @@ import { expect } from 'chai'
 import 'jsdom-global/register.js'
 import { JSDOM } from 'jsdom'
 
-import MapOverlay, { SvgLayer, TextSvgLayer } from '../src/MapOverlay.js'
+import MapOverlay, { ImageSvgLayer, SvgLayer, TextSvgLayer } from '../src/MapOverlay.js'
 
 describe('MapOverlay', () => {
   before(function() {
@@ -302,6 +302,88 @@ describe('MapOverlay', () => {
 
       expect(textLayer.getSvgSource()).to.be.equals(expectedSvg.outerHTML)
       expect(textLayer.getSvgSource()).to.be.equals('<text x="100" y="200"><tspan x="100">Hello</tspan><tspan x="100" dy="1.2em">World!</tspan><tspan x="100" dy="1.2em">How are you?</tspan></text>')
+    })
+  })
+
+  describe('ImageSvgLayer', () => {
+    it('constructs a basic image SVG layer', () => {
+      const imageInfo = {
+        href: 'cup_of_coffee.jpeg',
+        x: '200',
+        y: '200'
+      }
+
+      const imageLayer = new ImageSvgLayer(imageInfo)
+
+      expect(imageLayer.getSvgSource()).to.be.equals('<image href="cup_of_coffee.jpeg" x="200" y="200"></image>')
+    })
+
+    it('constructor with no imageInfo throws an error', () => {
+      assert.throws(() => new ImageSvgLayer(), TypeError)
+    })
+
+    it('constructor with null imageInfo throws an error', () => {
+      assert.throws(() => new ImageSvgLayer(null), TypeError)
+    })
+
+    it('constructor with non-object imageInfo throws an error', () => {
+      assert.throws(() => new ImageSvgLayer('string'), TypeError)
+    })
+
+    it('constructor with no text property throws an error', () => {
+      assert.throws(() => new ImageSvgLayer({}), TypeError)
+    })
+
+    it('constructor with non-string href property throws an error', () => {
+      assert.throws(() => new ImageSvgLayer({ href: 123 }), TypeError)
+    })
+
+    it('constructor with no x property throws an error', () => {
+      assert.throws(() => new ImageSvgLayer({ href: 'cup_of_coffee.jpeg' }), TypeError)
+    })
+
+    it('constructor with non-string or non-number x property throws an error', () => {
+      assert.throws(() => new ImageSvgLayer({ href: 'cup_of_coffee.jpeg', x: {} }), TypeError)
+    })
+
+    it('constructor with no y property throws an error', () => {
+      assert.throws(() => new ImageSvgLayer({ href: 'cup_of_coffee.jpeg', x: '100' }), TypeError)
+    })
+
+    it('constructor with non-string or non-number y property throws an error', () => {
+      assert.throws(() => new ImageSvgLayer({ href: 'cup_of_coffee.jpeg', x: '100', y: {} }), TypeError)
+    })
+
+    it('constructor with additional properties', () => {
+      const imageInfo = {
+        href: 'cup_of_coffee.jpeg',
+        x: '100',
+        y: '200',
+        width: '100',
+        height: '100'
+      }
+
+      const imageLayer = new ImageSvgLayer(imageInfo)
+
+      expect(imageLayer.getSvgSource()).to.be.equals('<image href="cup_of_coffee.jpeg" x="100" y="200" width="100" height="100"></image>')
+    })
+
+    it('constructor with special characters in the href property', () => {
+      const imageInfo = {
+        href: 'cup_of_">coffee.jpeg',
+        x: '100',
+        y: '200'
+      }
+
+      const expectedSvg = document.createElement('image')
+      expectedSvg.setAttribute('href', imageInfo.href)
+      expectedSvg.setAttribute('x', imageInfo.x)
+      expectedSvg.setAttribute('y', imageInfo.y)
+
+      const imageLayer = new ImageSvgLayer(imageInfo)
+
+      expect(imageLayer.getSvgSource()).to.be.equals(expectedSvg.outerHTML)
+      expect(imageLayer.getSvgSource()).to.be.equals('<image href="cup_of_&quot;>coffee.jpeg" x="100" y="200"></image>')
     })
   })
 })
