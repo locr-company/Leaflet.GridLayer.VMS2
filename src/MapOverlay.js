@@ -59,8 +59,13 @@ export default class MapOverlay {
 
   /**
    * @param {SvgLayer} layer
+   * @returns {void}
    */
   addOrReplace(layer) {
+    if (!(layer instanceof SvgLayer)) {
+      throw new TypeError('layer must be an instance of SvgLayer')
+    }
+
     const domParser = new DOMParser()
 
     const parsedLayerDom = domParser.parseFromString(layer.getSvgSource(), 'application/xml')
@@ -70,11 +75,11 @@ export default class MapOverlay {
       return
     }
 
-    for (const layerIndex in this.layers) {
-      const currentLayer = this.layers[layerIndex]
+    for (const layerIndex in this.#layers) {
+      const currentLayer = this.#layers[layerIndex]
       const currentParsedLayerDom = domParser.parseFromString(currentLayer.getSvgSource(), 'application/xml')
       if (currentParsedLayerDom.documentElement.id === layerId) {
-        this.layers[layerIndex] = layer
+        this.#layers[layerIndex] = layer
         return
       }
     }

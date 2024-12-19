@@ -3,6 +3,7 @@ export default class MapOverlay {
     get width(): number;
     get height(): number;
     add(layer: SvgLayer): void;
+    addOrReplace(layer: SvgLayer): void;
     getSvgOverlay(size: {width?: number, height?: number}|undefined): string;
 }
 

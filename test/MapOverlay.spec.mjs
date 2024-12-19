@@ -1,10 +1,16 @@
 import assert from 'assert'
 import { expect } from 'chai'
 import 'jsdom-global/register.js'
+import { JSDOM } from 'jsdom'
 
 import MapOverlay, { SvgLayer, TextSvgLayer } from '../src/MapOverlay.js'
 
 describe('MapOverlay', () => {
+  before(function() {
+    const dom = new JSDOM()
+    global.DOMParser = dom.window.DOMParser
+  })
+
   describe('default (MapOverlay)', () => {
     it('constructs a MapOverlay object', () => {
       const mapOverlay = new MapOverlay({ width: 100, height: 200 })
@@ -99,6 +105,72 @@ describe('MapOverlay', () => {
       const mapOverlay = new MapOverlay({ width: 100, height: 200 })
 
       assert.throws(() => mapOverlay.add({}), TypeError)
+    })
+
+    it('addOrReplace method with a non-SvgLayer object throws an error', () => {
+      const mapOverlay = new MapOverlay({ width: 100, height: 200 })
+
+      assert.throws(() => mapOverlay.addOrReplace({}), TypeError)
+    })
+
+    it('addOrReplace method with a SvgLayer object replaces the layer with the same id', () => {
+      const mapOverlay = new MapOverlay({ width: 100, height: 200 })
+
+      const rawSvg1 = '<g id="1">some layer</g>'
+      const svgLayer1 = new SvgLayer(rawSvg1)
+      const textSvgLayer2 = new TextSvgLayer({ text: 'Hello, world!', x: '100', y: '200', id: '2' })
+
+      mapOverlay.add(svgLayer1)
+      mapOverlay.add(textSvgLayer2)
+
+      const expectedSvgBeforeReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${rawSvg1}${textSvgLayer2.getSvgSource()}</svg>`
+      expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgBeforeReplace)
+
+      const textSvgLayer3 = new TextSvgLayer({ text: 'Foo Bar', x: '100', y: '200', id: '2' })
+      mapOverlay.addOrReplace(textSvgLayer3)
+
+      const expectedSvgAfterReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${rawSvg1}${textSvgLayer3.getSvgSource()}</svg>`
+      expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgAfterReplace)
+    })
+
+    it('addOrReplace method with a SvgLayer object added the layer where the id does not exists, yet', () => {
+      const mapOverlay = new MapOverlay({ width: 100, height: 200 })
+
+      const rawSvg1 = '<g id="1">some layer</g>'
+      const svgLayer1 = new SvgLayer(rawSvg1)
+      const textSvgLayer2 = new TextSvgLayer({ text: 'Hello, world!', x: '100', y: '200', id: '2' })
+
+      mapOverlay.add(svgLayer1)
+      mapOverlay.add(textSvgLayer2)
+
+      const expectedSvgBeforeReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${rawSvg1}${textSvgLayer2.getSvgSource()}</svg>`
+      expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgBeforeReplace)
+
+      const textSvgLayer3 = new TextSvgLayer({ text: 'Foo Bar', x: '100', y: '200', id: '3' })
+      mapOverlay.addOrReplace(textSvgLayer3)
+
+      const expectedSvgAfterReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${rawSvg1}${textSvgLayer2.getSvgSource()}${textSvgLayer3.getSvgSource()}</svg>`
+      expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgAfterReplace)
+    })
+
+    it('addOrReplace method with a SvgLayer object added the layer where no id exists', () => {
+      const mapOverlay = new MapOverlay({ width: 100, height: 200 })
+
+      const rawSvg1 = '<g id="1">some layer</g>'
+      const svgLayer1 = new SvgLayer(rawSvg1)
+      const textSvgLayer2 = new TextSvgLayer({ text: 'Hello, world!', x: '100', y: '200', id: '2' })
+
+      mapOverlay.add(svgLayer1)
+      mapOverlay.add(textSvgLayer2)
+
+      const expectedSvgBeforeReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${rawSvg1}${textSvgLayer2.getSvgSource()}</svg>`
+      expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgBeforeReplace)
+
+      const textSvgLayer3 = new TextSvgLayer({ text: 'Foo Bar', x: '100', y: '200' })
+      mapOverlay.addOrReplace(textSvgLayer3)
+
+      const expectedSvgAfterReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${rawSvg1}${textSvgLayer2.getSvgSource()}${textSvgLayer3.getSvgSource()}</svg>`
+      expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgAfterReplace)
     })
   })
 
