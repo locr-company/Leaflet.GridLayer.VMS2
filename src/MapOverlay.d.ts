@@ -12,6 +12,10 @@ export class SvgLayer {
     getSvgSource(): string;
 }
 
+export class ImageSvgLayer extends SvgLayer {
+    constructor(imageInfo: {href: string, x: string|number, y: string|number, [key: string]: any});
+}
+
 export class TextSvgLayer extends SvgLayer {
     constructor(textInfo: {text: string, x: string|number, y: string|number, [key: string]: any});
 }
