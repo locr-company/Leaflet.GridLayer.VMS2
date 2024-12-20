@@ -3710,109 +3710,115 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
       tileUrl = tileUrl.replace('{key}', '').replace('{value}', '').replace('{type}', '')
 
-      tileLayerData.tileCanvas.abortController = new AbortController()
+      const decodeFunction = () => {
+        for (const decodeWorker of globalThis.vms2Context.decodeWorkers) {
+          if (!decodeWorker.resolveFunction) {
+            const decodeEntry = globalThis.vms2Context.decodeQueue.shift()
 
-      fetch(new URL(tileUrl, window.location.origin), { signal: tileLayerData.tileCanvas.abortController.signal })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error({
-              code: response.status,
-              message: response.statusText,
-              response: response
-            })
+            if (decodeEntry.tileLayerData.tileCanvas.hasBeenRemoved) {
+              decodeEntry.resolve()
+            } else {
+              decodeWorker.postMessage(decodeEntry.decodeData)
+
+              decodeWorker.resolveFunction = () => {
+                this._getCachedTile(decodeEntry.dataLayerId, decodeEntry.x, decodeEntry.y, decodeEntry.z, decodeEntry.tileLayerData)
+
+                globalThis.vms2Context.decodeWorkersRunning--
+
+                decodeEntry.resolve()
+
+                if (globalThis.vms2Context.decodeQueue.length > 0) {
+                  decodeFunction()
+                }
+              }
+
+              globalThis.vms2Context.decodeWorkersRunning++
+            }
+
+            return
           }
+        }
+      }
 
-          this.numberOfRequestedTiles++
+      const processRawData = rawData => {
+        if (tileLayerData.tileCanvas.hasBeenRemoved) {
+          return resolve()
+        }
 
-          return response.arrayBuffer()
-        })
-        .then(rawData => {
-          if (tileLayerData.tileCanvas.hasBeenRemoved) {
-            return resolve()
-          }
+        if (rawData.byteLength <= 4) {
+          return resolve()
+        }
 
-          if (rawData.byteLength <= 4) {
-            return resolve()
-          }
+        const decodeData = { lId: dataLayerId, datas: [] }
 
-          const decodeData = { lId: dataLayerId, datas: [] }
+        const rawDataDataView = new DataView(rawData)
+        let rawDataOffset = 0
 
-          const rawDataDataView = new DataView(rawData)
-          let rawDataOffset = 0
+        let tileCount = rawDataDataView.getUint32(rawDataOffset, true)
+        rawDataOffset += 4
 
-          let tileCount = rawDataDataView.getUint32(rawDataOffset, true)
+        while (tileCount > 0) {
+          const tileX = rawDataDataView.getUint32(rawDataOffset, true)
           rawDataOffset += 4
 
-          while (tileCount > 0) {
-            const tileX = rawDataDataView.getUint32(rawDataOffset, true)
-            rawDataOffset += 4
+          const tileY = rawDataDataView.getUint32(rawDataOffset, true)
+          rawDataOffset += 4
 
-            const tileY = rawDataDataView.getUint32(rawDataOffset, true)
-            rawDataOffset += 4
+          const tileZ = rawDataDataView.getUint32(rawDataOffset, true)
+          rawDataOffset += 4
 
-            const tileZ = rawDataDataView.getUint32(rawDataOffset, true)
-            rawDataOffset += 4
+          const detailZoom = rawDataDataView.getUint32(rawDataOffset, true)
+          rawDataOffset += 4
 
-            const detailZoom = rawDataDataView.getUint32(rawDataOffset, true)
-            rawDataOffset += 4
+          const dataSize = rawDataDataView.getUint32(rawDataOffset, true)
+          rawDataOffset += 4
 
-            const dataSize = rawDataDataView.getUint32(rawDataOffset, true)
-            rawDataOffset += 4
+          decodeData.datas.push({
+            x: tileX,
+            y: tileY,
+            z: tileZ,
+            dZ: detailZoom,
+            cD: this.options.disableDecode === true ? new DataView(new ArrayBuffer()) : rawData.slice(rawDataOffset, rawDataOffset + dataSize)
+          })
 
-            decodeData.datas.push({
-              x: tileX,
-              y: tileY,
-              z: tileZ,
-              dZ: detailZoom,
-              cD: this.options.disableDecode === true ? new DataView(new ArrayBuffer()) : rawData.slice(rawDataOffset, rawDataOffset + dataSize)
-            })
+          rawDataOffset += dataSize
 
-            rawDataOffset += dataSize
+          tileCount--
+        }
 
-            tileCount--
-          }
+        globalThis.vms2Context.decodeQueue.push({ dataLayerId, x, y, z, tileLayerData, decodeData, resolve })
 
-          const decodeFunction = () => {
-            for (const decodeWorker of globalThis.vms2Context.decodeWorkers) {
-              if (!decodeWorker.resolveFunction) {
-                const decodeEntry = globalThis.vms2Context.decodeQueue.shift()
+        decodeFunction()
+      }
 
-                if (decodeEntry.tileLayerData.tileCanvas.hasBeenRemoved) {
-                  decodeEntry.resolve()
-                } else {
-                  decodeWorker.postMessage(decodeEntry.decodeData)
+      tileLayerData.tileCanvas.abortController = new AbortController()
 
-                  decodeWorker.resolveFunction = () => {
-                    this._getCachedTile(decodeEntry.dataLayerId, decodeEntry.x, decodeEntry.y, decodeEntry.z, decodeEntry.tileLayerData)
-
-                    globalThis.vms2Context.decodeWorkersRunning--
-
-                    decodeEntry.resolve()
-
-                    if (globalThis.vms2Context.decodeQueue.length > 0) {
-                      decodeFunction()
-                    }
-                  }
-
-                  globalThis.vms2Context.decodeWorkersRunning++
-                }
-
-                return
-              }
+      if (this.options.disableDecode === true) {
+        processRawData(new ArrayBuffer(4))
+      } else {
+        fetch(new URL(tileUrl, window.location.origin), { signal: tileLayerData.tileCanvas.abortController.signal })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error({
+                code: response.status,
+                message: response.statusText,
+                response: response
+              })
             }
-          }
 
-          globalThis.vms2Context.decodeQueue.push({ dataLayerId, x, y, z, tileLayerData, decodeData, resolve })
+            this.numberOfRequestedTiles++
 
-          decodeFunction()
-        })
-        .catch(error => {
-          if (error.code === 20) {
-            resolve()
-          } else {
-            throw error
-          }
-        })
+            return response.arrayBuffer()
+          })
+          .then(processRawData)
+          .catch(error => {
+            if (error.code === 20) {
+              resolve()
+            } else {
+              throw error
+            }
+          })
+      }
     })
   },
   _skipPolygon: function (geometry, dataOffset) {
