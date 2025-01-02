@@ -1,24 +1,23 @@
 describe('template spec', () => {
-  it('passes', () => {
+  it('can display an empty (blue-water) map.', () => {
     cy.visit('http://localhost:9876/empty_map.html')
 
     cy.window().then(win => {
-      cy.wait(2000).then(() => {
-        const map = win.document.getElementById('map')
-        if (map.leafletMap instanceof win.L.Map) {
-          map.leafletMap.eachLayer(layer => {
-            if (!(layer instanceof win.L.GridLayer.VMS2)) {
-              return
-            }
+      const map = win.document.getElementById('map')
+      if (map.leafletMap instanceof win.L.Map) {
+        map.leafletMap.eachLayer(layer => {
+          if (!(layer instanceof win.L.GridLayer.VMS2)) {
+            return
+          }
 
-            layer.getPrintCanvas().then(canvas => {
-              const image = canvas.toDataURL('image/png')
-              cy.writeFile('empty_map.png', image)
-              cy.readFile('empty_map.png').should('exist')
+          cy.wrap(layer.getPrintCanvas()).then(canvas => {
+            const image = canvas[0].toDataURL('image/png')
+            cy.fixture('empty_map.base64').then(refImage => {
+              expect(refImage).to.equal(image)
             })
           })
-        }
-      })
+        })
+      }
     })
   })
 })
