@@ -1,4 +1,4 @@
-describe('template spec', () => {
+describe('basic map specs', () => {
   it('can display an empty (blue-water) map.', () => {
     cy.visit('http://localhost:9876/empty_map.html')
 
