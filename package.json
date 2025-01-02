@@ -5,7 +5,10 @@
   "type": "module",
   "types": "src/Leaflet.GridLayer.VMS2.d.ts",
   "scripts": {
+    "cy:run": "cypress run",
+    "cypress-test": "start-server-and-test start-dev-server http://localhost:9876 cy:run",
     "lint:js": "eslint src/*.js",
+    "start-dev-server": "node dev-server.mjs",
     "test": "mocha"
   },
   "repository": {
@@ -44,10 +47,13 @@
     "@typescript-eslint/eslint-plugin": "^8.18.1",
     "@typescript-eslint/parser": "^8.18.1",
     "chai": "^5.1.2",
+    "cypress": "^13.17.0",
     "eslint": "^8.57.0",
     "eslint-config-standard": "^17.1.0",
+    "http-server": "^14.1.1",
     "jsdom": "^25.0.1",
     "jsdom-global": "^3.0.2",
-    "mocha": "^11.0.2"
+    "mocha": "^11.0.2",
+    "start-server-and-test": "^2.0.9"
   }
 }
