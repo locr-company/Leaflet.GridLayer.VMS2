@@ -242,8 +242,8 @@ class TextSvgLayer extends SvgLayer {
 class PoiLayer {
   #poiData
 
-  constructor(iconData) {
-    this.#poiData = { iconData }
+  constructor(poiData) {
+    this.#poiData = { poiData }
   }
 
   getPoiData() {
