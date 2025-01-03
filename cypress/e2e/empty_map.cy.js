@@ -1,4 +1,6 @@
-describe('template spec', () => {
+describe('basic map specs', () => {
+  const prefix = 'data:image/png;base64,'
+
   it('can display an empty (blue-water) map.', () => {
     cy.visit('http://localhost:9876/empty_map.html')
 
@@ -12,8 +14,8 @@ describe('template spec', () => {
 
           cy.wrap(layer.getPrintCanvas()).then(canvas => {
             const image = canvas[0].toDataURL('image/png')
-            cy.fixture('empty_map.base64').then(refImage => {
-              expect(refImage).to.equal(image)
+            cy.fixture('empty_map.png').then(refImage => {
+              expect(refImage).to.equal(image.slice(prefix.length))
             })
           })
         })
