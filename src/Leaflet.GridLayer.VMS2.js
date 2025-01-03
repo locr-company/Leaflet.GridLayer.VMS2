@@ -694,8 +694,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         iconData.iconAnchor[0] *= this.currentMarkerScale 
         iconData.iconAnchor[1] *= this.currentMarkerScale 
         
-        const latitude = poiData.marker?.getLatLng().lat ?? iconData.latitude
-        const longitude = poiData.marker?.getLatLng().lng ?? iconData.longitude
+        const latitude = poiData.marker?.getLatLng().lat ?? poiData.latitude
+        const longitude = poiData.marker?.getLatLng().lng ?? poiData.longitude
         const marker = L.marker([latitude, longitude], { icon: L.icon(iconData) })
 
         marker.addTo(this._map)
