@@ -172,6 +172,49 @@ describe('MapOverlay', () => {
       const expectedSvgAfterReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${rawSvg1}${textSvgLayer2.getSvgSource()}${textSvgLayer3.getSvgSource()}</svg>`
       expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgAfterReplace)
     })
+
+    it('replaceTextContent method with a non-string id throws an error', () => {
+      const mapOverlay = new MapOverlay({ width: 100, height: 200 })
+
+      assert.throws(() => mapOverlay.replaceTextContent(1), TypeError)
+    })
+
+    it('replaceTextContent method with a non-string textContent throws an error', () => {
+      const mapOverlay = new MapOverlay({ width: 100, height: 200 })
+
+      assert.throws(() => mapOverlay.replaceTextContent('1', 1), TypeError)
+    })
+
+    it('replaceTextContent method with a non-existing id throws an error', () => {
+      const mapOverlay = new MapOverlay({ width: 100, height: 200 })
+
+      const textSvgLayer = new TextSvgLayer({ text: 'Hello, world!', x: '100', y: '200', id: '1' })
+
+      mapOverlay.add(textSvgLayer)
+
+      const expectedSvg = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${textSvgLayer.getSvgSource()}</svg>`
+      expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvg)
+
+      assert.throws(() => mapOverlay.replaceTextContent('2', 'foo'), ReferenceError)
+    })
+
+    it('replaceTextContent method with a existing id replaces text', () => {
+      const mapOverlay = new MapOverlay({ width: 100, height: 200 })
+
+      const textSvgLayer = new TextSvgLayer({ text: 'Hello, world!', x: '100', y: '200', id: '1' })
+
+      mapOverlay.add(textSvgLayer)
+
+      const expectedSvgBeforeTextReplacement = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${textSvgLayer.getSvgSource()}</svg>`
+      expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgBeforeTextReplacement)
+
+      mapOverlay.replaceTextContent('1', 'foo')
+
+      const expectedTextSvgLayerAfterReplacement = new TextSvgLayer({ text: 'foo', x: '100', y: '200', id: '1' })
+
+      const expectedSvgAfterTextReplacement = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${expectedTextSvgLayerAfterReplacement.getSvgSource()}</svg>`
+      expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgAfterTextReplacement)
+    })
   })
 
   describe('SvgLayer', () => {
