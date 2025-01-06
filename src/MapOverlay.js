@@ -156,6 +156,38 @@ export default class MapOverlay {
 
     return poiDatas
   }
+
+  /**
+   * @param {string} id
+   * @param {string} textContent
+   */
+  replaceTextContent(id, textContent) {
+    if (typeof id !== 'string') {
+      throw new TypeError('id must be a string')
+    }
+    if (typeof textContent !== 'string') {
+      throw new TypeError('textContent must be a string')
+    }
+
+    for (const layerIndex in this.#layers) {
+      const currentLayer = this.#layers[layerIndex]
+
+      if(!(currentLayer instanceof TextSvgLayer)) {
+        continue
+      }
+      const domParser = new DOMParser()
+      const currentParsedLayerDom = domParser.parseFromString(currentLayer.getSvgSource(), 'application/xml')
+
+      if (currentParsedLayerDom.documentElement.id !== id) {
+        continue
+      }
+
+      this.#layers[layerIndex] = currentLayer.buildLayerWithReplacedTextContent(textContent)
+      return
+    }
+
+    throw new ReferenceError(`TextSvgLayer with id: "${id}" not found`)
+  }
 }
 
 class SvgLayer {
@@ -214,6 +246,11 @@ class ImageSvgLayer extends SvgLayer {
 
 class TextSvgLayer extends SvgLayer {
   /**
+   * @type {{text: string, x: string|number, y: string|number, [key: string]: any}}
+   */
+  #data
+
+  /**
    * @param {{text: string, x: string|number, y: string|number, [key: string]: any}} textInfo
    */
   constructor(textInfo) {
@@ -259,6 +296,16 @@ class TextSvgLayer extends SvgLayer {
     }
 
     super(svgTextElement.outerHTML)
+
+    this.#data = textInfo
+  }
+
+  /**
+   * @param {string} textContent
+   * @returns {TextSvgLayer}
+   */
+  buildLayerWithReplacedTextContent(textContent) {
+    return new TextSvgLayer({ ...this.#data, text: textContent })
   }
 }
 
