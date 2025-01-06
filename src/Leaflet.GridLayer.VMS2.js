@@ -344,11 +344,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                 const iconSvgElement = document.createElementNS('http://www.w3.org/2000/svg', 'image')
                 
-                iconSvgElement.setAttribute('href', poiData.iconData.iconUrl)
-                iconSvgElement.setAttribute('x', (markerPoint.x - poiData.iconData.iconAnchor[0] - pixelOrigin.x) * printFormatSize.printScale / this.options.mapScale)
-                iconSvgElement.setAttribute('y', (markerPoint.y - poiData.iconData.iconAnchor[1] - pixelOrigin.y) * printFormatSize.printScale / this.options.mapScale)
-                iconSvgElement.setAttribute('width', poiData.iconData.iconSize[0] * printFormatSize.printScale / this.options.mapScale)
-                iconSvgElement.setAttribute('height', poiData.iconData.iconSize[1] * printFormatSize.printScale / this.options.mapScale)
+                iconSvgElement.setAttribute('href', poiData.iconUrl)
+                iconSvgElement.setAttribute('x', (markerPoint.x - poiData.iconAnchor[0] - pixelOrigin.x) * printFormatSize.printScale / this.options.mapScale)
+                iconSvgElement.setAttribute('y', (markerPoint.y - poiData.iconAnchor[1] - pixelOrigin.y) * printFormatSize.printScale / this.options.mapScale)
+                iconSvgElement.setAttribute('width', poiData.iconSize[0] * printFormatSize.printScale / this.options.mapScale)
+                iconSvgElement.setAttribute('height', poiData.iconSize[1] * printFormatSize.printScale / this.options.mapScale)
 
                 const firstChild = mapOverlaySvgElement.firstChild
                 mapOverlaySvgElement.insertBefore(iconSvgElement, firstChild)                
@@ -687,7 +687,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       const poiDatas = this.mapOverlay.getPoiDatas()
 
       for(const poiData of poiDatas) {
-        const iconData = JSON.parse(JSON.stringify(poiData.iconData))
+        const iconData = JSON.parse(JSON.stringify(poiData))
 
         iconData.iconSize[0] *= this.currentMarkerScale 
         iconData.iconSize[1] *= this.currentMarkerScale 
