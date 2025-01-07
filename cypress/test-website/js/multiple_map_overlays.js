@@ -7,12 +7,20 @@ L.Map.addInitHook(function () {
   this.getContainer().leafletMap = this
 })
 
+let poiLayerAdded = false
+const initialCenter = {
+  lat: 52.27645,
+  lng: 10.53453
+}
+const printFormat = getPrintFormat()
+const mapOverlay = new MapOverlay(printFormat.getSize())
+
 const mapContainer = document.getElementById('map')
 
 const map = L.map(mapContainer, {
   minZoom: 0,
   maxZoom: 19
-}).setView([52.27645, 10.53453], 15)
+}).setView([initialCenter.lat, initialCenter.lng], 15)
 
 const resizeObserver = new ResizeObserver( ( entries ) => {
   for ( const entry of entries ) {
@@ -31,6 +39,36 @@ const vms2Layer = L.gridLayer.vms2({
 
 vms2Layer.addTo(map)
 
+/**
+ * @returns {{width: number, height: number}}
+ */
+function getMapContainerFormat() {
+  const mapContainerFormatElement = document.getElementById('map-container-format')
+  if (!(mapContainerFormatElement instanceof HTMLSelectElement)) {
+    throw new Error('map-container-format element not found')
+  }
+  if (mapContainerFormatElement.selectedOptions.length === 0) {
+    throw new Error('no map container format selected')
+  }
+
+  const selectedOption = mapContainerFormatElement.selectedOptions[0]
+  if (!(selectedOption instanceof HTMLOptionElement)) {
+    throw new Error('selected option not found')
+  }
+
+  const dataMapContainerFormatAttr = selectedOption.attributes.getNamedItem('data-map-container-format')
+  if (!(dataMapContainerFormatAttr instanceof Attr)) {
+    throw new Error('data-map-container-format attribute not found')
+  }
+
+  const mapContainerFormat = JSON.parse(dataMapContainerFormatAttr.value)
+
+  return {
+    width: mapContainerFormat.width,
+    height: mapContainerFormat.height
+  }
+}
+
 function getTextOverlayContent() {
   const textSvgOverlayElement = document.getElementById('text-svg-overlay')
   if (textSvgOverlayElement instanceof HTMLTextAreaElement) {
@@ -46,6 +84,23 @@ function getTextOverlayContent() {
 
     return textContentLines.join('\n')
   }
+}
+
+function getPoiData() {
+  const poiIconsElement = document.getElementById('poi-icons')
+  if (!(poiIconsElement instanceof HTMLSelectElement)) {
+    throw new Error('poi-icons element not found')
+  }
+  if (poiIconsElement.selectedOptions.length === 0) {
+    throw new Error('no poi icon selected')
+  }
+
+  const dataPoiDataAttr = poiIconsElement.selectedOptions[0].attributes.getNamedItem('data-poi-data')
+  if (!(dataPoiDataAttr instanceof Attr)) {
+    throw new Error('data-poi-data attribute not found')
+  }
+
+  return JSON.parse(dataPoiDataAttr.value)
 }
 
 /**
@@ -68,6 +123,13 @@ function getPrintFormat() {
   return new PrintFormat(JSON.parse(dataPrintFormatAttr.value))
 }
 
+function initMapContainerFormatElement() {
+  const mapContainerFormatElement = document.getElementById('map-container-format')
+  if (mapContainerFormatElement instanceof HTMLSelectElement) {
+    mapContainerFormatElement.addEventListener('change', refreshMapContainerFormat)
+  }
+}
+
 function initTextSvgOverlayElement() {
   const textSvgOverlayElement = document.getElementById('text-svg-overlay')
   if (textSvgOverlayElement instanceof HTMLTextAreaElement) {
@@ -76,11 +138,37 @@ function initTextSvgOverlayElement() {
   }
 }
 
-function refreshMapOverlay() {
-  const printFormat = getPrintFormat()
-  const mapOverlay = new MapOverlay(printFormat.getSize())
+function initPoiDataElement() {
+  const poiIconsElement = document.getElementById('poi-icons')
+  if (poiIconsElement instanceof HTMLSelectElement) {
+    poiIconsElement.addEventListener('change', refreshMapOverlay)
+  }
+}
 
-  const rawCircleSvgLayer = `<g>
+function initPrintFormatElement() {
+  const printFormatElement = document.getElementById('print-format')
+  if (printFormatElement instanceof HTMLSelectElement) {
+    printFormatElement.addEventListener('change', refreshPrintFormat)
+  }
+}
+
+function refreshMapContainerFormat() {
+  const mapContainerFormat = getMapContainerFormat()
+  mapContainer.style.width = `${mapContainerFormat.width}px`
+  mapContainer.style.height = `${mapContainerFormat.height}px`
+  map.invalidateSize()
+
+  const elementIdsToResize = ['text-svg-overlay', 'print-format', 'map-container-format', 'poi-icons']
+  for (const elementId of elementIdsToResize) {
+    const element = document.getElementById(elementId)
+    if (element instanceof HTMLElement) {
+      element.style.width = `${mapContainerFormat.width}px`
+    }
+  }
+}
+
+function refreshMapOverlay() {
+  const rawCircleSvgLayer = `<g id="my-circle">
       <defs>
           <mask id="circle-mask">
               <rect width="100%" height="100%" fill="white"/>
@@ -91,24 +179,26 @@ function refreshMapOverlay() {
   </g>`
   const circleSvgLayer = new SvgLayer(rawCircleSvgLayer)
 
-  const textSvgLayer = new TextSvgLayer({text: getTextOverlayContent(), x: '50%', y: '30%', 'font-size': '2cm', 'text-anchor': 'middle', 'dominant-baseline': 'middle'})
+  const textSvgLayer = new TextSvgLayer({id: 'my-text', text: getTextOverlayContent(), x: '50%', y: '30%', 'font-size': '2cm', 'text-anchor': 'middle', 'dominant-baseline': 'middle'})
 
-  const imageSvgLayer = new ImageSvgLayer({href: 'http://localhost:9876/assets/gfx/cup_of_coffee.jpeg', x: 'calc(50% - 128px)', y: 'calc(50% + 64px)', width: '256px', height: '256px'})
+  const imageSvgLayer = new ImageSvgLayer({id: 'my-image', href: 'assets/gfx/cup_of_coffee.jpeg', x: 'calc(50% - 128px)', y: 'calc(50% + 64px)', width: '256px', height: '256px'})
 
   const iconData = {
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', 
-    latitude: 52.27645,
-    longitude: 10.53453,
-    iconSize: [25, 41],
-    iconAnchor: [12.5, 41],
+    ...getPoiData(),
+    id: 'my-poi'
   }
-  const poiLayer = new PoiLayer(iconData)
+  if (!poiLayerAdded) {
+    iconData.latitude = initialCenter.lat
+    iconData.longitude = initialCenter.lng
+  }
 
-  mapOverlay.add(poiLayer)
-  mapOverlay.add(textSvgLayer)
-  mapOverlay.add(circleSvgLayer)
-  mapOverlay.add(imageSvgLayer)
+  mapOverlay.addOrReplace(new PoiLayer(iconData))
+  poiLayerAdded = true
 
+  mapOverlay.addOrReplace(textSvgLayer)
+  mapOverlay.addOrReplace(circleSvgLayer)
+  mapOverlay.addOrReplace(imageSvgLayer)
+  
   vms2Layer.setMapOverlay(mapOverlay)
 }
 
@@ -117,5 +207,9 @@ function refreshPrintFormat() {
 }
 
 initTextSvgOverlayElement()
+initPrintFormatElement()
+initMapContainerFormatElement()
+initPoiDataElement()
 refreshPrintFormat()
 refreshMapOverlay()
+refreshMapContainerFormat()
