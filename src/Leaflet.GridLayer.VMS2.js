@@ -252,9 +252,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     this.mapOverlayMarkerDatas = []
 
     if(this._map) {
-      this._map.invalidateSize()
-
-      this._map.fire('resize')
+      this._rebuildMapOverlay()
     }
   },
   getPrintCanvas: async function () {
@@ -707,17 +705,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
     }
   },
-  _onResize: function (event) {
-    if (this.printFormat) {
-      if (!this.printFormatMaskDiv.isConnected) {
-        this._map.getContainer().appendChild(this.printFormatMaskDiv)
-      }
-    } else {
-      if (this.printFormatMaskDiv.isConnected) {
-        this.printFormatMaskDiv.remove()
-      }
-    }
-
+  _rebuildMapOverlay: function () {
     if (this.mapOverlay) {
       if (!this.mapOverlayDiv.isConnected) {
         this._map.getContainer().appendChild(this.mapOverlayDiv)
@@ -727,6 +715,31 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     } else {
       if (this.mapOverlayDiv.isConnected) {
         this.mapOverlayDiv.remove()
+      }
+    }
+
+    if (this.printFormat) {
+      const printFormatSize = this.printFormat.getSize()
+
+      if(this.mapOverlay) {
+        let printFormatScale = 1
+        if (this.lastPrintFormatSize) {
+          printFormatScale = Math.sqrt(printFormatSize.width * printFormatSize.height) / Math.sqrt(this.lastPrintFormatSize.width * this.lastPrintFormatSize.height)
+        }
+        this._updateMapOverlayMarkerDatas(printFormatScale)
+      }
+
+      this.mapOverlayDiv.innerHTML = this.mapOverlay?.getSvgOverlay({ width: printFormatSize.width, height: printFormatSize.height }) ?? ''
+    }
+  },
+  _onResize: function (event) {
+    if (this.printFormat) {
+      if (!this.printFormatMaskDiv.isConnected) {
+        this._map.getContainer().appendChild(this.printFormatMaskDiv)
+      }
+    } else {
+      if (this.printFormatMaskDiv.isConnected) {
+        this.printFormatMaskDiv.remove()
       }
     }
 
@@ -765,17 +778,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       const center = this._map.getCenter()
       const newZoom = this._map.getZoom() + Math.log(this.options.mapScale * printFormatScale / previousMapScale) / Math.log(this.options.zoomPowerBase)
 
-      if(this.mapOverlay) {
-        this._updateMapOverlayMarkerDatas(printFormatScale)
-      }
-
       // eslint-disable-next-line no-underscore-dangle
       this._map._resetView(center, newZoom, true)
 
-      this.mapOverlayDiv.innerHTML = this.mapOverlay?.getSvgOverlay({ width: printFormatSize.width, height: printFormatSize.height }) ?? ''
-
       this.redraw()
     }
+
+    this._rebuildMapOverlay()
   },
   _checkAndSetDisplacement: function (displacementLayers, displacementLayerNames, boxes) {
     for (const box of boxes) {

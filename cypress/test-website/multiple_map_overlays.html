@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Test Website</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+        <script type="module" src="js/multiple_map_overlays.js"></script>
+    </head>
+    <body style="margin: 0; padding: 0;">
+        <div id="map" style="border: 1px solid black; width: 500px; height: 500px; margin-left: auto; margin-right: auto;"></div>
+        <div style="text-align: center;">
+            <textarea id="text-svg-overlay" style="width: 500px; margin-top: 10px;" rows="5">
+                Hello World!
+                How are you?
+            </textarea>
+        </div>
+        <div style="text-align: center;">
+            <select id="print-format" style="width: 500px; margin-top: 10px;">
+                <option value="din-a2-portrait" data-print-format="{&quot;width&quot;: 42, &quot;height&quot;: 59.4, &quot;unitType&quot;: &quot;cm&quot;}">DIN A2 (Portrait)</option>
+                <option value="din-a3-portrait" data-print-format="{&quot;width&quot;: 29.7, &quot;height&quot;: 42, &quot;unitType&quot;: &quot;cm&quot;}">DIN A3 (Portrait)</option>
+                <option value="din-a4-portrait" data-print-format="{&quot;width&quot;: 21, &quot;height&quot;: 29.7, &quot;unitType&quot;: &quot;cm&quot;}">DIN A4 (Portrait)</option>
+                <option value="din-a5-portrait" data-print-format="{&quot;width&quot;: 14.8, &quot;height&quot;: 21, &quot;unitType&quot;: &quot;cm&quot;}" selected>DIN A5 (Portrait)</option>
+                <option value="din-a6-portrait" data-print-format="{&quot;width&quot;: 10.5, &quot;height&quot;: 14.8, &quot;unitType&quot;: &quot;cm&quot;}">DIN A6 (Portrait)</option>
+                <option value="din-a7-portrait" data-print-format="{&quot;width&quot;: 7.4, &quot;height&quot;: 10.5, &quot;unitType&quot;: &quot;cm&quot;}">DIN A7 (Portrait)</option>
+                <option value="din-a2-landscape" data-print-format="{&quot;width&quot;: 59.4, &quot;height&quot;: 42, &quot;unitType&quot;: &quot;cm&quot;}">DIN A2 (Landscape)</option>
+                <option value="din-a3-landscape" data-print-format="{&quot;width&quot;: 42, &quot;height&quot;: 29.7, &quot;unitType&quot;: &quot;cm&quot;}">DIN A3 (Landscape)</option>
+                <option value="din-a4-landscape" data-print-format="{&quot;width&quot;: 29.7, &quot;height&quot;: 21, &quot;unitType&quot;: &quot;cm&quot;}">DIN A4 (Landscape)</option>
+                <option value="din-a5-landscape" data-print-format="{&quot;width&quot;: 21, &quot;height&quot;: 14.8, &quot;unitType&quot;: &quot;cm&quot;}">DIN A5 (Landscape)</option>
+                <option value="din-a6-landscape" data-print-format="{&quot;width&quot;: 14.8, &quot;height&quot;: 10.5, &quot;unitType&quot;: &quot;cm&quot;}">DIN A6 (Landscape)</option>
+                <option value="din-a7-landscape" data-print-format="{&quot;width&quot;: 10.5, &quot;height&quot;: 7.4, &quot;unitType&quot;: &quot;cm&quot;}">DIN A7 (Landscape)</option>
+            </select>
+        </div>
+    </body>
+</html>
