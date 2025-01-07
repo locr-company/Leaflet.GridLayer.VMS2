@@ -360,7 +360,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
             let svgString = xmlSerializer.serializeToString(mapOverlaySvgElement)
 
-            const urlStringMatches = [...svgString.matchAll(/url\('(https?:\/\/[^\s']+)'/g)].concat([...svgString.matchAll(/href="(https?:\/\/[^\s"]+)"/g)])
+            const urlStringMatches = [...svgString.matchAll(/url\('((https?:\/\/[^\s']+)|(.*\/[^\s']+))'/g)].concat([...svgString.matchAll(/href="((https?:\/\/[^\s"]+)|(.*\/[^\s"]+))"/g)])
 
             function fetchAndConvertToDataURL(urlString) {
               return new Promise((resolve, reject) => {
