@@ -50,8 +50,8 @@ export default class MapOverlay {
    * @returns {void}
    */
   add(layer) {
-    if (!(layer instanceof SvgLayer)) {
-      throw new TypeError('layer must be an instance of SvgLayer')
+    if (!(layer instanceof SvgLayer) && !(layer instanceof PoiLayer)) {
+      throw new TypeError('layer must be an instance of SvgLayer or PoiLayer')
     }
 
     this.#layers.push(layer)
@@ -62,28 +62,51 @@ export default class MapOverlay {
    * @returns {void}
    */
   addOrReplace(layer) {
-    if (!(layer instanceof SvgLayer)) {
-      throw new TypeError('layer must be an instance of SvgLayer')
+    if (!(layer instanceof SvgLayer) && !(layer instanceof PoiLayer)) {
+      throw new TypeError('layer must be an instance of SvgLayer or PoiLayer')
     }
 
-    const domParser = new DOMParser()
+    if(layer instanceof SvgLayer) {
+      const domParser = new DOMParser()
 
-    const parsedLayerDom = domParser.parseFromString(layer.getSvgSource(), 'application/xml')
-    const layerId = parsedLayerDom.documentElement.id || ''
-    if (layerId === '') {
-      this.add(layer)
-      return
-    }
+      const parsedLayerDom = domParser.parseFromString(layer.getSvgSource(), 'application/xml')
+      const layerId = parsedLayerDom.documentElement.id || ''
 
-    for (const layerIndex in this.#layers) {
-      const currentLayer = this.#layers[layerIndex]
-      const currentParsedLayerDom = domParser.parseFromString(currentLayer.getSvgSource(), 'application/xml')
-      if (currentParsedLayerDom.documentElement.id === layerId) {
-        this.#layers[layerIndex] = layer
-        return
+      if (layerId !== '') {
+        for (const layerIndex in this.#layers) {
+          const currentLayer = this.#layers[layerIndex]
+
+          if(currentLayer instanceof SvgLayer) {
+            const currentParsedLayerDom = domParser.parseFromString(currentLayer.getSvgSource(), 'application/xml')
+
+            if (currentParsedLayerDom.documentElement.id === layerId) {
+              this.#layers[layerIndex] = layer
+
+              return
+            }
+          }
+        }
+      }
+    } else if(layer instanceof PoiLayer) {
+      const poiData = layer.getPoiData()
+
+      if(poiData.id !== '') {
+        for (const layerIndex in this.#layers) {
+          const currentLayer = this.#layers[layerIndex]
+  
+          if(currentLayer instanceof PoiLayer) {
+            const currentPoiData = currentLayer.getPoiData()
+
+            if (currentPoiData.id === poiData.id) {
+              Object.assign(currentPoiData, poiData)
+  
+              return
+            }
+          }
+        }
       }
     }
-
+  
     this.add(layer)
   }
 
@@ -132,6 +155,38 @@ export default class MapOverlay {
     }
 
     return poiDatas
+  }
+
+  /**
+   * @param {string} id
+   * @param {string} textContent
+   */
+  replaceTextContent(id, textContent) {
+    if (typeof id !== 'string') {
+      throw new TypeError('id must be a string')
+    }
+    if (typeof textContent !== 'string') {
+      throw new TypeError('textContent must be a string')
+    }
+
+    for (const layerIndex in this.#layers) {
+      const currentLayer = this.#layers[layerIndex]
+
+      if(!(currentLayer instanceof TextSvgLayer)) {
+        continue
+      }
+      const domParser = new DOMParser()
+      const currentParsedLayerDom = domParser.parseFromString(currentLayer.getSvgSource(), 'application/xml')
+
+      if (currentParsedLayerDom.documentElement.id !== id) {
+        continue
+      }
+
+      this.#layers[layerIndex] = currentLayer.buildLayerWithReplacedTextContent(textContent)
+      return
+    }
+
+    throw new ReferenceError(`TextSvgLayer with id: "${id}" not found`)
   }
 }
 
@@ -191,6 +246,11 @@ class ImageSvgLayer extends SvgLayer {
 
 class TextSvgLayer extends SvgLayer {
   /**
+   * @type {{text: string, x: string|number, y: string|number, [key: string]: any}}
+   */
+  #data
+
+  /**
    * @param {{text: string, x: string|number, y: string|number, [key: string]: any}} textInfo
    */
   constructor(textInfo) {
@@ -236,6 +296,16 @@ class TextSvgLayer extends SvgLayer {
     }
 
     super(svgTextElement.outerHTML)
+
+    this.#data = textInfo
+  }
+
+  /**
+   * @param {string} textContent
+   * @returns {TextSvgLayer}
+   */
+  buildLayerWithReplacedTextContent(textContent) {
+    return new TextSvgLayer({ ...this.#data, text: textContent })
   }
 }
 
@@ -243,7 +313,7 @@ class PoiLayer {
   #poiData
 
   constructor(poiData) {
-    this.#poiData = { poiData }
+    this.#poiData = poiData
   }
 
   getPoiData() {

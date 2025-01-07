@@ -5,6 +5,7 @@ export default class MapOverlay {
     add(layer: SvgLayer): void;
     addOrReplace(layer: SvgLayer): void;
     getSvgOverlay(size: {width?: number, height?: number}|undefined): string;
+    replaceTextContent(id: string, textContent: string): void;
 }
 
 export class SvgLayer {
