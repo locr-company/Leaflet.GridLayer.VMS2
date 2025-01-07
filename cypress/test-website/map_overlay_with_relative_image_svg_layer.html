@@ -39,20 +39,9 @@
             vms2Layer.setMapOverlay(mapOverlay);
 
             vms2Layer.addTo(map);
-
-            const buildPrintCanvasButton = document.getElementById('build-print-canvas');
-            buildPrintCanvasButton.addEventListener('click', () => {
-                vms2Layer.getPrintCanvas().then((printCanvas) => {
-                    const printMap = document.getElementById('print-map');
-                    printMap.innerHTML = '';
-                    printMap.appendChild(printCanvas);
-                });
-            });
         </script>
     </head>
     <body style="margin: 0; padding: 0;">
         <div id="map" style="border: 1px solid black; width: 500px; height: 500px; margin-left: auto; margin-right: auto;"></div>
-        <div style="text-align: center; margin-top: 10px; margin-bottom: 10px;"><button id="build-print-canvas">buildPrintCanvas</button></div>
-        <div id="print-map" style="text-align: center; margin-left: auto; margin-right: auto;"></div>
     </body>
 </html>
