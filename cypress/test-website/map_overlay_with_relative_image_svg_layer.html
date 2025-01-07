@@ -34,7 +34,7 @@
             vms2Layer.setPrintFormat(printFormat);
 
             const mapOverlay = new MapOverlay(printFormat.getSize());
-            const imageSvgLayer = new ImageSvgLayer({href: 'http://localhost:9876/assets/gfx/cup_of_coffee.jpeg', x: 'calc(50% - 128px)', y: 'calc(50% - 128px)', width: '256px', height: '256px'});
+            const imageSvgLayer = new ImageSvgLayer({href: 'assets/gfx/cup_of_coffee.jpeg', x: 'calc(50% - 128px)', y: 'calc(50% - 128px)', width: '256px', height: '256px'});
             mapOverlay.add(imageSvgLayer);
             vms2Layer.setMapOverlay(mapOverlay);
 
