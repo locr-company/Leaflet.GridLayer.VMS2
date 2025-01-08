@@ -687,16 +687,16 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       const poiDatas = this.mapOverlay.getPoiDatas()
 
       for(const poiData of poiDatas) {
-        const iconData = JSON.parse(JSON.stringify(poiData))
+        const newPoiData = JSON.parse(JSON.stringify(poiData))
 
-        iconData.iconSize[0] *= this.currentMarkerScale 
-        iconData.iconSize[1] *= this.currentMarkerScale 
-        iconData.iconAnchor[0] *= this.currentMarkerScale 
-        iconData.iconAnchor[1] *= this.currentMarkerScale 
+        newPoiData.iconData.iconSize[0] *= this.currentMarkerScale 
+        newPoiData.iconData.iconSize[1] *= this.currentMarkerScale 
+        newPoiData.iconData.iconAnchor[0] *= this.currentMarkerScale 
+        newPoiData.iconData.iconAnchor[1] *= this.currentMarkerScale 
         
         const latitude = poiData.marker?.getLatLng().lat ?? poiData.latitude
         const longitude = poiData.marker?.getLatLng().lng ?? poiData.longitude
-        const marker = L.marker([latitude, longitude], { icon: L.icon(iconData) })
+        const marker = L.marker([latitude, longitude], { icon: L.icon(newPoiData.iconData) })
 
         marker.addTo(this._map)
         marker.dragging.enable()
