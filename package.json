@@ -43,17 +43,17 @@
     "leaflet": "^1.7.0"
   },
   "devDependencies": {
-    "@types/leaflet": "^1.9.15",
-    "@typescript-eslint/eslint-plugin": "^8.18.1",
-    "@typescript-eslint/parser": "^8.18.1",
+    "@types/leaflet": "^1.9.16",
+    "@typescript-eslint/eslint-plugin": "^8.19.1",
+    "@typescript-eslint/parser": "^8.19.1",
     "chai": "^5.1.2",
     "cypress": "^13.17.0",
     "eslint": "^8.57.0",
     "eslint-config-standard": "^17.1.0",
     "http-server": "^14.1.1",
-    "jsdom": "^25.0.1",
+    "jsdom": "^26.0.0",
     "jsdom-global": "^3.0.2",
-    "mocha": "^11.0.2",
+    "mocha": "^11.1.0",
     "start-server-and-test": "^2.0.9"
   }
 }
