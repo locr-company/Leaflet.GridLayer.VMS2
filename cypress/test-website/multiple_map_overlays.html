@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Test Website</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+        <script type="module" src="js/multiple_map_overlays.js"></script>
+    </head>
+    <body style="margin: 0; padding: 0;">
+        <div id="map" style="border: 1px solid black; width: 500px; height: 500px; margin-left: auto; margin-right: auto;"></div>
+        <div style="text-align: center;">
+            <select id="print-format" style="width: 500px; margin-top: 10px;">
+                <option value="din-a2-portrait" data-print-format="{&quot;width&quot;: 42, &quot;height&quot;: 59.4, &quot;unitType&quot;: &quot;cm&quot;}">DIN A2 (Portrait)</option>
+                <option value="din-a3-portrait" data-print-format="{&quot;width&quot;: 29.7, &quot;height&quot;: 42, &quot;unitType&quot;: &quot;cm&quot;}">DIN A3 (Portrait)</option>
+                <option value="din-a4-portrait" data-print-format="{&quot;width&quot;: 21, &quot;height&quot;: 29.7, &quot;unitType&quot;: &quot;cm&quot;}">DIN A4 (Portrait)</option>
+                <option value="din-a5-portrait" data-print-format="{&quot;width&quot;: 14.8, &quot;height&quot;: 21, &quot;unitType&quot;: &quot;cm&quot;}" selected>DIN A5 (Portrait)</option>
+                <option value="din-a6-portrait" data-print-format="{&quot;width&quot;: 10.5, &quot;height&quot;: 14.8, &quot;unitType&quot;: &quot;cm&quot;}">DIN A6 (Portrait)</option>
+                <option value="din-a7-portrait" data-print-format="{&quot;width&quot;: 7.4, &quot;height&quot;: 10.5, &quot;unitType&quot;: &quot;cm&quot;}">DIN A7 (Portrait)</option>
+                <option value="din-a2-landscape" data-print-format="{&quot;width&quot;: 59.4, &quot;height&quot;: 42, &quot;unitType&quot;: &quot;cm&quot;}">DIN A2 (Landscape)</option>
+                <option value="din-a3-landscape" data-print-format="{&quot;width&quot;: 42, &quot;height&quot;: 29.7, &quot;unitType&quot;: &quot;cm&quot;}">DIN A3 (Landscape)</option>
+                <option value="din-a4-landscape" data-print-format="{&quot;width&quot;: 29.7, &quot;height&quot;: 21, &quot;unitType&quot;: &quot;cm&quot;}">DIN A4 (Landscape)</option>
+                <option value="din-a5-landscape" data-print-format="{&quot;width&quot;: 21, &quot;height&quot;: 14.8, &quot;unitType&quot;: &quot;cm&quot;}">DIN A5 (Landscape)</option>
+                <option value="din-a6-landscape" data-print-format="{&quot;width&quot;: 14.8, &quot;height&quot;: 10.5, &quot;unitType&quot;: &quot;cm&quot;}">DIN A6 (Landscape)</option>
+                <option value="din-a7-landscape" data-print-format="{&quot;width&quot;: 10.5, &quot;height&quot;: 7.4, &quot;unitType&quot;: &quot;cm&quot;}">DIN A7 (Landscape)</option>
+            </select>
+        </div>
+        <div style="text-align: center;">
+            <select id="map-container-format" style="width: 500px; margin-top: 10px;">
+                <option value="300x300" data-map-container-format="{&quot;width&quot;: 300, &quot;height&quot;: 300}">300x300px</option>
+                <option value="400x400" data-map-container-format="{&quot;width&quot;: 400, &quot;height&quot;: 400}">400x400px</option>
+                <option value="500x500" data-map-container-format="{&quot;width&quot;: 500, &quot;height&quot;: 500}" selected>500x500px</option>
+                <option value="600x600" data-map-container-format="{&quot;width&quot;: 600, &quot;height&quot;: 600}">600x600px</option>
+                <option value="700x700" data-map-container-format="{&quot;width&quot;: 700, &quot;height&quot;: 700}">700x700px</option>
+                <option value="300x700" data-map-container-format="{&quot;width&quot;: 300, &quot;height&quot;: 700}">300x700px</option>
+                <option value="400x600" data-map-container-format="{&quot;width&quot;: 400, &quot;height&quot;: 600}">400x600px</option>
+                <option value="600x400" data-map-container-format="{&quot;width&quot;: 600, &quot;height&quot;: 400}">600x400px</option>
+                <option value="700x300" data-map-container-format="{&quot;width&quot;: 700, &quot;height&quot;: 300}">700x300px</option>
+            </select>
+        </div>
+        <div style="text-align: center;">
+            <textarea id="text-svg-overlay" style="width: 500px; margin-top: 10px; box-sizing: border-box;" rows="5">
+                Hello World!
+                How are you?
+            </textarea>
+        </div>
+        <div style="text-align: center;">
+            <select id="poi-icons" style="width: 500px; margin-top: 10px;">
+                <option value="marker-icon" data-poi-data="{&quot;iconUrl&quot;: &quot;https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png&quot;, &quot;iconSize&quot;: [25, 41], &quot;iconAnchor&quot;: [12.5, 41]}" selected>Leaflet marker-icon</option>
+                <option value="marker-icon-2x" data-poi-data="{&quot;iconUrl&quot;: &quot;https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png&quot;, &quot;iconSize&quot;: [50, 82], &quot;iconAnchor&quot;: [25, 82]}">Leaflet marker-icon-2x</option>
+                <option value="locr-example-pin" data-poi-data="{&quot;iconUrl&quot;: &quot;https://vectormaps2.locr.com/vms2/examples/pin.png&quot;, &quot;iconSize&quot;: [81, 119], &quot;iconAnchor&quot;: [40, 115]}">locr example pin</option>
+            </select>
+        </div>
+        <div style="text-align: center; margin-top: 10px;"><button id="create-print-map">createPrintMap</button></div>
+        <div id="print-map" style="text-align: center; margin-top: 10px;"></div>
+    </body>
+</html>
