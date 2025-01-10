@@ -82,6 +82,73 @@ export default class PrintFormat {
   }
 
   /**
+   * @param {number} mapContainerWidth
+   * @param {number} mapContainerHeight
+   * @returns {string}
+   */
+  buildMaskForClipPath(mapContainerWidth, mapContainerHeight) {
+    const size = this.getSize()
+
+    const aspectRatio = size.width / size.height
+    const mapContainerAspectRatio = mapContainerWidth / mapContainerHeight
+
+    if (aspectRatio > mapContainerAspectRatio) {
+      const topBorderPercent = 50 - mapContainerAspectRatio / aspectRatio * 50
+      const bottomBorderPercent = 100 - topBorderPercent
+
+      return `polygon(0% 0%, 100% 0%, 100% ${topBorderPercent}%, 0% ${topBorderPercent}%, 0% ${bottomBorderPercent}%, 100% ${bottomBorderPercent}%, 100% 100%, 0% 100%)`
+    } else {
+      const leftBorderPercent = 50 - aspectRatio / mapContainerAspectRatio * 50
+      const rightBorderPercent = 100 - leftBorderPercent
+
+      return `polygon(0% 100%, 0% 0%, ${leftBorderPercent}% 0%, ${leftBorderPercent}% 100%, ${rightBorderPercent}% 100%, ${rightBorderPercent}% 0%, 100% 0%, 100% 100%)`
+    }
+  }
+
+  /**
+   * @param {number} mapContainerWidth
+   * @param {number} mapContainerHeight
+   * @returns {number}
+   */
+  calculateMapScale(mapContainerWidth, mapContainerHeight) {
+    const size = this.getSize()
+
+    const aspectRatio = size.width / size.height
+    const mapContainerAspectRatio = mapContainerWidth / mapContainerHeight
+
+    if (aspectRatio > mapContainerAspectRatio) {
+      return mapContainerWidth * size.printScale / size.width
+    } else {
+      return mapContainerHeight * size.printScale / size.height
+    }
+  }
+
+  /**
+   * @param {number} mapContainerWidth
+   * @param {number} mapContainerHeight
+   * @returns {{width: number, height: number}}
+   */
+  calculateVirtualMapContainerSize(mapContainerWidth, mapContainerHeight) {
+    const virtualSize = {
+      width: mapContainerWidth,
+      height: mapContainerHeight
+    }
+
+    const size = this.getSize()
+
+    const aspectRatio = size.width / size.height
+    const mapContainerAspectRatio = mapContainerWidth / mapContainerHeight
+
+    if (aspectRatio > mapContainerAspectRatio) {
+      virtualSize.height *= mapContainerAspectRatio / aspectRatio
+    } else {
+      virtualSize.width *= aspectRatio / mapContainerAspectRatio
+    }
+
+    return virtualSize
+  }
+
+  /**
    * @returns {{width: number, height: number, dpi: number, printScale: number}}
    */
   getSize() {

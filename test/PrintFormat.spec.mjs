@@ -121,4 +121,46 @@ describe('PrintFormat', () => {
     assert.throws(() => PrintFormat.CM_PER_INCH = 1, TypeError)
     assert.throws(() => PrintFormat.MM_PER_INCH = 1, TypeError)
   })
+
+  it('buildMaskForClipPath() returns a correct portrait polygon string', () => {
+    const printFormat = new PrintFormat({width: 14.8, height: 21, unitType: 'cm'})
+    
+    const mask = printFormat.buildMaskForClipPath(500, 500)
+    expect(mask).to.equal('polygon(0% 100%, 0% 0%, 14.76190476190476% 0%, 14.76190476190476% 100%, 85.23809523809524% 100%, 85.23809523809524% 0%, 100% 0%, 100% 100%)')
+  })
+
+  it('buildMaskForClipPath() returns a correct landscape polygon string', () => {
+    const printFormat = new PrintFormat({width: 21, height: 14.8, unitType: 'cm'})
+    
+    const mask = printFormat.buildMaskForClipPath(500, 500)
+    expect(mask).to.equal('polygon(0% 0%, 100% 0%, 100% 14.76190476190476%, 0% 14.76190476190476%, 0% 85.23809523809524%, 100% 85.23809523809524%, 100% 100%, 0% 100%)')
+  })
+
+  it('calculateMapScale() returns a correct map scale for portrait', () => {
+    const printFormat = new PrintFormat({width: 14.8, height: 21, unitType: 'cm'})
+    
+    const mapScale = printFormat.calculateMapScale(500, 500)
+    expect(mapScale).to.equal(0.5859037378392217)
+  })
+
+  it('calculateMapScale() returns a correct map scale for landscape', () => {
+    const printFormat = new PrintFormat({width: 21, height: 14.8, unitType: 'cm'})
+    
+    const mapScale = printFormat.calculateMapScale(500, 500)
+    expect(mapScale).to.equal(0.5859037378392217)
+  })
+
+  it('calculateVirtualMapContainerSize() returns a correct size for portrait', () => {
+    const printFormat = new PrintFormat({width: 14.8, height: 21, unitType: 'cm'})
+    
+    const size = printFormat.calculateVirtualMapContainerSize(500, 500)
+    expect(size).to.deep.equal({width: 352.3809523809524, height: 500})
+  })
+
+  it('calculateVirtualMapContainerSize() returns a correct size for landscape', () => {
+    const printFormat = new PrintFormat({width: 21, height: 14.8, unitType: 'cm'})
+    
+    const size = printFormat.calculateVirtualMapContainerSize(500, 500)
+    expect(size).to.deep.equal({width: 500, height: 352.3809523809524})
+  })
 })

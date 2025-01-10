@@ -72,16 +72,12 @@ RandomGenerator.prototype['random_pick'] = function (elements, elementCounts) {
 L.GridLayer.VMS2 = L.GridLayer.extend({
   numberOfRequestedTiles: 0,
 
-  allSystemsGo: true,
-
   tileSize: 0,
 
   randomGenerator: new RandomGenerator(),
 
   tileDbInfos: null,
   tileDbInfosResolves: [],
-
-  unicodeDataTable,
 
   tileCanvases: [],
   saveDataCanvases: [],
@@ -344,11 +340,14 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                 const iconSvgElement = document.createElementNS('http://www.w3.org/2000/svg', 'image')
                 
-                iconSvgElement.setAttribute('href', poiData.iconUrl)
-                iconSvgElement.setAttribute('x', (markerPoint.x - poiData.iconAnchor[0] - pixelOrigin.x) * printFormatSize.printScale / this.options.mapScale)
-                iconSvgElement.setAttribute('y', (markerPoint.y - poiData.iconAnchor[1] - pixelOrigin.y) * printFormatSize.printScale / this.options.mapScale)
-                iconSvgElement.setAttribute('width', poiData.iconSize[0] * printFormatSize.printScale / this.options.mapScale)
-                iconSvgElement.setAttribute('height', poiData.iconSize[1] * printFormatSize.printScale / this.options.mapScale)
+                const x = (markerPoint.x - pixelOrigin.x) * printFormatSize.printScale / (this.printMapScale ?? this.options.mapScale)
+                const y = (markerPoint.y - pixelOrigin.y) * printFormatSize.printScale / (this.printMapScale ?? this.options.mapScale)
+
+                iconSvgElement.setAttribute('href', poiData.iconData.iconUrl)
+                iconSvgElement.setAttribute('x', x - poiData.iconData.iconAnchor[0] * printFormatSize.printScale)
+                iconSvgElement.setAttribute('y', y - poiData.iconData.iconAnchor[1] * printFormatSize.printScale)
+                iconSvgElement.setAttribute('width', poiData.iconData.iconSize[0] * printFormatSize.printScale)
+                iconSvgElement.setAttribute('height', poiData.iconData.iconSize[1] * printFormatSize.printScale)
 
                 const firstChild = mapOverlaySvgElement.firstChild
                 mapOverlaySvgElement.insertBefore(iconSvgElement, firstChild)                
@@ -664,39 +663,29 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     this._container = null
     this._tileZoom = undefined
   },
-  _updateMapOverlayMarkerDatas: function (printFormatScale) {
-    let newMarkerScale
+  _updateMapOverlayMarkerDatas: function () {
+    const markerScale = this.printMapScale ?? this.options.mapScale
 
-    if(printFormatScale) {
-      newMarkerScale = printFormatScale
-    } else {
-      newMarkerScale = this.options.mapScale
+    for(const marker of this.mapOverlayMarkerDatas) {
+      this._map.removeLayer(marker)
     }
 
-    if(this.currentMarkerScale != newMarkerScale) {
-      for(const marker of this.mapOverlayMarkerDatas) {
-        this._map.removeLayer(marker)
-      }
-  
-      this.mapOverlayMarkerDatas = []
-
-      this.currentMarkerScale = this.options.mapScale
-    }
+    this.mapOverlayMarkerDatas = []
 
     if(this.mapOverlayMarkerDatas.length == 0) {
       const poiDatas = this.mapOverlay.getPoiDatas()
 
       for(const poiData of poiDatas) {
-        const iconData = JSON.parse(JSON.stringify(poiData))
+        const newPoiData = JSON.parse(JSON.stringify(poiData))
 
-        iconData.iconSize[0] *= this.currentMarkerScale 
-        iconData.iconSize[1] *= this.currentMarkerScale 
-        iconData.iconAnchor[0] *= this.currentMarkerScale 
-        iconData.iconAnchor[1] *= this.currentMarkerScale 
+        newPoiData.iconData.iconSize[0] *= markerScale 
+        newPoiData.iconData.iconSize[1] *= markerScale 
+        newPoiData.iconData.iconAnchor[0] *= markerScale 
+        newPoiData.iconData.iconAnchor[1] *= markerScale 
         
         const latitude = poiData.marker?.getLatLng().lat ?? poiData.latitude
         const longitude = poiData.marker?.getLatLng().lng ?? poiData.longitude
-        const marker = L.marker([latitude, longitude], { icon: L.icon(iconData) })
+        const marker = L.marker([latitude, longitude], { icon: L.icon(newPoiData.iconData) })
 
         marker.addTo(this._map)
         marker.dragging.enable()
@@ -736,17 +725,17 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       const printSizeAspectRatio = printFormatSize.width / printFormatSize.height
       const mapSizeAspectRatio = this._map.getSize().x / this._map.getSize().y
 
-      const previousMapScale = this.options.mapScale
+      const previousPrintMapScale = this.printMapScale ?? this.options.mapScale
 
       if (printSizeAspectRatio > mapSizeAspectRatio) {
-        this.options.mapScale = this._map.getSize().x * printFormatSize.printScale / printFormatSize.width
+        this.printMapScale = this._map.getSize().x * printFormatSize.printScale / printFormatSize.width
 
         const topBorderPercent = 50 - mapSizeAspectRatio / printSizeAspectRatio * 50
         const bottomBorderPercent = 100 - topBorderPercent
 
         this.printFormatMaskDiv.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${topBorderPercent}%, 0% ${topBorderPercent}%, 0% ${bottomBorderPercent}%, 100% ${bottomBorderPercent}%, 100% 100%, 0% 100%)`
       } else {
-        this.options.mapScale = this._map.getSize().y * printFormatSize.printScale / printFormatSize.height
+        this.printMapScale = this._map.getSize().y * printFormatSize.printScale / printFormatSize.height
 
         const leftBorderPercent = 50 - printSizeAspectRatio / mapSizeAspectRatio * 50
         const rightBorderPercent = 100 - leftBorderPercent
@@ -754,19 +743,19 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         this.printFormatMaskDiv.style.clipPath = `polygon(0% 100%, 0% 0%, ${leftBorderPercent}% 0%, ${leftBorderPercent}% 100%, ${rightBorderPercent}% 100%, ${rightBorderPercent}% 0%, 100% 0%, 100% 100%)`
       }
 
-      let printFormatScale = 1
+      let printFormatScaleRatio = 1
 
-      if (this.lastPrintFormatSize) {
-        printFormatScale = Math.sqrt(printFormatSize.width * printFormatSize.height) / Math.sqrt(this.lastPrintFormatSize.width * this.lastPrintFormatSize.height)
+      if (this.previousPrintFormatSize) {
+        printFormatScaleRatio = Math.sqrt(printFormatSize.width * printFormatSize.height) / Math.sqrt(this.previousPrintFormatSize.width * this.previousPrintFormatSize.height)
       }
-      
-      this.lastPrintFormatSize = printFormatSize
+
+      this.previousPrintFormatSize = printFormatSize
       
       const center = this._map.getCenter()
-      const newZoom = this._map.getZoom() + Math.log(this.options.mapScale * printFormatScale / previousMapScale) / Math.log(this.options.zoomPowerBase)
+      const newZoom = this._map.getZoom() + Math.log(printFormatScaleRatio * this.printMapScale / previousPrintMapScale) / Math.log(this.options.zoomPowerBase)
 
       if(this.mapOverlay) {
-        this._updateMapOverlayMarkerDatas(printFormatScale)
+        this._updateMapOverlayMarkerDatas()
       }
 
       // eslint-disable-next-line no-underscore-dangle
@@ -1278,10 +1267,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
               drawingInfo.context.drawImage(
                 drawingInfo.iconImage,
-                (x - drawingInfo.drawingArea.left + iconX) * drawingInfo.mapScale,
-                (drawingInfo.drawingArea.top - y + iconY) * drawingInfo.mapScale,
-                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.mapScale,
-                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.mapScale
+                (x - drawingInfo.drawingArea.left + iconX) * drawingInfo.scale,
+                (drawingInfo.drawingArea.top - y + iconY) * drawingInfo.scale,
+                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.scale,
+                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.scale
               )
             }
           }
@@ -1297,11 +1286,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               drawingInfo.context.textAlign = textDisplacementBox.align
               drawingInfo.context.textBaseline = textDisplacementBox.baseline
 
-              const textX = (x - drawingInfo.drawingArea.left + textDisplacementBox.x) * drawingInfo.mapScale
-              let textY = (drawingInfo.drawingArea.top - y + textDisplacementBox.y) * drawingInfo.mapScale
+              const textX = (x - drawingInfo.drawingArea.left + textDisplacementBox.x) * drawingInfo.scale
+              let textY = (drawingInfo.drawingArea.top - y + textDisplacementBox.y) * drawingInfo.scale
 
               if (textLineInfos.length > 1 && textDisplacementBox.baseline === 'middle') {
-                textY -= drawingInfo.fontSize * drawingInfo.mapScale * (textLineInfos.length - 1) / 2
+                textY -= drawingInfo.fontSize * drawingInfo.scale * (textLineInfos.length - 1) / 2
               }
 
               for (const textLineInfo of textLineInfos) {
@@ -1309,7 +1298,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 drawingInfo.context.strokeText(textLineInfo.text, textX, textY)
                 drawingInfo.context.fillText(textLineInfo.text, textX, textY)
 
-                textY += drawingInfo.fontSize * drawingInfo.mapScale
+                textY += drawingInfo.fontSize * drawingInfo.scale
               }
 
               drawingInfo.context.endGroup()
@@ -1361,19 +1350,19 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             drawingInfo.isGrid
           ) { // Note: Top > Bottom! Allow every location if there is a grid!
             if (drawingInfo.iconAngle !== 0) {
-              drawingInfo.context.setTransform(new DOMMatrix().translate((x - drawingInfo.drawingArea.left) * drawingInfo.mapScale, (drawingInfo.drawingArea.top - y) * drawingInfo.mapScale).rotate(drawingInfo.iconAngle * 180 / Math.PI))
+              drawingInfo.context.setTransform(new DOMMatrix().translate((x - drawingInfo.drawingArea.left) * drawingInfo.scale, (drawingInfo.drawingArea.top - y) * drawingInfo.scale).rotate(drawingInfo.iconAngle * 180 / Math.PI))
               drawingInfo.context.drawImage(
                 drawingInfo.iconImage,
-                iconX * drawingInfo.mapScale, iconY * drawingInfo.mapScale,
-                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.mapScale,
-                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.mapScale)
+                iconX * drawingInfo.scale, iconY * drawingInfo.scale,
+                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.scale,
+                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.scale)
             } else {
               drawingInfo.context.drawImage(
                 drawingInfo.iconImage,
-                (x - drawingInfo.drawingArea.left + iconX) * drawingInfo.mapScale,
-                (drawingInfo.drawingArea.top - y + iconY) * drawingInfo.mapScale,
-                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.mapScale,
-                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.mapScale
+                (x - drawingInfo.drawingArea.left + iconX) * drawingInfo.scale,
+                (drawingInfo.drawingArea.top - y + iconY) * drawingInfo.scale,
+                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.scale,
+                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.scale
               )
             }
           }
@@ -1461,7 +1450,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
-        if (this.unicodeDataTable[text.charCodeAt(characterIndex)]) {
+        if (unicodeDataTable[text.charCodeAt(characterIndex)]) {
           text = [...text].reverse().join('')
 
           break
@@ -1612,11 +1601,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                 for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
                   if (text[characterIndex] !== ' ') {
-                    const matrix = new DOMMatrix().translate((characterInfos[characterIndex].point.x - drawingInfo.drawingArea.left) * drawingInfo.mapScale, (drawingInfo.drawingArea.top - characterInfos[characterIndex].point.y) * drawingInfo.mapScale).rotate(-characterInfos[characterIndex].rotationAngle * 180 / Math.PI)
+                    const matrix = new DOMMatrix().translate((characterInfos[characterIndex].point.x - drawingInfo.drawingArea.left) * drawingInfo.scale, (drawingInfo.drawingArea.top - characterInfos[characterIndex].point.y) * drawingInfo.scale).rotate(-characterInfos[characterIndex].rotationAngle * 180 / Math.PI)
 
                     matrices.push(matrix)
 
-                    drawingInfo.context.tw = characterInfos[characterIndex].width * drawingInfo.mapScale
+                    drawingInfo.context.tw = characterInfos[characterIndex].width * drawingInfo.scale
                     drawingInfo.context.setTransform(matrix)
                     drawingInfo.context.strokeText(text[characterIndex], 0, 0)
                   }
@@ -1624,7 +1613,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                 for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
                   if (text[characterIndex] !== ' ') {
-                    drawingInfo.context.tw = characterInfos[characterIndex].width * drawingInfo.mapScale
+                    drawingInfo.context.tw = characterInfos[characterIndex].width * drawingInfo.scale
                     drawingInfo.context.setTransform(matrices.shift())
                     drawingInfo.context.fillText(text[characterIndex], 0, 0)
                   }
@@ -1647,7 +1636,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       let y = geometry.getFloat32(dataOffset, true)
       dataOffset += 4
 
-      drawingInfo.context.moveTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.mapScale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.mapScale))
+      drawingInfo.context.moveTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.scale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.scale))
 
       for (let pointIndex = 1; pointIndex < numberOfPoints; pointIndex++) {
         x = geometry.getFloat32(dataOffset, true)
@@ -1656,7 +1645,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         y = geometry.getFloat32(dataOffset, true)
         dataOffset += 4
 
-        drawingInfo.context.lineTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.mapScale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.mapScale))
+        drawingInfo.context.lineTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.scale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.scale))
       }
 
       drawingInfo.context.stroke()
@@ -1690,7 +1679,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         let lastDeltaTop = 0
         let lastDeltaBottom = 0
 
-        const deltaScale = Math.min(1, drawingInfo.mapScale)
+        const deltaScale = Math.min(1, drawingInfo.scale)
 
         for (let pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
           const x = polygonPoints[pointIndex].x
@@ -1717,10 +1706,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               if (pointsDrawn === 0) {
                 drawingInfo.context.beginPath()
 
-                drawingInfo.context.moveTo(Math.round((lastX - drawingInfo.drawingArea.left) * drawingInfo.mapScale), Math.round((drawingInfo.drawingArea.top - lastY) * drawingInfo.mapScale))
+                drawingInfo.context.moveTo(Math.round((lastX - drawingInfo.drawingArea.left) * drawingInfo.scale), Math.round((drawingInfo.drawingArea.top - lastY) * drawingInfo.scale))
               }
 
-              drawingInfo.context.lineTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.mapScale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.mapScale))
+              drawingInfo.context.lineTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.scale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.scale))
 
               pointsDrawn++
             }
@@ -1753,9 +1742,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           const y = polygonPoints[pointIndex].y
 
           if (pointIndex === 0) {
-            drawingInfo.context.moveTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.mapScale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.mapScale))
+            drawingInfo.context.moveTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.scale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.scale))
           } else {
-            drawingInfo.context.lineTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.mapScale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.mapScale))
+            drawingInfo.context.lineTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.scale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.scale))
           }
         }
       }
@@ -2041,11 +2030,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     let objectScale = drawingInfo.objectScale
 
     if (!isNaN(saveStyle.ZoomScale)) {
-      objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, saveStyle.ZoomScale)
+      objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, saveStyle.ZoomScale)
     }
 
     if (!isNaN(saveStyle.StrokeWidth)) {
-      drawingInfo.context.lineWidth = saveStyle.StrokeWidth * objectScale * drawingInfo.mapScale * drawingInfo.adjustedObjectScale
+      drawingInfo.context.lineWidth = saveStyle.StrokeWidth * objectScale * drawingInfo.scale * drawingInfo.adjustedObjectScale
 
       drawingInfo.context.setLineDash([])
       drawingInfo.context.lineCap = 'round'
@@ -2120,7 +2109,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       let objectScale = drawingInfo.objectScale
 
       if (!isNaN(objectStyle.ZoomScale)) {
-        objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
+        objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
       }
 
       if (isNaN(objectStyle.FillAlpha)) {
@@ -2140,7 +2129,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       if (!isNaN(objectStyle.StrokeWidth)) {
-        drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.mapScale * drawingInfo.adjustedObjectScale)
+        drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.scale * drawingInfo.adjustedObjectScale)
       }
 
       if (objectStyle.StrokeAlpha && objectStyle.StrokeWidth > 0 && objectStyle.StrokeColor) {
@@ -2156,7 +2145,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           const lineDash = []
 
           for (const dash of objectStyle.LineDash) {
-            lineDash.push(dash * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.mapScale))
+            lineDash.push(dash * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.scale))
           }
 
           drawingInfo.context.setLineDash(lineDash)
@@ -2192,7 +2181,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         if (patternName) {
           const pattern = await this._getPattern(drawingInfo.context, patternName)
 
-          pattern.transformMatrix = new DOMMatrix().translate(drawingInfo.mapArea.left * drawingInfo.mapScale, drawingInfo.mapArea.top * drawingInfo.mapScale).scale(drawingInfo.patternScale)
+          pattern.transformMatrix = new DOMMatrix().translate(drawingInfo.mapArea.left * drawingInfo.scale, drawingInfo.mapArea.top * drawingInfo.scale).scale(drawingInfo.patternScale)
 
           pattern.setTransform(pattern.transformMatrix)
 
@@ -2295,8 +2284,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             this._remapPixels(drawingInfo.saveDataPixels, drawingInfo.saveDataIds, drawingInfo.saveDataCanvas.width)
           }
 
-          const pixelX = Math.round((x - drawingInfo.saveDataArea.left) * drawingInfo.mapScale)
-          const pixelY = Math.round((drawingInfo.saveDataArea.top - y) * drawingInfo.mapScale)
+          const pixelX = Math.round((x - drawingInfo.saveDataArea.left) * drawingInfo.scale)
+          const pixelY = Math.round((drawingInfo.saveDataArea.top - y) * drawingInfo.scale)
 
           if (pixelX >= 0 && pixelX < drawingInfo.saveDataCanvas.width && pixelY >= 0 && pixelY < drawingInfo.saveDataCanvas.height) {
             const pixelIndex = (pixelX + pixelY * drawingInfo.saveDataCanvas.width) * 4
@@ -2343,7 +2332,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         let objectScale = drawingInfo.objectScale
 
         if (!isNaN(objectStyle.ZoomScale)) {
-          objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
+          objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
         }
 
         if (activeObjectStyle !== objectStyle) {
@@ -2364,7 +2353,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
 
           if (!isNaN(objectStyle.StrokeWidth)) {
-            drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.mapScale * drawingInfo.adjustedObjectScale)
+            drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.scale * drawingInfo.adjustedObjectScale)
           }
 
           if (objectStyle.StrokeAlpha && objectStyle.StrokeWidth > 0 && objectStyle.StrokeColor) {
@@ -2380,7 +2369,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               const lineDash = []
 
               for (const dash of objectStyle.LineDash) {
-                lineDash.push(dash * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.mapScale))
+                lineDash.push(dash * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.scale))
               }
 
               drawingInfo.context.setLineDash(lineDash)
@@ -2426,7 +2415,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           if (patternName) {
             const pattern = await this._getPattern(drawingInfo.context, patternName)
 
-            pattern.transformMatrix = new DOMMatrix().translate(drawingInfo.mapArea.left * drawingInfo.mapScale, drawingInfo.mapArea.top * drawingInfo.mapScale).scale(drawingInfo.patternScale)
+            pattern.transformMatrix = new DOMMatrix().translate(drawingInfo.mapArea.left * drawingInfo.scale, drawingInfo.mapArea.top * drawingInfo.scale).scale(drawingInfo.patternScale)
 
             pattern.setTransform(pattern.transformMatrix)
 
@@ -2498,8 +2487,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             this._remapPixels(drawingInfo.saveDataPixels, drawingInfo.saveDataIds, drawingInfo.saveDataCanvas.width)
           }
 
-          const pixelX = Math.round((x - drawingInfo.saveDataArea.left) * drawingInfo.mapScale)
-          const pixelY = Math.round((drawingInfo.saveDataArea.top - y) * drawingInfo.mapScale)
+          const pixelX = Math.round((x - drawingInfo.saveDataArea.left) * drawingInfo.scale)
+          const pixelY = Math.round((drawingInfo.saveDataArea.top - y) * drawingInfo.scale)
 
           if (pixelX >= 0 && pixelX < drawingInfo.saveDataCanvas.width && pixelY >= 0 && pixelY < drawingInfo.saveDataCanvas.height) {
             const pixelIndex = (pixelX + pixelY * drawingInfo.saveDataCanvas.width) * 4
@@ -2546,7 +2535,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         let objectScale = drawingInfo.objectScale
 
         if (!isNaN(objectStyle.ZoomScale)) {
-          objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
+          objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
         }
 
         if (activeObjectStyle !== objectStyle) {
@@ -2567,7 +2556,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           }
 
           if (!isNaN(objectStyle.StrokeWidth)) {
-            drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.mapScale * drawingInfo.adjustedObjectScale)
+            drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.scale * drawingInfo.adjustedObjectScale)
           }
 
           if (objectStyle.StrokeAlpha && objectStyle.StrokeWidth > 0 && objectStyle.StrokeColor) {
@@ -2583,7 +2572,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               const lineDash = []
 
               for (const dash of objectStyle.LineDash) {
-                lineDash.push(dash * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.mapScale))
+                lineDash.push(dash * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.scale))
               }
 
               drawingInfo.context.setLineDash(lineDash)
@@ -2615,7 +2604,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               fontStyle = objectStyle.FontStyle
             }
 
-            drawingInfo.context.font = fontStyle + ' ' + (drawingInfo.fontSize * drawingInfo.mapScale) + 'px \'' + objectStyle.FontFamily + '\''
+            drawingInfo.context.font = fontStyle + ' ' + (drawingInfo.fontSize * drawingInfo.scale) + 'px \'' + objectStyle.FontFamily + '\''
 
             drawingInfo.fontStyle = fontStyle
             drawingInfo.fontFamily = objectStyle.FontFamily
@@ -2680,23 +2669,23 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             drawingInfo.iconMirrorX = iconScales[0] < 0 ? -1 : 1
             drawingInfo.iconMirrorY = iconScales[1] < 0 ? -1 : 1
 
-            drawingInfo.iconWidth = Math.abs(drawingInfo.iconImage.width * iconScales[0]) * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : objectScale)
-            drawingInfo.iconHeight = Math.abs(drawingInfo.iconImage.height * iconScales[1]) * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : objectScale)
+            drawingInfo.iconWidth = Math.abs(drawingInfo.iconImage.width * iconScales[0]) * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.scale : objectScale)
+            drawingInfo.iconHeight = Math.abs(drawingInfo.iconImage.height * iconScales[1]) * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.scale : objectScale)
 
             drawingInfo.iconAngle = drawingInfo.objectData.Angle || 0
 
             const iconImageAnchor = [0, 0]
 
             if (activeObjectStyle.IconImageAnchor) {
-              iconImageAnchor[0] = objectStyle.DisplayUnit === 'px' ? (activeObjectStyle.IconImageAnchor[0] - drawingInfo.iconImage.width / 2) / drawingInfo.mapScale : (activeObjectStyle.IconImageAnchor[0] - 0.5) * Math.abs(drawingInfo.iconImage.width * iconScales[0]) * objectScale
-              iconImageAnchor[1] = objectStyle.DisplayUnit === 'px' ? (activeObjectStyle.IconImageAnchor[1] - drawingInfo.iconImage.height / 2) / drawingInfo.mapScale : (activeObjectStyle.IconImageAnchor[1] - 0.5) * Math.abs(drawingInfo.iconImage.height * iconScales[1]) * objectScale
+              iconImageAnchor[0] = objectStyle.DisplayUnit === 'px' ? (activeObjectStyle.IconImageAnchor[0] - drawingInfo.iconImage.width / 2) / drawingInfo.scale : (activeObjectStyle.IconImageAnchor[0] - 0.5) * Math.abs(drawingInfo.iconImage.width * iconScales[0]) * objectScale
+              iconImageAnchor[1] = objectStyle.DisplayUnit === 'px' ? (activeObjectStyle.IconImageAnchor[1] - drawingInfo.iconImage.height / 2) / drawingInfo.scale : (activeObjectStyle.IconImageAnchor[1] - 0.5) * Math.abs(drawingInfo.iconImage.height * iconScales[1]) * objectScale
             }
 
             const iconImageOffsets = [0, 0]
 
             if (activeObjectStyle.IconImageOffsets) {
-              iconImageOffsets[0] = activeObjectStyle.IconImageOffsets[0] * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : Math.abs(drawingInfo.iconImage.width * iconScales[0]) * objectScale)
-              iconImageOffsets[1] = activeObjectStyle.IconImageOffsets[1] * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : Math.abs(drawingInfo.iconImage.height * iconScales[1]) * objectScale)
+              iconImageOffsets[0] = activeObjectStyle.IconImageOffsets[0] * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.scale : Math.abs(drawingInfo.iconImage.width * iconScales[0]) * objectScale)
+              iconImageOffsets[1] = activeObjectStyle.IconImageOffsets[1] * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.scale : Math.abs(drawingInfo.iconImage.height * iconScales[1]) * objectScale)
             }
 
             drawingInfo.iconImageOffsetX = iconImageOffsets[0] - iconImageAnchor[0]
@@ -2705,8 +2694,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             const iconTextOffset = [0, 0]
 
             if (activeObjectStyle.IconTextOffset) {
-              iconTextOffset[0] = activeObjectStyle.IconTextOffset[0] * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : objectScale)
-              iconTextOffset[1] = activeObjectStyle.IconTextOffset[1] * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : objectScale)
+              iconTextOffset[0] = activeObjectStyle.IconTextOffset[0] * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.scale : objectScale)
+              iconTextOffset[1] = activeObjectStyle.IconTextOffset[1] * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.scale : objectScale)
             }
 
             drawingInfo.iconTextOffsetX = iconTextOffset[0]
@@ -2718,7 +2707,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               iconMinimumDistance = activeObjectStyle.IconMinimumDistance
             }
 
-            drawingInfo.iconMinimumDistance = iconMinimumDistance * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.mapScale : objectScale)
+            drawingInfo.iconMinimumDistance = iconMinimumDistance * (objectStyle.DisplayUnit === 'px' ? 1 / drawingInfo.scale : objectScale)
 
             drawingInfo.iconTextPlacement = activeObjectStyle.IconTextPlacement
           }
@@ -2747,7 +2736,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           if (patternName) {
             const pattern = await this._getPattern(drawingInfo.context, patternName)
 
-            pattern.transformMatrix = new DOMMatrix().translate(drawingInfo.mapArea.left * drawingInfo.mapScale, drawingInfo.mapArea.top * drawingInfo.mapScale).scale(drawingInfo.patternScale)
+            pattern.transformMatrix = new DOMMatrix().translate(drawingInfo.mapArea.left * drawingInfo.scale, drawingInfo.mapArea.top * drawingInfo.scale).scale(drawingInfo.patternScale)
 
             pattern.setTransform(pattern.transformMatrix)
 
@@ -2872,7 +2861,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               tileInfo.width = tileCanvas.width
               tileInfo.height = tileCanvas.height
 
-              const userMapScale = tileInfo.mapScale || this.options.mapScale
+              const userMapScale = tileInfo.mapScale ?? this.printMapScale ?? this.options.mapScale
 
               tileInfo.mapBounds = {}
 
@@ -3008,7 +2997,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   iconPositions: {},
 
                   patternScale: tileInfo.dpi * 72 / DEFAULT_PRINT_DPI / DEFAULT_PRINT_DPI * userMapScale,
-                  mapScale: tileInfo.width / (mapArea.right - mapArea.left),
+                  scale: tileInfo.width / (mapArea.right - mapArea.left),
                   adjustedObjectScale: Math.abs(tileInfo.vms2TileZ < 6 ? 0.7 : 0.7 / Math.cos(tileInfo.mapBounds.latitudeMin * Math.PI / 180)),
 
                   displacementLayers: {
@@ -3049,10 +3038,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                     const anchorX = displacementIcon.anchor ? displacementIcon.anchor[0] : (width / 2)
                     const anchorY = height - (displacementIcon.anchor ? displacementIcon.anchor[1] : (height / 2))
 
-                    const left = this._longitudeToMeters(displacementIcon.longitude) - anchorX * tileInfo.width / (this.tileSize * drawingInfo.mapScale)
-                    const right = this._longitudeToMeters(displacementIcon.longitude) + (width - anchorX) * tileInfo.width / (this.tileSize * drawingInfo.mapScale)
-                    const top = this._latitudeToMeters(displacementIcon.latitude) + (height - anchorY) * tileInfo.width / (this.tileSize * drawingInfo.mapScale)
-                    const bottom = this._latitudeToMeters(displacementIcon.latitude) - anchorY * tileInfo.width / (this.tileSize * drawingInfo.mapScale)
+                    const left = this._longitudeToMeters(displacementIcon.longitude) - anchorX * tileInfo.width / (this.tileSize * drawingInfo.scale)
+                    const right = this._longitudeToMeters(displacementIcon.longitude) + (width - anchorX) * tileInfo.width / (this.tileSize * drawingInfo.scale)
+                    const top = this._latitudeToMeters(displacementIcon.latitude) + (height - anchorY) * tileInfo.width / (this.tileSize * drawingInfo.scale)
+                    const bottom = this._latitudeToMeters(displacementIcon.latitude) - anchorY * tileInfo.width / (this.tileSize * drawingInfo.scale)
 
                     displacementBoxes.push({ left, right, top, bottom })
                   }
@@ -3088,7 +3077,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   if (layer.Grid) {
                     drawingInfo.isGrid = true
 
-                    const gridZoomScale = 1 / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.mapScale / drawingInfo.userMapScale / tileInfo.dpi, layer.Grid.ZoomScale || 1)
+                    const gridZoomScale = 1 / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, layer.Grid.ZoomScale || 1)
 
                     const gridSize = [layer.Grid.Size[0] * drawingInfo.objectScale * gridZoomScale, layer.Grid.Size[1] * drawingInfo.objectScale * gridZoomScale]
 
@@ -3326,7 +3315,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                     if (patternName) {
                       const pattern = await this._getPattern(drawingInfo.context, patternName)
 
-                      pattern.transformMatrix = new DOMMatrix().translate(-drawingInfo.mapArea.left * drawingInfo.mapScale * drawingInfo.patternScale, -drawingInfo.mapArea.top * drawingInfo.mapScale * drawingInfo.patternScale).scale(drawingInfo.patternScale)
+                      pattern.transformMatrix = new DOMMatrix().translate(-drawingInfo.mapArea.left * drawingInfo.scale * drawingInfo.patternScale, -drawingInfo.mapArea.top * drawingInfo.scale * drawingInfo.patternScale).scale(drawingInfo.patternScale)
                       //pattern_.transformMatrix = new DOMMatrix().scale(drawingInfo.patternScale)
 
                       pattern.setTransform(pattern.transformMatrix)
@@ -3651,10 +3640,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   },
   _requestTile: function (dataLayerId, x, y, z, tileLayerData) {
     return new Promise(resolve => {
-      if (!this.allSystemsGo) {
-        return resolve()
-      }
-
       x &= ((1 << z) - 1)
       y &= ((1 << z) - 1)
 
