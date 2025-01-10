@@ -731,26 +731,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     if (this.printFormat) {
       const printFormatSize = this.printFormat.getSize()
 
-      const printSizeAspectRatio = printFormatSize.width / printFormatSize.height
-      const mapSizeAspectRatio = this._map.getSize().x / this._map.getSize().y
-
       const previousPrintMapScale = this.printMapScale ?? this.options.mapScale
 
-      if (printSizeAspectRatio > mapSizeAspectRatio) {
-        this.printMapScale = this._map.getSize().x * printFormatSize.printScale / printFormatSize.width
-
-        const topBorderPercent = 50 - mapSizeAspectRatio / printSizeAspectRatio * 50
-        const bottomBorderPercent = 100 - topBorderPercent
-
-        this.printFormatMaskDiv.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${topBorderPercent}%, 0% ${topBorderPercent}%, 0% ${bottomBorderPercent}%, 100% ${bottomBorderPercent}%, 100% 100%, 0% 100%)`
-      } else {
-        this.printMapScale = this._map.getSize().y * printFormatSize.printScale / printFormatSize.height
-
-        const leftBorderPercent = 50 - printSizeAspectRatio / mapSizeAspectRatio * 50
-        const rightBorderPercent = 100 - leftBorderPercent
-
-        this.printFormatMaskDiv.style.clipPath = `polygon(0% 100%, 0% 0%, ${leftBorderPercent}% 0%, ${leftBorderPercent}% 100%, ${rightBorderPercent}% 100%, ${rightBorderPercent}% 0%, 100% 0%, 100% 100%)`
-      }
+      this.printMapScale = this.printFormat.calculateMapScale(this._map.getSize().x, this._map.getSize().y)
+      this.printFormatMaskDiv.style.clipPath = this.printFormat.buildMaskForClipPath(this._map.getSize().x, this._map.getSize().y)
 
       let printFormatScaleRatio = 1
 
