@@ -44,6 +44,10 @@ export default class BaseMap {
     return this.#printFormat
   }
 
+  invalidateSize() {
+    this.#map.invalidateSize()
+  }
+
   setMapOverlay(mapOverlay) {
     this.#vms2Layer.setMapOverlay(mapOverlay)
   }
