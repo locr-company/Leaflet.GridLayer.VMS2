@@ -34,14 +34,16 @@
             vms2Layer.setPrintFormat(printFormat);
 
             const mapOverlay = new MapOverlay(printFormat.getSize());
-            const iconData = {
-                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', 
+            const poiData = {
+                iconData: {
+                    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', 
+                    iconSize: [25, 41],
+                    iconAnchor: [12.5, 41]
+                },
                 latitude: 52.27645,
-                longitude: 10.53453,
-                iconSize: [25, 41],
-                iconAnchor: [12.5, 41],
+                longitude: 10.53453
             }
-            const poiLayer = new PoiLayer(iconData);
+            const poiLayer = new PoiLayer(poiData);
             mapOverlay.add(poiLayer);
             vms2Layer.setMapOverlay(mapOverlay);
 
