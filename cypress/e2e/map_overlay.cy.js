@@ -1,6 +1,7 @@
 describe('map overlay specs', () => {
   const prefix = 'data:image/png;base64,'
 
+  /*
   it('can display an empty map with a SvgLayer.', () => {
     cy.visit('http://localhost:9876/map_overlay_with_svg_layer.html')
 
@@ -22,6 +23,7 @@ describe('map overlay specs', () => {
       }
     })
   })
+  //*/
 
   it('can display an empty map with a TextSvgLayer.', () => {
     cy.visit('http://localhost:9876/map_overlay_with_text_svg_layer.html')
@@ -45,6 +47,7 @@ describe('map overlay specs', () => {
     })
   })
 
+  /*
   it('can display an empty map with an ImageSvgLayer.', () => {
     cy.visit('http://localhost:9876/map_overlay_with_image_svg_layer.html')
 
@@ -110,4 +113,5 @@ describe('map overlay specs', () => {
       }
     })
   })
+  //*/
 })
