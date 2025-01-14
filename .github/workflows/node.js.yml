@@ -30,7 +30,9 @@ jobs:
     - run: npm run lint:js
     - run: npm run test
     - run: npm run cypress-test
+
     - name: Upload images as artifacts
+      if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
         name: generated-images-${{ matrix.os-version }}-${{ matrix.node-version }}
