@@ -3,7 +3,7 @@ import { expect } from 'chai'
 import 'jsdom-global/register.js'
 import { JSDOM } from 'jsdom'
 
-import MapOverlay, { ImageSvgLayer, SvgLayer, TextSvgLayer } from '../src/MapOverlay.js'
+import MapOverlay, { FontFace, ImageSvgLayer, SvgLayer, TextSvgLayer } from '../src/MapOverlay.js'
 
 describe('MapOverlay', () => {
   before(function() {
@@ -70,11 +70,11 @@ describe('MapOverlay', () => {
       const mapData = { width: 100, height: 200 }
       const mapOverlay = new MapOverlay(mapData)
 
-      const expectedSvg1 = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${mapData.width} ${mapData.height}" preserveAspectRatio="xMidYMid meet"></svg>`
+      const expectedSvg1 = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${mapData.width} ${mapData.height}" preserveAspectRatio="xMidYMid meet">\n</svg>`
       expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvg1)
 
       const getSvgOverlaySizeOption = { width: 50, height: 50 }
-      const expectedSvg2 = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${getSvgOverlaySizeOption.width} ${getSvgOverlaySizeOption.height}" preserveAspectRatio="xMidYMid meet"></svg>`
+      const expectedSvg2 = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${getSvgOverlaySizeOption.width} ${getSvgOverlaySizeOption.height}" preserveAspectRatio="xMidYMid meet">\n</svg>`
       expect(mapOverlay.getSvgOverlay(getSvgOverlaySizeOption)).to.be.equals(expectedSvg2)
     })
 
@@ -86,7 +86,7 @@ describe('MapOverlay', () => {
 
       mapOverlay.add(svgLayer)
 
-      expect(mapOverlay.getSvgOverlay()).to.be.equals(`<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${mapData.width} ${mapData.height}" preserveAspectRatio="xMidYMid meet">${rawSvg}</svg>`)
+      expect(mapOverlay.getSvgOverlay()).to.be.equals(`<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${mapData.width} ${mapData.height}" preserveAspectRatio="xMidYMid meet">\n${rawSvg}\n</svg>`)
     })
 
     it('getSvgOverlay with an invalid width option', () => {
@@ -123,13 +123,13 @@ describe('MapOverlay', () => {
       mapOverlay.add(svgLayer1)
       mapOverlay.add(textSvgLayer2)
 
-      const expectedSvgBeforeReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${rawSvg1}${textSvgLayer2.getSvgSource()}</svg>`
+      const expectedSvgBeforeReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">\n${rawSvg1}\n${textSvgLayer2.getSvgSource()}\n</svg>`
       expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgBeforeReplace)
 
       const textSvgLayer3 = new TextSvgLayer({ text: 'Foo Bar', x: '100', y: '200', id: '2' })
       mapOverlay.addOrReplace(textSvgLayer3)
 
-      const expectedSvgAfterReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${rawSvg1}${textSvgLayer3.getSvgSource()}</svg>`
+      const expectedSvgAfterReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">\n${rawSvg1}\n${textSvgLayer3.getSvgSource()}\n</svg>`
       expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgAfterReplace)
     })
 
@@ -143,13 +143,13 @@ describe('MapOverlay', () => {
       mapOverlay.add(svgLayer1)
       mapOverlay.add(textSvgLayer2)
 
-      const expectedSvgBeforeReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${rawSvg1}${textSvgLayer2.getSvgSource()}</svg>`
+      const expectedSvgBeforeReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">\n${rawSvg1}\n${textSvgLayer2.getSvgSource()}\n</svg>`
       expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgBeforeReplace)
 
       const textSvgLayer3 = new TextSvgLayer({ text: 'Foo Bar', x: '100', y: '200', id: '3' })
       mapOverlay.addOrReplace(textSvgLayer3)
 
-      const expectedSvgAfterReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${rawSvg1}${textSvgLayer2.getSvgSource()}${textSvgLayer3.getSvgSource()}</svg>`
+      const expectedSvgAfterReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">\n${rawSvg1}\n${textSvgLayer2.getSvgSource()}\n${textSvgLayer3.getSvgSource()}\n</svg>`
       expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgAfterReplace)
     })
 
@@ -163,13 +163,13 @@ describe('MapOverlay', () => {
       mapOverlay.add(svgLayer1)
       mapOverlay.add(textSvgLayer2)
 
-      const expectedSvgBeforeReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${rawSvg1}${textSvgLayer2.getSvgSource()}</svg>`
+      const expectedSvgBeforeReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">\n${rawSvg1}\n${textSvgLayer2.getSvgSource()}\n</svg>`
       expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgBeforeReplace)
 
       const textSvgLayer3 = new TextSvgLayer({ text: 'Foo Bar', x: '100', y: '200' })
       mapOverlay.addOrReplace(textSvgLayer3)
 
-      const expectedSvgAfterReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${rawSvg1}${textSvgLayer2.getSvgSource()}${textSvgLayer3.getSvgSource()}</svg>`
+      const expectedSvgAfterReplace = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">\n${rawSvg1}\n${textSvgLayer2.getSvgSource()}\n${textSvgLayer3.getSvgSource()}\n</svg>`
       expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgAfterReplace)
     })
 
@@ -192,7 +192,7 @@ describe('MapOverlay', () => {
 
       mapOverlay.add(textSvgLayer)
 
-      const expectedSvg = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${textSvgLayer.getSvgSource()}</svg>`
+      const expectedSvg = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">\n${textSvgLayer.getSvgSource()}\n</svg>`
       expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvg)
 
       assert.throws(() => mapOverlay.replaceTextContent('2', 'foo'), ReferenceError)
@@ -205,14 +205,14 @@ describe('MapOverlay', () => {
 
       mapOverlay.add(textSvgLayer)
 
-      const expectedSvgBeforeTextReplacement = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${textSvgLayer.getSvgSource()}</svg>`
+      const expectedSvgBeforeTextReplacement = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">\n${textSvgLayer.getSvgSource()}\n</svg>`
       expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgBeforeTextReplacement)
 
       mapOverlay.replaceTextContent('1', 'foo')
 
       const expectedTextSvgLayerAfterReplacement = new TextSvgLayer({ text: 'foo', x: '100', y: '200', id: '1' })
 
-      const expectedSvgAfterTextReplacement = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${expectedTextSvgLayerAfterReplacement.getSvgSource()}</svg>`
+      const expectedSvgAfterTextReplacement = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">\n${expectedTextSvgLayerAfterReplacement.getSvgSource()}\n</svg>`
       expect(mapOverlay.getSvgOverlay()).to.be.equals(expectedSvgAfterTextReplacement)
     })
   })
@@ -427,6 +427,92 @@ describe('MapOverlay', () => {
 
       expect(imageLayer.getSvgSource()).to.be.equals(expectedSvg.outerHTML)
       expect(imageLayer.getSvgSource()).to.be.equals('<image href="cup_of_&quot;>coffee.jpeg" x="100" y="200"></image>')
+    })
+  })
+
+  describe('FontFace', () => {
+    it('constructs a FontFace object', () => {
+      const fontFace = new FontFace({
+        fontFamily: 'Noto Sans',
+        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap'
+      })
+
+      const expectedFontFace = `@font-face {
+  font-family: 'Noto Sans';
+  src: url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+  font-style: normal;
+  font-weight: 400;
+}`
+      expect(fontFace.buildCssFontFace()).to.be.equals(expectedFontFace)
+    })
+
+    it('constructs a FontFace object with all properties', () => {
+      const fontFace = new FontFace({
+        fontFamily: 'Noto Sans',
+        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap',
+        fontStyle: 'italic',
+        fontWeight: 700,
+        unicodeRanges: ['U+0000-00FF', 'U+0100-017F']
+      })
+
+      const expectedFontFace = `@font-face {
+  font-family: 'Noto Sans';
+  src: url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+  font-style: italic;
+  font-weight: 700;
+  unicode-range: U+0000-00FF, U+0100-017F;
+}`
+      expect(fontFace.buildCssFontFace()).to.be.equals(expectedFontFace)
+    })
+
+    it('constructs a FontFace object without fontFamily property', () => {
+      assert.throws(() => new FontFace({
+        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap'
+      }), TypeError)
+    })
+
+    it('constructs a FontFace object with an empty fontFamily property', () => {
+      assert.throws(() => new FontFace({
+        fontFamily: '',
+        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap'
+      }), RangeError)
+    })
+
+    it('constructs a FontFace object without srcUrl property', () => {
+      assert.throws(() => new FontFace({
+        fontFamily: 'Noto Sans'
+      }), TypeError)
+    })
+
+    it('constructs a FontFace object with an empty srcUrl property', () => {
+      assert.throws(() => new FontFace({
+        fontFamily: 'Noto Sans',
+        srcUrl: ''
+      }), RangeError)
+    })
+
+    it('constructs a FontFace object with an invalid fontStyle type property', () => {
+      assert.throws(() => new FontFace({
+        fontFamily: 'Noto Sans',
+        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap',
+        fontStyle: 1
+      }), TypeError)
+    })
+
+    it('constructs a FontFace object with an invalid fontWeight type property', () => {
+      assert.throws(() => new FontFace({
+        fontFamily: 'Noto Sans',
+        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap',
+        fontWeight: 'bold'
+      }), TypeError)
+    })
+
+    it('constructs a FontFace object with an invalid unicodeRanges type property', () => {
+      assert.throws(() => new FontFace({
+        fontFamily: 'Noto Sans',
+        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap',
+        unicodeRanges: 'U+0000-00FF'
+      }), TypeError)
     })
   })
 })
