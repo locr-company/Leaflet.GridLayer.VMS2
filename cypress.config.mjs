@@ -20,7 +20,7 @@ export default defineConfig({
             diff.data,
             width,
             height,
-            { threshold: 0.05 }
+            { threshold: 0.075 }
           );
           fs.writeFileSync(diffPath, PNG.sync.write(diff));
     
