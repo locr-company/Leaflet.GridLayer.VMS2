@@ -38,8 +38,10 @@ describe('map overlay specs', () => {
 
           cy.wrap(layer.getPrintCanvas()).then(canvas => {
             const image = canvas[0].toDataURL('image/png')
+            const base64Data = image.slice(prefix.length);
+            cy.writeFile('cypress/artifacts/map_overlay_with_text_svg_layer.png', base64Data, 'base64');
             cy.fixture('map_overlay_with_text_svg_layer.png').then(refImage => {
-              expect(refImage).to.equal(image.slice(prefix.length))
+              expect(refImage).to.equal(base64Data)
             })
           })
         })
