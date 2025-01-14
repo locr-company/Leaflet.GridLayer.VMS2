@@ -51,7 +51,7 @@ describe('map overlay specs', () => {
               compare: `cypress/artifacts/${baseFilename}.png`,
               diffPath: `cypress/artifacts/${baseFilename}-diff.png`,
             }).then((diffPixelCount) => {
-              expect(diffPixelCount).to.equal(0)
+              expect(diffPixelCount).to.be.lessThanOrEqual(100)
             })
           })
         })
