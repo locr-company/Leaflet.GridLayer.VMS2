@@ -1,7 +1,7 @@
-import BaseMap from 'http://localhost:9876/js/BaseMap.js'
-import CreatePrintMapButton from 'http://localhost:9876/js/CreatePrintMapButton.js'
-import PrintFormat from 'http://localhost:9876/Leaflet.GridLayer.VMS2/PrintFormat.js'
-import MapOverlay, { ImageSvgLayer, PoiLayer, SvgLayer, TextSvgLayer } from 'http://localhost:9876/Leaflet.GridLayer.VMS2/MapOverlay.js'
+import BaseMap from '../js/BaseMap.js'
+import CreatePrintMapButton from '../js/CreatePrintMapButton.js'
+import PrintFormat from '../Leaflet.GridLayer.VMS2/PrintFormat.js'
+import MapOverlay, { FontFace, ImageSvgLayer, PoiLayer, SvgLayer, TextSvgLayer } from '../Leaflet.GridLayer.VMS2/MapOverlay.js'
 
 const baseMap = new BaseMap()
 
@@ -13,6 +13,14 @@ const initialCenter = {
 const printFormat = getPrintFormat()
 
 const mapOverlay = new MapOverlay(printFormat.getSize())
+
+mapOverlay.addFontFace(new FontFace({
+  fontFamily: 'Barlow Condensed',
+  srcUrl: 'https://fonts.gstatic.com/s/barlowcondensed/v12/HTxwL3I-JCGChYJ8VI-L6OO_au7B4-Lwz3bWuYMBYro.woff2',
+  fontWeight: 500,
+  fontStyle: 'normal',
+  unicodeRanges: ['U+0000-00FF', 'U+0131', 'U+0152-0153', 'U+02BB-02BC', 'U+02C6', 'U+02DA', 'U+02DC', 'U+0304', 'U+0308', 'U+0329', 'U+2000-206F', 'U+20AC', 'U+2122', 'U+2191', 'U+2193', 'U+2212', 'U+2215', 'U+FEFF', 'U+FFFD']
+}))
 
 const mapContainer = document.getElementById('map')
 
@@ -165,9 +173,26 @@ function refreshMapOverlay() {
   </g>`
   const circleSvgLayer = new SvgLayer(rawCircleSvgLayer)
 
-  const textSvgLayer = new TextSvgLayer({id: 'my-text', text: getTextOverlayContent(), x: '50%', y: '30%', 'font-size': '2cm', 'text-anchor': 'middle', 'dominant-baseline': 'middle'})
+  const textSvgLayer = new TextSvgLayer({
+    id: 'my-text',
+    text: getTextOverlayContent(),
+    x: '50%',
+    y: '30%',
+    'font-family': 'Barlow Condensed',
+    'font-weight': 500,
+    'font-size': '2cm',
+    'text-anchor': 'middle',
+    'dominant-baseline': 'middle'
+  })
 
-  const imageSvgLayer = new ImageSvgLayer({id: 'my-image', href: 'assets/gfx/cup_of_coffee.jpeg', x: 'calc(50% - 128px)', y: 'calc(50% + 64px)', width: '256px', height: '256px'})
+  const imageSvgLayer = new ImageSvgLayer({
+    id: 'my-image',
+    href: 'assets/gfx/cup_of_coffee.jpeg',
+    x: 'calc(50% - 128px)',
+    y: 'calc(50% + 64px)',
+    width: '256px',
+    height: '256px'
+  })
 
   const iconData = {
     iconData: { ...getPoiData() },
