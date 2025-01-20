@@ -2,6 +2,7 @@ export default class MapOverlay {
   #width = 0
   #height = 0
 
+  #fontFaces = []
   #layers = []
 
   /**
@@ -55,6 +56,18 @@ export default class MapOverlay {
     }
 
     this.#layers.push(layer)
+  }
+
+  /**
+   * @param {FontFace} fontFace
+   * @returns {void}
+   */
+  addFontFace(fontFace) {
+    if (!(fontFace instanceof FontFace)) {
+      throw new TypeError('fontFace must be an instance of FontFace')
+    }
+
+    this.#fontFaces.push(fontFace)
   }
 
   /**
@@ -134,10 +147,19 @@ export default class MapOverlay {
       }
     }
 
-    let svgString = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">`
+    let svgString = `<svg x="0" y="0" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">\n`
 
+    if (this.#fontFaces.length > 0) {
+      svgString += '<defs>\n'
+      svgString += '<style type="text/css">\n'
+      for (const fontFace of this.#fontFaces) {
+        svgString += fontFace.buildCssFontFace() + '\n'
+      }
+      svgString += '</style>\n'
+      svgString += '</defs>\n'
+    }
     for (const layer of this.#layers) {
-      svgString += layer.getSvgSource()
+      svgString += layer.getSvgSource() + '\n'
     }
 
     svgString += '</svg>'
@@ -325,7 +347,79 @@ class PoiLayer {
   }
 }
 
+class FontFace {
+  #fontFamily = ''
+  #srcUrl = ''
+  #fontStyle = 'normal'
+  #fontWeight = 400
+  #unicodeRanges = []
+
+  /**
+   * @param {{
+   *  fontFamily: string,
+   *  srcUrl: string,
+   *  fontStyle: string?,
+   *  fontWeight: number?,
+   *  unicodeRanges: string[]?
+   * }} data
+   */
+  constructor(data) {
+    if (data === undefined || data === null || data.constructor !== Object) {
+      throw new TypeError('data must be an object')
+    }
+    if (typeof data.fontFamily !== 'string') {
+      throw new TypeError('data.fontFamily must be a string')
+    }
+    this.#fontFamily = data.fontFamily.trim()
+    if (this.#fontFamily === '') {
+      throw new RangeError('data.fontFamily must not be an empty string')
+    }
+
+    if (typeof data.srcUrl !== 'string') {
+      throw new TypeError('data.srcUrl must be a string')
+    }
+    this.#srcUrl = data.srcUrl.trim()
+    if (this.#srcUrl === '') {
+      throw new RangeError('data.srcUrl must not be an empty string')
+    }
+
+    if (data.fontStyle !== undefined && data.fontStyle !== null) {
+      if (typeof data.fontStyle !== 'string') {
+        throw new TypeError('data.fontStyle must be a string')
+      }
+      this.#fontStyle = data.fontStyle
+    }
+    if (data.fontWeight !== undefined && data.fontWeight !== null) {
+      if (isNaN(data.fontWeight)) {
+        throw new TypeError('data.fontWeight must be a number')
+      }
+      this.#fontWeight = data.fontWeight
+    }
+    if (data.unicodeRanges !== undefined && data.unicodeRanges !== null) {
+      if (!Array.isArray(data.unicodeRanges)) {
+        throw new TypeError('data.unicodeRanges must be an array')
+      }
+      this.#unicodeRanges = data.unicodeRanges
+    }
+  }
+
+  buildCssFontFace() {
+    let cssFontFace = `@font-face {\n`
+    cssFontFace += `  font-family: '${this.#fontFamily}';\n`
+    cssFontFace += `  src: url('${this.#srcUrl}');\n`
+    cssFontFace += `  font-style: ${this.#fontStyle};\n`
+    cssFontFace += `  font-weight: ${this.#fontWeight};\n`
+    if (this.#unicodeRanges.length > 0) {
+      cssFontFace += `  unicode-range: ${this.#unicodeRanges.join(', ')};\n`
+    }
+    cssFontFace += `}`
+
+    return cssFontFace
+  }
+}
+
 export {
+  FontFace,
   MapOverlay,
   SvgLayer,
   ImageSvgLayer,
