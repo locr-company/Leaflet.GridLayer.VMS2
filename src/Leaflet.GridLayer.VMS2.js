@@ -82,6 +82,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   tileCanvases: [],
   saveDataCanvases: [],
 
+  mapOverlay: undefined,
+  printFormat: undefined,
+
   options: {
     zoomPowerBase: DEFAULT_ZOOM_POWER_BASE,
     style: DEFAULT_STYLE_ID,
@@ -655,7 +658,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     this._map.off('resize', this._onResize, this)
 
     this._removeAllTiles()
-    remove(this._container)
+    L.DomUtil.remove(this._container)
     // eslint-disable-next-line no-underscore-dangle
     map._removeZoomLimit(this)
     this._container = null
