@@ -2,6 +2,9 @@ export default class MapOverlay {
   #width = 0
   #height = 0
 
+  /**
+   * @type {CustomFontFace[]}
+   */
   #fontFaces = []
   #layers = []
 
@@ -59,12 +62,12 @@ export default class MapOverlay {
   }
 
   /**
-   * @param {FontFace} fontFace
+   * @param {CustomFontFace} fontFace
    * @returns {void}
    */
   addFontFace(fontFace) {
-    if (!(fontFace instanceof FontFace)) {
-      throw new TypeError('fontFace must be an instance of FontFace')
+    if (!(fontFace instanceof CustomFontFace)) {
+      throw new TypeError('fontFace must be an instance of CustomFontFace')
     }
 
     this.#fontFaces.push(fontFace)
@@ -347,70 +350,62 @@ class PoiLayer {
   }
 }
 
-class FontFace {
-  #fontFamily = ''
-  #srcUrl = ''
-  #fontStyle = 'normal'
-  #fontWeight = 400
-  #unicodeRanges = []
+class CustomFontFace {
+  #source = ''
 
   /**
-   * @param {{
-   *  fontFamily: string,
-   *  srcUrl: string,
-   *  fontStyle: string?,
-   *  fontWeight: number?,
-   *  unicodeRanges: string[]?
-   * }} data
+   * @param {string} family
+   * @param {string} source
+   * @param {FontFaceDescriptors?} descriptors
    */
-  constructor(data) {
-    if (data === undefined || data === null || data.constructor !== Object) {
-      throw new TypeError('data must be an object')
+  constructor(family, source, descriptors) {
+    if (typeof family !== 'string') {
+      throw new TypeError('family must be a string')
     }
-    if (typeof data.fontFamily !== 'string') {
-      throw new TypeError('data.fontFamily must be a string')
-    }
-    this.#fontFamily = data.fontFamily.trim()
-    if (this.#fontFamily === '') {
-      throw new RangeError('data.fontFamily must not be an empty string')
+    family = family.trim()
+    if (family === '') {
+      throw new RangeError('family must not be an empty string')
     }
 
-    if (typeof data.srcUrl !== 'string') {
-      throw new TypeError('data.srcUrl must be a string')
+    if (typeof source !== 'string') {
+      throw new TypeError('source must be a string')
     }
-    this.#srcUrl = data.srcUrl.trim()
-    if (this.#srcUrl === '') {
-      throw new RangeError('data.srcUrl must not be an empty string')
+    source = source.trim()
+    if (source === '') {
+      throw new RangeError('source must not be an empty string')
     }
 
-    if (data.fontStyle !== undefined && data.fontStyle !== null) {
-      if (typeof data.fontStyle !== 'string') {
-        throw new TypeError('data.fontStyle must be a string')
+    this.family = family
+    this.#source = source
+
+    if (descriptors) {
+      if (descriptors.style) {
+        this.style = descriptors.style
       }
-      this.#fontStyle = data.fontStyle
-    }
-    if (data.fontWeight !== undefined && data.fontWeight !== null) {
-      if (isNaN(data.fontWeight)) {
-        throw new TypeError('data.fontWeight must be a number')
+      if (descriptors.weight) {
+        this.weight = descriptors.weight
       }
-      this.#fontWeight = data.fontWeight
-    }
-    if (data.unicodeRanges !== undefined && data.unicodeRanges !== null) {
-      if (!Array.isArray(data.unicodeRanges)) {
-        throw new TypeError('data.unicodeRanges must be an array')
+      if (descriptors.unicodeRange) {
+        this.unicodeRange = descriptors.unicodeRange
       }
-      this.#unicodeRanges = data.unicodeRanges
     }
   }
 
+  /**
+   * @returns {string}
+   */
   buildCssFontFace() {
     let cssFontFace = `@font-face {\n`
-    cssFontFace += `  font-family: '${this.#fontFamily}';\n`
-    cssFontFace += `  src: url('${this.#srcUrl}');\n`
-    cssFontFace += `  font-style: ${this.#fontStyle};\n`
-    cssFontFace += `  font-weight: ${this.#fontWeight};\n`
-    if (this.#unicodeRanges.length > 0) {
-      cssFontFace += `  unicode-range: ${this.#unicodeRanges.join(', ')};\n`
+    cssFontFace += `  font-family: '${this.family}';\n`
+    cssFontFace += `  src: url('${this.#source}');\n`
+    if (this.style) {
+      cssFontFace += `  font-style: ${this.style};\n`
+    }
+    if (this.weight) {
+      cssFontFace += `  font-weight: ${this.weight};\n`
+    }
+    if (this.unicodeRange) {
+      cssFontFace += `  unicode-range: ${this.unicodeRange};\n`
     }
     cssFontFace += `}`
 
@@ -419,7 +414,7 @@ class FontFace {
 }
 
 export {
-  FontFace,
+  CustomFontFace,
   MapOverlay,
   SvgLayer,
   ImageSvgLayer,

@@ -1,7 +1,7 @@
 import BaseMap from '../js/BaseMap.js'
 import CreatePrintMapButton from '../js/CreatePrintMapButton.js'
 import PrintFormat from '../Leaflet.GridLayer.VMS2/PrintFormat.js'
-import MapOverlay, { FontFace, ImageSvgLayer, PoiLayer, SvgLayer, TextSvgLayer } from '../Leaflet.GridLayer.VMS2/MapOverlay.js'
+import MapOverlay, { CustomFontFace, ImageSvgLayer, PoiLayer, SvgLayer, TextSvgLayer } from '../Leaflet.GridLayer.VMS2/MapOverlay.js'
 
 const baseMap = new BaseMap()
 
@@ -14,13 +14,15 @@ const printFormat = getPrintFormat()
 
 const mapOverlay = new MapOverlay(printFormat.getSize())
 
-mapOverlay.addFontFace(new FontFace({
-  fontFamily: 'Barlow Condensed',
-  srcUrl: 'https://fonts.gstatic.com/s/barlowcondensed/v12/HTxwL3I-JCGChYJ8VI-L6OO_au7B4-Lwz3bWuYMBYro.woff2',
-  fontWeight: 500,
-  fontStyle: 'normal',
-  unicodeRanges: ['U+0000-00FF', 'U+0131', 'U+0152-0153', 'U+02BB-02BC', 'U+02C6', 'U+02DA', 'U+02DC', 'U+0304', 'U+0308', 'U+0329', 'U+2000-206F', 'U+20AC', 'U+2122', 'U+2191', 'U+2193', 'U+2212', 'U+2215', 'U+FEFF', 'U+FFFD']
-}))
+mapOverlay.addFontFace(new CustomFontFace(
+  'Barlow Condensed',
+  'https://fonts.gstatic.com/s/barlowcondensed/v12/HTxwL3I-JCGChYJ8VI-L6OO_au7B4-Lwz3bWuYMBYro.woff2',
+  {
+    weight: 500,
+    style: 'normal',
+    unicodeRange: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD'
+  }
+))
 
 const mapContainer = document.getElementById('map')
 
