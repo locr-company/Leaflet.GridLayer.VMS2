@@ -448,6 +448,7 @@ describe('MapOverlay', () => {
         {
           style: 'italic',
           weight: 700,
+          display: 'swap',
           unicodeRange: 'U+0000-00FF, U+0100-017F'
         }
       )
@@ -457,6 +458,7 @@ describe('MapOverlay', () => {
   src: url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap');
   font-style: italic;
   font-weight: 700;
+  font-display: swap;
   unicode-range: U+0000-00FF, U+0100-017F;
 }`
       expect(fontFace.buildCssFontFace()).to.be.equals(expectedFontFace)
