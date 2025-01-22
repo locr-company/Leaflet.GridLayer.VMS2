@@ -385,6 +385,9 @@ class CustomFontFace {
       if (descriptors.weight) {
         this.weight = descriptors.weight
       }
+      if (descriptors.display) {
+        this.display = descriptors.display
+      }
       if (descriptors.unicodeRange) {
         this.unicodeRange = descriptors.unicodeRange
       }
@@ -403,6 +406,9 @@ class CustomFontFace {
     }
     if (this.weight) {
       cssFontFace += `  font-weight: ${this.weight};\n`
+    }
+    if (this.display) {
+      cssFontFace += `  font-display: ${this.display};\n`
     }
     if (this.unicodeRange) {
       cssFontFace += `  unicode-range: ${this.unicodeRange};\n`
