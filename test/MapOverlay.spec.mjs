@@ -3,7 +3,7 @@ import { expect } from 'chai'
 import 'jsdom-global/register.js'
 import { JSDOM } from 'jsdom'
 
-import MapOverlay, { FontFace, ImageSvgLayer, SvgLayer, TextSvgLayer } from '../src/MapOverlay.js'
+import MapOverlay, { CustomFontFace, ImageSvgLayer, SvgLayer, TextSvgLayer } from '../src/MapOverlay.js'
 
 describe('MapOverlay', () => {
   before(function() {
@@ -430,89 +430,50 @@ describe('MapOverlay', () => {
     })
   })
 
-  describe('FontFace', () => {
-    it('constructs a FontFace object', () => {
-      const fontFace = new FontFace({
-        fontFamily: 'Noto Sans',
-        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap'
-      })
+  describe('CustomFontFace', () => {
+    it('constructs a CustomFontFace object', () => {
+      const fontFace = new CustomFontFace('Noto Sans', 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap')
 
       const expectedFontFace = `@font-face {
   font-family: 'Noto Sans';
   src: url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap');
-  font-style: normal;
-  font-weight: 400;
 }`
       expect(fontFace.buildCssFontFace()).to.be.equals(expectedFontFace)
     })
 
-    it('constructs a FontFace object with all properties', () => {
-      const fontFace = new FontFace({
-        fontFamily: 'Noto Sans',
-        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap',
-        fontStyle: 'italic',
-        fontWeight: 700,
-        unicodeRanges: ['U+0000-00FF', 'U+0100-017F']
-      })
+    it('constructs a CustomFontFace object with all arguments and descriptors', () => {
+      const fontFace = new CustomFontFace(
+        'Noto Sans',
+        'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap',
+        {
+          style: 'italic',
+          weight: 700,
+          display: 'swap',
+          unicodeRange: 'U+0000-00FF, U+0100-017F'
+        }
+      )
 
       const expectedFontFace = `@font-face {
   font-family: 'Noto Sans';
   src: url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap');
   font-style: italic;
   font-weight: 700;
+  font-display: swap;
   unicode-range: U+0000-00FF, U+0100-017F;
 }`
       expect(fontFace.buildCssFontFace()).to.be.equals(expectedFontFace)
     })
 
-    it('constructs a FontFace object without fontFamily property', () => {
-      assert.throws(() => new FontFace({
-        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap'
-      }), TypeError)
+    it('constructs a CustomFontFace object with an empty family argument', () => {
+      assert.throws(() => new CustomFontFace('', 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap'), RangeError)
     })
 
-    it('constructs a FontFace object with an empty fontFamily property', () => {
-      assert.throws(() => new FontFace({
-        fontFamily: '',
-        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap'
-      }), RangeError)
+    it('constructs a CustomFontFace object without source argument', () => {
+      assert.throws(() => new CustomFontFace('Noto Sans'), TypeError)
     })
 
-    it('constructs a FontFace object without srcUrl property', () => {
-      assert.throws(() => new FontFace({
-        fontFamily: 'Noto Sans'
-      }), TypeError)
-    })
-
-    it('constructs a FontFace object with an empty srcUrl property', () => {
-      assert.throws(() => new FontFace({
-        fontFamily: 'Noto Sans',
-        srcUrl: ''
-      }), RangeError)
-    })
-
-    it('constructs a FontFace object with an invalid fontStyle type property', () => {
-      assert.throws(() => new FontFace({
-        fontFamily: 'Noto Sans',
-        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap',
-        fontStyle: 1
-      }), TypeError)
-    })
-
-    it('constructs a FontFace object with an invalid fontWeight type property', () => {
-      assert.throws(() => new FontFace({
-        fontFamily: 'Noto Sans',
-        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap',
-        fontWeight: 'bold'
-      }), TypeError)
-    })
-
-    it('constructs a FontFace object with an invalid unicodeRanges type property', () => {
-      assert.throws(() => new FontFace({
-        fontFamily: 'Noto Sans',
-        srcUrl: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap',
-        unicodeRanges: 'U+0000-00FF'
-      }), TypeError)
+    it('constructs a CustomFontFace object with an empty source argument', () => {
+      assert.throws(() => new CustomFontFace('Noto Sans', ''), RangeError)
     })
   })
 })

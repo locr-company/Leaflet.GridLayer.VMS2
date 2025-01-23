@@ -5,7 +5,6 @@ export default [
       'semi': ['error', 'never'], // Disallow trailing semicolons
       'camelcase': ['error', { properties: 'always', ignoreDestructuring: false, ignoreImports: false }], // Enforce camelCase
       'no-underscore-dangle': ['error', {
-        'allowAfterThis': false,
         'allowAfterSuper': false,
         'enforceInMethodNames': true,
         'allow': ['_id'], // Add exceptions here
