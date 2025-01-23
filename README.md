@@ -3,6 +3,7 @@
 [![NPM Version](https://img.shields.io/npm/v/%40locr-company%2Fleaflet-gridlayer-vms2)](https://www.npmjs.com/package/@locr-company/leaflet-gridlayer-vms2)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/locr-company/leaflet.gridlayer.vms2/node.js.yml)](https://github.com/locr-company/Leaflet.GridLayer.VMS2/actions/workflows/node.js.yml)
 [![CodeQL](https://github.com/locr-company/Leaflet.GridLayer.VMS2/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/locr-company/Leaflet.GridLayer.VMS2/actions/workflows/github-code-scanning/codeql)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=locr-company_Leaflet.GridLayer.VMS2&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=locr-company_Leaflet.GridLayer.VMS2)
 
 # Synopsis
 
