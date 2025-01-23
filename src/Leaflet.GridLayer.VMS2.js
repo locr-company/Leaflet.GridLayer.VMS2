@@ -1,7 +1,5 @@
 import unicodeDataTable from './unicode.js'
 import './PrintFormat.js'
-import { MapOverlay } from './MapOverlay.js'
-import PrintFormat from './PrintFormat.js'
 
 const EARTH_EQUATORIAL_RADIUS_METERS = 6378137
 const EARTH_EQUATORIAL_CIRCUMFERENCE_METERS = 2 * Math.PI * EARTH_EQUATORIAL_RADIUS_METERS
@@ -704,10 +702,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       this._updateMapOverlayMarkerDatas()
-    } else {
-      if (this.mapOverlayDiv.isConnected) {
-        this.mapOverlayDiv.remove()
-      }
+    } else if (this.mapOverlayDiv.isConnected) {
+      this.mapOverlayDiv.remove()
     }
 
     if (this.printFormat) {
