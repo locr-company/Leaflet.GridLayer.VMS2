@@ -8,6 +8,7 @@
         <script type="module">
             import BaseMap from './js/BaseMap.js';
             import CreatePrintMapButton from './js/CreatePrintMapButton.js';
+            import CreateMapButton from './js/CreateMapButton.js';
             import PrintFormat from './Leaflet.GridLayer.VMS2/PrintFormat.js';
 
             const baseMap = new BaseMap();
@@ -20,11 +21,13 @@
             baseMap.setPrintFormat(printFormat);
 
             CreatePrintMapButton.init(baseMap);
+            CreateMapButton.init(baseMap);
         </script>
     </head>
     <body style="margin: 0; padding: 0;">
         <div id="map" style="border: 1px solid black; width: 500px; height: 500px; margin-left: auto; margin-right: auto;"></div>
-        <div style="text-align: center; margin-top: 10px;"><button id="create-print-map">createPrintMap</button></div>
+        <div style="text-align: center; margin-top: 10px;"><button id="create-print-map">createPrintMap</button> <button id="create-map">createMap</button></div>
         <div id="print-map" style="text-align: center; margin-top: 10px;"></div>
+        <div id="map-canvas" style="text-align: center; margin-top: 10px;"></div>
     </body>
 </html>
