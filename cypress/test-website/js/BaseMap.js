@@ -16,12 +16,27 @@ export default class BaseMap {
       maxZoom: 19
     }).setView([52.27645, 10.53453], 15)
 
-    this.#vms2Layer = L.gridLayer.vms2({
-      style: '4502',
-      disableDecode: true,
-    })
+    const vms2Options = {
+      style: '4502'
+    }
+    const searchParams = new URLSearchParams(window.location.search)
+    const accessKey = searchParams.get('access_key')
+    if (typeof accessKey === 'string' && accessKey !== '') {
+      vms2Options.accessKey = accessKey
+    } else {
+      vms2Options.disableDecode = true
+    }
+    this.#vms2Layer = L.gridLayer.vms2(vms2Options)
 
     this.#vms2Layer.addTo(this.#map)
+  }
+
+  containerPointToLatLng(point) {
+    return this.#map.containerPointToLatLng(point)
+  }
+
+  getBounds() {
+    return this.#map.getBounds()
   }
 
   /**
@@ -34,6 +49,10 @@ export default class BaseMap {
       width: size.x,
       height: size.y
     }
+  }
+
+  getMapCanvas(args) {
+    return this.#vms2Layer.getMapCanvas(args)
   }
 
   getPrintCanvas() {

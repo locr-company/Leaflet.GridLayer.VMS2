@@ -115,6 +115,9 @@ export default class MapOverlay {
 
             if (currentPoiData.id === poiData.id) {
               Object.assign(currentPoiData, poiData)
+              if (typeof currentPoiData.latitude === 'number' && typeof currentPoiData.longitude === 'number' && currentPoiData.marker) {
+                currentPoiData.marker.setLatLng([currentPoiData.latitude, currentPoiData.longitude])
+              }
   
               return
             }
