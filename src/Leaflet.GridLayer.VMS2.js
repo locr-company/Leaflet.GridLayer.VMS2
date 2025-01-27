@@ -1,5 +1,6 @@
 import unicodeDataTable from './unicode.js'
-import './PrintFormat.js'
+import MapOverlay from './MapOverlay.js'
+import PrintFormat from './PrintFormat.js'
 
 const EARTH_EQUATORIAL_RADIUS_METERS = 6378137
 const EARTH_EQUATORIAL_CIRCUMFERENCE_METERS = 2 * Math.PI * EARTH_EQUATORIAL_RADIUS_METERS
@@ -231,6 +232,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     return tileCanvas
   },
   setPrintFormat(printFormat) {
+    if (!(printFormat instanceof PrintFormat)) {
+      throw new TypeError('printFormat is not an instance of PrintFormat')
+    }
+
     this.printFormat = printFormat
 
     if(this._map) {
@@ -240,6 +245,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     }
   },
   setMapOverlay(mapOverlay) {
+    if (!(mapOverlay instanceof MapOverlay)) {
+      throw new TypeError('mapOverlay is not an instance of MapOverlay')
+    }
+
     this.mapOverlay = mapOverlay
 
     for(const marker of this.mapOverlayMarkerDatas) {
@@ -1445,7 +1454,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         }
       }
 
-      for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
+      for (const character of text) {
         if (!globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily]) {
           globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily] = {}
         }
@@ -1454,12 +1463,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle] = {}
         }
 
-        if (!globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][text[characterIndex]]) {
+        if (!globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][character]) {
           globalThis.vms2Context.fontCharacterContext.font = drawingInfo.fontStyle + ' 100px \'' + drawingInfo.fontFamily + '\''
-          globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][text[characterIndex]] = globalThis.vms2Context.fontCharacterContext.measureText(text[characterIndex]).width
+          globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][character] = globalThis.vms2Context.fontCharacterContext.measureText(character).width
         }
 
-        textWidth += globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][text[characterIndex]] * drawingInfo.fontSize / 100
+        textWidth += globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][character] * drawingInfo.fontSize / 100
       }
 
       if (textWidth < drawingInfo.objectData.length) {
@@ -1510,8 +1519,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             additionalCharacterRotation = Math.PI
           }
 
-          for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
-            const characterWidth = globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][text[characterIndex]] * drawingInfo.fontSize / 100
+          for (const character of text) {
+            const characterWidth = globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][character] * drawingInfo.fontSize / 100
 
             characterOffset += characterWidth / 2
 
