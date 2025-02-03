@@ -238,7 +238,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     this.printFormat = printFormat
 
-    if(this._map) {
+    if (this._map) {
       this._map.invalidateSize()
 
       this._map.fire('resize')
@@ -251,13 +251,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     this.mapOverlay = mapOverlay
 
-    for(const marker of this.mapOverlayMarkerDatas) {
+    for (const marker of this.mapOverlayMarkerDatas) {
       this._map.removeLayer(marker)
     }
 
     this.mapOverlayMarkerDatas = []
 
-    if(this._map) {
+    if (this._map) {
       this._rebuildMapOverlay()
     }
   },
@@ -341,13 +341,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
             const poiDatas = this.mapOverlay.getPoiDatas()
 
-            for(const poiData of poiDatas) {
-              if(poiData.marker) {
+            for (const poiData of poiDatas) {
+              if (poiData.marker) {
                 const markerPoint = this._map.project(poiData.marker.getLatLng())
                 const pixelOrigin = this._map.project([latitudeMax, longitudeMin])
 
                 const iconSvgElement = document.createElementNS('http://www.w3.org/2000/svg', 'image')
-                
+
                 const x = (markerPoint.x - pixelOrigin.x) * printFormatSize.printScale / (this.printMapScale ?? this.options.mapScale)
                 const y = (markerPoint.y - pixelOrigin.y) * printFormatSize.printScale / (this.printMapScale ?? this.options.mapScale)
 
@@ -358,10 +358,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 iconSvgElement.setAttribute('height', poiData.iconData.iconSize[1] * printFormatSize.printScale)
 
                 const firstChild = mapOverlaySvgElement.firstChild
-                mapOverlaySvgElement.insertBefore(iconSvgElement, firstChild)                
+                mapOverlaySvgElement.insertBefore(iconSvgElement, firstChild)
               }
             }
-      
+
             const mapOverlayImage = new Image()
             const xmlSerializer = new XMLSerializer()
 
@@ -405,11 +405,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                 mapOverlayImage.src = mapOverlaySvgBlobUrl
 
-                mapOverlayImage.addEventListener('load',() => {
+                mapOverlayImage.addEventListener('load', () => {
                   URL.revokeObjectURL(mapOverlaySvgBlobUrl)
 
                   printCanvasContext.drawImage(mapOverlayImage, 0, 0)
-  
+
                   resolve(printCanvas)
                 })
               })
@@ -420,37 +420,38 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     })
   },
   getMapCanvas: async function (mapInfo) {
-    /*
-     * Start of billing related code block. Do not change or skip it, neither block its function.
-     * It must be executed when this function is being called.
-     * Refer to the license for more information.
-     */
-    if (this.options.accessKey) {
-      const meta = {
-        function: this.getMapCanvas.name,
-        mapInfo: mapInfo
+    if (mapInfo &&
+      typeof (mapInfo.width) === 'number' && typeof (mapInfo.height) === 'number' &&
+      (typeof (mapInfo.x) === 'number' && typeof (mapInfo.y) === 'number' && typeof (mapInfo.z) === 'number' ||
+        typeof (mapInfo.latitudeMin) === 'number' && typeof (mapInfo.longitudeMin) === 'number' && typeof (mapInfo.latitudeMax) === 'number' && typeof (mapInfo.longitudeMax) === 'number')) {
+      /*
+       * Start of billing related code block. Do not change or skip it, neither block its function.
+       * It must be executed when this function is being called.
+       * Refer to the license for more information.
+       */
+      if (this.options.accessKey) {
+        const meta = {
+          function: this.getMapCanvas.name,
+          mapInfo: mapInfo
+        }
+
+        const metaJson = JSON.stringify(meta)
+
+        fetch('https://vms2.locr.com/api/vms2/ping', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ key: this.options.accessKey, meta: metaJson })
+        })
       }
-
-      const metaJson = JSON.stringify(meta)
-
-      fetch('https://vms2.locr.com/api/vms2/ping', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ key: this.options.accessKey, meta: metaJson })
-      })
-    }
-    /*
+      /*
      * End of billing related code block. Do not change or skip it, neither block its function.
      * It must be executed when this function is being called.
      * Refer to the license for more information.
      */
 
-    let mapCanvas = null
-
-    if (mapInfo.width && mapInfo.height) {
-      mapCanvas = document.createElement('canvas')
+      const mapCanvas = document.createElement('canvas')
 
       mapCanvas.width = mapInfo.width
       mapCanvas.height = mapInfo.height
@@ -459,9 +460,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       mapCanvas.hasBeenRemoved = false
 
       await this._drawTile(mapCanvas, mapInfo)
-    }
 
-    return mapCanvas
+      return mapCanvas
+    } else {
+      throw (new Error('Missing essential parameters!'))
+    }
   },
   getMapObjects: function (tileInfo, doneFunction) {
     const tileCanvas = {}
@@ -674,23 +677,23 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   _updateMapOverlayMarkerDatas: function () {
     const markerScale = this.printMapScale ?? this.options.mapScale
 
-    for(const marker of this.mapOverlayMarkerDatas) {
+    for (const marker of this.mapOverlayMarkerDatas) {
       this._map.removeLayer(marker)
     }
 
     this.mapOverlayMarkerDatas = []
 
-    if(this.mapOverlayMarkerDatas.length == 0) {
+    if (this.mapOverlayMarkerDatas.length == 0) {
       const poiDatas = this.mapOverlay.getPoiDatas()
 
-      for(const poiData of poiDatas) {
+      for (const poiData of poiDatas) {
         const newPoiData = JSON.parse(JSON.stringify(poiData))
 
-        newPoiData.iconData.iconSize[0] *= markerScale 
-        newPoiData.iconData.iconSize[1] *= markerScale 
-        newPoiData.iconData.iconAnchor[0] *= markerScale 
-        newPoiData.iconData.iconAnchor[1] *= markerScale 
-        
+        newPoiData.iconData.iconSize[0] *= markerScale
+        newPoiData.iconData.iconSize[1] *= markerScale
+        newPoiData.iconData.iconAnchor[0] *= markerScale
+        newPoiData.iconData.iconAnchor[1] *= markerScale
+
         const latitude = poiData.marker?.getLatLng().lat ?? poiData.latitude
         const longitude = poiData.marker?.getLatLng().lng ?? poiData.longitude
         const marker = L.marker([latitude, longitude], { icon: L.icon(newPoiData.iconData) })
@@ -718,7 +721,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     if (this.printFormat) {
       const printFormatSize = this.printFormat.getSize()
 
-      if(this.mapOverlay) {
+      if (this.mapOverlay) {
         this._updateMapOverlayMarkerDatas()
       }
 
@@ -751,7 +754,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       this.previousPrintFormatSize = printFormatSize
-      
+
       const center = this._map.getCenter()
       const newZoom = this._map.getZoom() + Math.log(printFormatScaleRatio * this.printMapScale / previousPrintMapScale) / Math.log(this.options.zoomPowerBase)
 
@@ -2026,11 +2029,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     let objectScale = drawingInfo.objectScale
 
-    if (!isNaN(saveStyle.ZoomScale)) {
+    if (typeof(saveStyle.ZoomScale) === 'number') {
       objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, saveStyle.ZoomScale)
     }
 
-    if (!isNaN(saveStyle.StrokeWidth)) {
+    if (typeof(saveStyle.StrokeWidth) === 'number') {
       drawingInfo.context.lineWidth = saveStyle.StrokeWidth * objectScale * drawingInfo.scale * drawingInfo.adjustedObjectScale
 
       drawingInfo.context.setLineDash([])
@@ -2063,7 +2066,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       mapObject.info['locr_layer'] = layer.layerName
 
       if (!mapObject.type) {
-        if (!isNaN(mapObject.info.length)) {
+        if (typeof(mapObject.info.length) === 'number') {
           mapObject.type = 'line'
         } else if (mapObject.geometry === null) {
           mapObject.type = 'point'
@@ -2105,11 +2108,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
       let objectScale = drawingInfo.objectScale
 
-      if (!isNaN(objectStyle.ZoomScale)) {
+      if (typeof(objectStyle.ZoomScale) === 'number') {
         objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
       }
 
-      if (isNaN(objectStyle.FillAlpha)) {
+      if (typeof(objectStyle.FillAlpha) !== 'number') {
         objectStyle.FillAlpha = 1
       }
 
@@ -2121,11 +2124,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         drawingInfo.isFilled = false
       }
 
-      if (isNaN(objectStyle.StrokeAlpha)) {
+      if (typeof(objectStyle.StrokeAlpha) !== 'number') {
         objectStyle.StrokeAlpha = 1
       }
 
-      if (!isNaN(objectStyle.StrokeWidth)) {
+      if (typeof(objectStyle.StrokeWidth) === 'number') {
         drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.scale * drawingInfo.adjustedObjectScale)
       }
 
@@ -2211,7 +2214,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         }
 
         if (!mapObject.type) {
-          if (!isNaN(mapObject.info.length)) {
+          if (typeof(mapObject.info.length) === 'number') {
             mapObject.type = 'line'
           } else if (mapObject.geometry === null) {
             mapObject.type = 'point'
@@ -2253,7 +2256,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       if (!mapObject.type) {
-        if (!isNaN(mapObject.info.length)) {
+        if (typeof(mapObject.info.length) === 'number') {
           mapObject.type = 'line'
         } else if (mapObject.geometry === null) {
           mapObject.type = 'point'
@@ -2328,12 +2331,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       if (objectStyle) {
         let objectScale = drawingInfo.objectScale
 
-        if (!isNaN(objectStyle.ZoomScale)) {
+        if (typeof(objectStyle.ZoomScale) === 'number') {
           objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
         }
 
         if (activeObjectStyle !== objectStyle) {
-          if (isNaN(objectStyle.FillAlpha)) {
+          if (typeof(objectStyle.FillAlpha) !== 'number') {
             objectStyle.FillAlpha = 1
           }
 
@@ -2345,11 +2348,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             drawingInfo.isFilled = false
           }
 
-          if (isNaN(objectStyle.StrokeAlpha)) {
+          if (typeof(objectStyle.StrokeAlpha) !== 'number') {
             objectStyle.StrokeAlpha = 1
           }
 
-          if (!isNaN(objectStyle.StrokeWidth)) {
+          if (typeof(objectStyle.StrokeWidth) === 'number') {
             drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.scale * drawingInfo.adjustedObjectScale)
           }
 
@@ -2456,7 +2459,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       if (!mapObject.type) {
-        if (!isNaN(mapObject.info.length)) {
+        if (typeof(mapObject.info.length) === 'number') {
           mapObject.type = 'line'
         } else if (mapObject.geometry === null) {
           mapObject.type = 'point'
@@ -2531,12 +2534,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       if (objectStyle) {
         let objectScale = drawingInfo.objectScale
 
-        if (!isNaN(objectStyle.ZoomScale)) {
+        if (typeof(objectStyle.ZoomScale) === 'number') {
           objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
         }
 
         if (activeObjectStyle !== objectStyle) {
-          if (isNaN(objectStyle.FillAlpha)) {
+          if (typeof(objectStyle.FillAlpha) !== 'number') {
             objectStyle.FillAlpha = 1
           }
 
@@ -2548,11 +2551,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             drawingInfo.isFilled = false
           }
 
-          if (isNaN(objectStyle.StrokeAlpha)) {
+          if (typeof(objectStyle.StrokeAlpha) !== 'number') {
             objectStyle.StrokeAlpha = 1
           }
 
-          if (!isNaN(objectStyle.StrokeWidth)) {
+          if (typeof(objectStyle.StrokeWidth) === 'number') {
             drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.scale * drawingInfo.adjustedObjectScale)
           }
 
@@ -2862,13 +2865,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
               tileInfo.mapBounds = {}
 
-              if (!isNaN(tileInfo.x) && !isNaN(tileInfo.y) && !isNaN(tileInfo.z)) {
+              if (typeof(tileInfo.x) === 'number' && typeof(tileInfo.y) === 'number' && typeof(tileInfo.z) === 'number') {
                 tileInfo.mapBounds.longitudeMin = this._tileToLongitude(tileInfo.x, tileInfo.z, this.options.zoomPowerBase)
                 tileInfo.mapBounds.longitudeMax = this._tileToLongitude(tileInfo.x + 1, tileInfo.z, this.options.zoomPowerBase)
                 tileInfo.mapBounds.latitudeMin = this._tileToLatitude(tileInfo.y + 1, tileInfo.z, this.options.zoomPowerBase)
                 tileInfo.mapBounds.latitudeMax = this._tileToLatitude(tileInfo.y, tileInfo.z, this.options.zoomPowerBase)
 
-                tileInfo.dpi = (this.options.dpi || DEFAULT_PRINT_DPI) * tileInfo.width / this.tileSize
+                tileInfo.dpi = (this.options.dpi ?? DEFAULT_PRINT_DPI) * tileInfo.width / this.tileSize
               } else {
                 tileInfo.mapBounds.longitudeMin = tileInfo.longitudeMin
                 tileInfo.mapBounds.longitudeMax = tileInfo.longitudeMax
@@ -2896,6 +2899,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   tileInfo.mapBounds.latitudeMin = this._normalizedToLatitude(normalizedMin)
                   tileInfo.mapBounds.latitudeMax = this._normalizedToLatitude(normalizedMax)
                 }
+
+                tileInfo.dpi ??= DEFAULT_PRINT_DPI
 
                 const tileSize = this.tileSize * tileInfo.dpi / DEFAULT_PRINT_DPI
 
@@ -3321,7 +3326,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                       drawingInfo.context.fillRect(0, 0, tileInfo.width, tileInfo.height)
                     }
                   } else {
-                    if (isNaN(mapStyle.BackgroundAlpha)) {
+                    if (typeof(mapStyle.BackgroundAlpha) !== 'number') {
                       mapStyle.BackgroundAlpha = 1
                     }
 
@@ -3446,7 +3451,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       let fetchTileStartY = Math.floor(this._latitudeToTile(tileLayerData.tileInfo.mapBounds.latitudeMax, fetchTileZ))
       let fetchTileEndY = Math.floor(this._latitudeToTile(tileLayerData.tileInfo.mapBounds.latitudeMin, fetchTileZ))
 
-      if (!isNaN(tileLayerData.tileInfo.x) && !isNaN(tileLayerData.tileInfo.y) && !isNaN(tileLayerData.tileInfo.z)) {
+      if (typeof(tileLayerData.tileInfo.x) === 'number' && typeof(tileLayerData.tileInfo.y) === 'number' && typeof(tileLayerData.tileInfo.z) === 'number') {
         if (tileLayerData.layerStyle.needsAreaExtension) {
           fetchTileStartX = Math.floor(this._longitudeToTile(tileLayerData.tileInfo.drawingMapBounds.longitudeMin, fetchTileZ))
           fetchTileEndX = Math.floor(this._longitudeToTile(tileLayerData.tileInfo.drawingMapBounds.longitudeMax, fetchTileZ))
