@@ -9,39 +9,54 @@ export default class CreatePrintMapButton {
     if (createMapButton) {
       createMapButton.addEventListener('click', () => {
         const printFormat = baseMap.getPrintFormat()
-        const mapBounds = baseMap.getBounds()
+        const printFormatSize = printFormat.getSize()
+        const printRatio = printFormatSize.width / printFormatSize.height
+
+        const mapPixelBounds = baseMap.getPixelBounds()
+        const mapWidth = mapPixelBounds.max.x - mapPixelBounds.min.x
+        const mapHeight = mapPixelBounds.max.y - mapPixelBounds.min.y
+        const mapRatio = mapWidth / mapHeight
+
+        let canvasLeft
+        let canvasRight
+        let canvasTop
+        let canvasBottom
+
+        if(mapRatio > printRatio) {
+          canvasLeft = mapPixelBounds.min.x + (mapWidth - mapHeight * printRatio) / 2
+          canvasRight = mapPixelBounds.max.x - (mapWidth - mapHeight * printRatio) / 2
+          canvasTop = mapPixelBounds.min.y
+          canvasBottom = mapPixelBounds.max.y
+        } else {
+          canvasLeft = mapPixelBounds.min.x
+          canvasRight = mapPixelBounds.max.x
+          canvasTop = mapPixelBounds.min.y + (mapHeight - mapWidth / printRatio) / 2
+          canvasBottom = mapPixelBounds.max.y - (mapHeight - mapWidth / printRatio) / 2
+        }
+
+        const canvasLatLngMin = baseMap.pointToLatLng({ x: canvasLeft, y: canvasBottom })
+        const canvasLatLngMax = baseMap.pointToLatLng({ x: canvasRight, y: canvasTop })
 
         const mapCanvasOptions = {
-          ...printFormat.getSize(),
-          latitudeMin: mapBounds.getSouth(),
-          longitudeMin: mapBounds.getWest(),
-          latitudeMax: mapBounds.getNorth(),
-          longitudeMax: mapBounds.getEast()
+          width: canvasRight - canvasLeft,
+          height: canvasBottom - canvasTop,
+
+          latitudeMin: canvasLatLngMin.lat,
+          longitudeMin: canvasLatLngMin.lng,
+          latitudeMax: canvasLatLngMax.lat,
+          longitudeMax: canvasLatLngMax.lng
         }
 
-        const mapContainerSize = baseMap.getMapContainerSize()
-        const virtualMapSize = printFormat.calculateVirtualMapContainerSize(mapContainerSize.width, mapContainerSize.height)
-        const mapSize = baseMap.getMapContainerSize()
-        const mapSizeRatio = mapSize.width / mapSize.height
-        const virtualMapSizeRatio = virtualMapSize.width / virtualMapSize.height
-        if (mapSizeRatio > virtualMapSizeRatio) {
-          const leftAndRightOffset = (mapSize.width - virtualMapSize.width) / 2
-          const topLeft = baseMap.containerPointToLatLng({ x: leftAndRightOffset, y: 0 })
-          const bottomRight = baseMap.containerPointToLatLng({ x: mapSize.width - leftAndRightOffset, y: mapSize.height })
-          mapCanvasOptions.longitudeMin = topLeft.lng
-          mapCanvasOptions.longitudeMax = bottomRight.lng
-        } else if (mapSizeRatio < virtualMapSizeRatio) {
-          const topAndBottomOffset = (mapSize.height - virtualMapSize.height) / 2
-          const topLeft = baseMap.containerPointToLatLng({ x: 0, y: topAndBottomOffset })
-          const bottomRight = baseMap.containerPointToLatLng({ x: mapSize.width, y: mapSize.height - topAndBottomOffset })
-          mapCanvasOptions.latitudeMin = bottomRight.lat
-          mapCanvasOptions.latitudeMax = topLeft.lat
-        }
-
+        /*
+        mapCanvasOptions.width *= 2
+        mapCanvasOptions.height *= 2
+        mapCanvasOptions.dpi = 300 * 2
+        */
+       
         baseMap.getMapCanvas(mapCanvasOptions).then(canvas => {
           const mapCanvas = document.getElementById('map-canvas')
           if (mapCanvas) {
-            canvas.style.width = `${virtualMapSize.width}px`
+            canvas.style.width = `${mapCanvasOptions.width}px`
 
             mapCanvas.innerHTML = ''
             mapCanvas.appendChild(canvas)

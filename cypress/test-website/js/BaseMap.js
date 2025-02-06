@@ -1,5 +1,5 @@
 import 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-import 'http://localhost:9876/Leaflet.GridLayer.VMS2/Leaflet.GridLayer.VMS2.js'
+import '../../../src/Leaflet.GridLayer.VMS2.js'
 
 export default class BaseMap {
   #map
@@ -24,19 +24,20 @@ export default class BaseMap {
     if (typeof accessKey === 'string' && accessKey !== '') {
       vms2Options.accessKey = accessKey
     } else {
-      vms2Options.disableDecode = true
+      //vms2Options.disableDecode = true
+      vms2Options.tileUrl = '/vms2/get_tile.php?xyzkvt={x},{y},{z},{key},{value},{type}'
     }
     this.#vms2Layer = L.gridLayer.vms2(vms2Options)
 
     this.#vms2Layer.addTo(this.#map)
   }
 
-  containerPointToLatLng(point) {
-    return this.#map.containerPointToLatLng(point)
+  getPixelBounds() {
+    return this.#map.getPixelBounds()
   }
 
-  getBounds() {
-    return this.#map.getBounds()
+  pointToLatLng(point) {
+    return this.#map.options.crs.pointToLatLng(point, this.#map.getZoom())
   }
 
   /**
