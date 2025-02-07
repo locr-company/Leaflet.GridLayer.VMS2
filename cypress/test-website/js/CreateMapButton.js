@@ -37,26 +37,26 @@ export default class CreatePrintMapButton {
         const canvasLatLngMin = baseMap.pointToLatLng({ x: canvasLeft, y: canvasBottom })
         const canvasLatLngMax = baseMap.pointToLatLng({ x: canvasRight, y: canvasTop })
 
+        const canvasWidth = canvasRight - canvasLeft
+        const canvasHeight = canvasBottom - canvasTop
+
+        const printFormatFactor = printFormatSize.width / canvasWidth
+
         const mapCanvasOptions = {
-          width: canvasRight - canvasLeft,
-          height: canvasBottom - canvasTop,
+          width: canvasWidth * printFormatFactor,
+          height: canvasHeight * printFormatFactor,
+          dpi: 300 * printFormatFactor,
 
           latitudeMin: canvasLatLngMin.lat,
           longitudeMin: canvasLatLngMin.lng,
           latitudeMax: canvasLatLngMax.lat,
           longitudeMax: canvasLatLngMax.lng
         }
-
-        /*
-        mapCanvasOptions.width *= 2
-        mapCanvasOptions.height *= 2
-        mapCanvasOptions.dpi = 300 * 2
-        */
        
         baseMap.getMapCanvas(mapCanvasOptions).then(canvas => {
           const mapCanvas = document.getElementById('map-canvas')
           if (mapCanvas) {
-            canvas.style.width = `${mapCanvasOptions.width}px`
+            canvas.style.width = `${canvasWidth}px`
 
             mapCanvas.innerHTML = ''
             mapCanvas.appendChild(canvas)
