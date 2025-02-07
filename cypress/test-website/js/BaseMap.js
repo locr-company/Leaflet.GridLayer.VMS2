@@ -1,5 +1,5 @@
 import 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-import 'http://localhost:9876/Leaflet.GridLayer.VMS2/Leaflet.GridLayer.VMS2.js'
+import '../Leaflet.GridLayer.VMS2/Leaflet.GridLayer.VMS2.js'
 
 export default class BaseMap {
   #map
@@ -31,12 +31,12 @@ export default class BaseMap {
     this.#vms2Layer.addTo(this.#map)
   }
 
-  containerPointToLatLng(point) {
-    return this.#map.containerPointToLatLng(point)
+  getPixelBounds() {
+    return this.#map.getPixelBounds()
   }
 
-  getBounds() {
-    return this.#map.getBounds()
+  pointToLatLng(point) {
+    return this.#map.options.crs.pointToLatLng(point, this.#map.getZoom())
   }
 
   /**
