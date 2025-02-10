@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Test Website</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+        <script type="module" src="./Leaflet.GridLayer.VMS2/LocrMapCustomElement.js"></script>
+        <script type="module">
+            import BaseMap from './js/BaseMap.js';
+            import CreatePrintMapButton from './js/CreatePrintMapButton.js';
+            import CreateMapButton from './js/CreateMapButton.js';
+
+            const searchParams = new URLSearchParams(window.location.search)
+            const accessKey = searchParams.get('access_key')
+            if (typeof accessKey === 'string' && accessKey !== '') {
+                const locrMapElement = document.getElementById('map');
+                locrMapElement?.setAttribute('access-key', accessKey);
+            }
+
+            /*
+            const baseMap = new BaseMap();
+
+            CreatePrintMapButton.init(baseMap);
+            CreateMapButton.init(baseMap);
+            */
+        </script>
+    </head>
+    <body style="margin: 0; padding: 0;">
+        <locr-map id="map" print-format="14.8x21cm" style="border: 1px solid black; width: 500px; height: 500px; margin-left: auto; margin-right: auto;"></locr-map>
+        <div style="text-align: center; margin-top: 10px;"><button id="create-print-map">createPrintMap</button> <button id="create-map">createMap</button></div>
+        <div id="print-map" style="text-align: center; margin-top: 10px;"></div>
+        <div id="map-canvas" style="text-align: center; margin-top: 10px;"></div>
+    </body>
+</html>

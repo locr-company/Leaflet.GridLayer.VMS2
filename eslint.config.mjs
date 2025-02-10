@@ -7,7 +7,7 @@ export default [
       'no-underscore-dangle': ['error', {
         'allowAfterSuper': false,
         'enforceInMethodNames': true,
-        'allow': ['_id'], // Add exceptions here
+        'allow': ['_id', '_loaded', '_onResize'], // Add exceptions here
         'allowAfterThis': true // Allow leading underscores for functions
       }] // Disallow trailing underscores
     }
