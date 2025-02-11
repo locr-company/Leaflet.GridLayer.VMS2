@@ -14,7 +14,6 @@ const PRINT_FORMAT_PATTERN = /(?<width>\d+(\.\d+)?)x(?<height>\d+(\.\d+)?)(?<uni
 
 class LocrMapCustomElement extends HTMLElement {
   #accessKey = ''
-  #constraints = {}
   #initState = 'uninitialized' // 'uninitialized', 'initializing', 'initialized'
   #layer = null
   #map = null
@@ -77,6 +76,34 @@ class LocrMapCustomElement extends HTMLElement {
     }
   }
 
+  /**
+   * @param {*} layerOptions
+   */
+  async #applyLayerOptionsIfConstraintsAreMet(layerOptions) {
+    const response = await fetch(`https://users.locr.com/api/api_key/${this.#accessKey}/constraints`)
+    if (response.status === 404) {
+      throw new Error('Access-Key not found for locrMAP!')
+    }
+    if (response.status >= 400) {
+      throw new Error('Invalid Access-Key for locrMAP!')
+    }
+    const constraints = await response.json()
+    if (typeof constraints['vms2-server'] === 'string') {
+      let vms2Server = constraints['vms2-server'].trim()
+      if (vms2Server !== '') {
+        if (!vms2Server.startsWith('http://') && !vms2Server.startsWith('https://')) {
+          vms2Server = `https://${vms2Server}`
+        }
+        if (!vms2Server.endsWith('/')) {
+          vms2Server += '/'
+        }
+        layerOptions.tileUrl = `${vms2Server}api/tile/{z}/{y}/{x}?k={key}&v={value}&t={type}`
+        layerOptions.styleUrl = `${vms2Server}api/style/{style_id}`
+        layerOptions.assetsUrl = `${vms2Server}api/styles/assets`
+      }
+    }
+  }
+
   async #initMap () {
     if (this.#initState === 'initializing' || this.#initState === 'initialized') {
       return
@@ -91,35 +118,13 @@ class LocrMapCustomElement extends HTMLElement {
 
       this.#initState = 'initializing'
 
-      const response = await fetch(`https://users.locr.com/api/api_key/${this.#accessKey}/constraints`)
-      if (response.status === 404) {
-        throw new Error('Access-Key not found for locrMAP!')
-      }
-      if (response.status >= 400) {
-        throw new Error('Invalid Access-Key for locrMAP!')
-      }
-
       const layerOptions = {
         attribution: '',
         accessKey: this.#accessKey,
         style: this.#style
       }
 
-      this.#constraints = await response.json()
-      if (typeof this.#constraints['vms2-server'] === 'string') {
-        let vms2Server = this.#constraints['vms2-server'].trim()
-        if (vms2Server !== '') {
-          if (!vms2Server.startsWith('http://') && !vms2Server.startsWith('https://')) {
-            vms2Server = `https://${vms2Server}`
-          }
-          if (!vms2Server.endsWith('/')) {
-            vms2Server += '/'
-          }
-          layerOptions.tileUrl = `${vms2Server}api/tile/{z}/{y}/{x}?k={key}&v={value}&t={type}`
-          layerOptions.styleUrl = `${vms2Server}api/style/{style_id}`
-          layerOptions.assetsUrl = `${vms2Server}api/styles/assets`
-        }
-      }
+      await this.#applyLayerOptionsIfConstraintsAreMet(layerOptions)
 
       this.#map = L.map(this, {
         minZoom: this.#minZoom,
