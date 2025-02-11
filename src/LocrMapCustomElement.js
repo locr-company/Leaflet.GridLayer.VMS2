@@ -85,8 +85,6 @@ class LocrMapCustomElement extends HTMLElement {
       return
     }
 
-    const domParser = new DOMParser()
-
     for (const layerIndex in dataLayers) {
       const layer = dataLayers[layerIndex]
 
@@ -94,33 +92,15 @@ class LocrMapCustomElement extends HTMLElement {
         console.warn(`locr-map element: dataLayers[${layerIndex}].type is not a string in setMapOverlayByData( data )!`)
         continue
       }
-      if (typeof layer.id !== 'string') {
-        console.warn(`locr-map element: dataLayers[${layerIndex}].id is not a string in setMapOverlayByData( data )!`)
-        continue
-      }
-      const layerId = layer.id.trim()
-      if (layerId === '') {
-        console.warn(`locr-map element: dataLayers[${layerIndex}].id is an empty string in setMapOverlayByData( data )!`)
-        continue
-      }
 
       let overlayLayer = null
       switch (layer.type) {
         case 'svg':
-          if (typeof layer.content === 'string') {
-            const parsedDom = domParser.parseFromString(layer.content, 'application/xml')
-            if (parsedDom instanceof XMLDocument && parsedDom.children.length > 0) {
-              parsedDom.documentElement.id = layerId
-              layer.content = parsedDom.documentElement.outerHTML
-            }
-            overlayLayer = new SvgLayer(layer.content)
-          }
+          overlayLayer = this.#buildSvgLayerByDataLayer(layer)
           break
 
         case 'text':
-          if (typeof layer.content === 'string') {
-            overlayLayer = this.#buildTextMapOverlay(layer.id, layer.content, layer.attributes)
-          }
+          overlayLayer = this.#buildTextSvgLayerByDataLayer(layer)
           break
 
         default:
@@ -192,6 +172,33 @@ class LocrMapCustomElement extends HTMLElement {
         layerOptions.assetsUrl = `${vms2Server}api/styles/assets`
       }
     }
+  }
+
+  /**
+   * @param {*} dataLayer
+   * @returns {SvgLayer?}
+   */
+  #buildSvgLayerByDataLayer (dataLayer) {
+    if (typeof dataLayer.content !== 'string') {
+      return null
+    }
+    if (typeof dataLayer.id !== 'string') {
+      console.warn('locr-map element: dataLayer.id is not a string in #buildSvgLayerByDataLayer (dataLayer)!')
+      return null
+    }
+    const layerId = dataLayer.id.trim()
+    if (layerId === '') {
+      console.warn('locr-map element: dataLayer.id is an empty string in #buildSvgLayerByDataLayer (dataLayer)!')
+      return null
+    }
+
+    const domParser = new DOMParser()
+    const parsedDom = domParser.parseFromString(dataLayer.content, 'application/xml')
+    if (parsedDom instanceof XMLDocument && parsedDom.children.length > 0) {
+      parsedDom.documentElement.id = layerId
+      dataLayer.content = parsedDom.documentElement.outerHTML
+    }
+    return new SvgLayer(dataLayer.content)
   }
 
   async #initMap () {
@@ -635,19 +642,22 @@ class LocrMapCustomElement extends HTMLElement {
   }
 
   /**
-   * @param {string} id
-   * @param {string} content
-   * @param {Object} attributes
-   * @return {TextSvgLayer} a new TextSvgLayer instance.
+   * @param {*} dataLayer
+   * @return {TextSvgLayer?} a new TextSvgLayer instance.
    */
-  #buildTextMapOverlay (id, content, attributes) {
+  #buildTextSvgLayerByDataLayer (dataLayer) {
+    if (typeof dataLayer.content !== 'string') {
+      return null
+    }
+
     if (!this.#map || !this.#layer) {
-      throw new Error('locr-map element: Leaflet map is not initialized for #buildTextMapOverlay( id, content, attributes ), yet!')
+      console.warn('locr-map element: Leaflet map is not initialized for #buildTextSvgLayerByDataLayer(dataLayer), yet!')
+      return null
     }
 
     const textInfo = {
-      text: content,
-      id,
+      text: dataLayer.content,
+      id: dataLayer.id,
       x: '50%',
       y: '85%',
       'text-anchor': 'middle',
@@ -659,9 +669,9 @@ class LocrMapCustomElement extends HTMLElement {
       'font-style': 'normal'
     }
 
-    if (attributes) {
-      for (const key in attributes) {
-        textInfo[key] = attributes[key]
+    if (dataLayer.attributes) {
+      for (const key in dataLayer.attributes) {
+        textInfo[key] = dataLayer.attributes[key]
       }
     }
 
