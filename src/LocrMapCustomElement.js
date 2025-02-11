@@ -10,7 +10,7 @@ const DEFAULT_STYLE = '4201'
 const DEFAULT_ZOOM = 1
 const MIN_ZOOM = 0
 const MAX_ZOOM = 21
-const PRINT_FORMAT_PATTERN = /(?<width>\d+(\.\d+)?)x(?<height>\d+(\.\d+)?)(?<unitType>cm|in|mm|pc|pt|px)?(@(?<dpi>\d+)dpi)?/
+const PRINT_FORMAT_PATTERN = /(?<width>\d{1,5}(\.\d{1,20})?)x(?<height>\d{1,5}(\.\d{1,20})?)(?<unitType>cm|in|mm|pc|pt|px)?(@(?<dpi>\d{1,4})dpi)?/
 
 class LocrMapCustomElement extends HTMLElement {
   #accessKey = ''
