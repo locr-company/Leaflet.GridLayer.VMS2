@@ -8,6 +8,7 @@
     "cy:run": "cypress run",
     "cypress-test": "start-server-and-test start-dev-server http://localhost:9876 cy:run",
     "lint:js": "eslint src/*.js",
+    "lint:standardjs": "npx standard",
     "start-dev-server": "node dev-server.mjs",
     "test": "mocha"
   },
@@ -44,11 +45,11 @@
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.16",
-    "@typescript-eslint/eslint-plugin": "^8.21.0",
-    "@typescript-eslint/parser": "^8.21.0",
+    "@typescript-eslint/eslint-plugin": "^8.24.0",
+    "@typescript-eslint/parser": "^8.24.0",
     "chai": "^5.1.2",
-    "cypress": "^14.0.0",
-    "eslint": "^9.18.0",
+    "cypress": "^14.0.2",
+    "eslint": "^9.20.0",
     "http-server": "^14.1.1",
     "jsdom": "^26.0.0",
     "jsdom-global": "^3.0.2",

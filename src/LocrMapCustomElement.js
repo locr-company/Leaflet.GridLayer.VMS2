@@ -1,20 +1,16 @@
+/* global DOMParser, HTMLElement, L, ResizeObserver, XMLDocument */
+
 import 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 
 import './Leaflet.GridLayer.VMS2.js'
 import PrintFormat from './PrintFormat.js'
-import MapOverlay, {
-  CustomFontFace,
-  PoiLayer,
-  SvgLayer,
-  TextSvgLayer,
-} from './MapOverlay.js'
+import MapOverlay, { CustomFontFace, PoiLayer, SvgLayer, TextSvgLayer } from './MapOverlay.js'
 
 const DEFAULT_STYLE = '4201'
 const DEFAULT_ZOOM = 1
 const MIN_ZOOM = 0
 const MAX_ZOOM = 21
-const PRINT_FORMAT_PATTERN =
-  /(?<width>\d+(\.\d+)?)x(?<height>\d+(\.\d+)?)(?<unitType>cm|in|mm|pc|pt|px)?(@(?<dpi>\d+)dpi)?/
+const PRINT_FORMAT_PATTERN = /(?<width>\d+(\.\d+)?)x(?<height>\d+(\.\d+)?)(?<unitType>cm|in|mm|pc|pt|px)?(@(?<dpi>\d+)dpi)?/
 
 class LocrMapCustomElement extends HTMLElement {
   #accessKey = ''
@@ -22,6 +18,7 @@ class LocrMapCustomElement extends HTMLElement {
   #initState = 'uninitialized' // 'uninitialized', 'initializing', 'initialized'
   #layer = null
   #map = null
+  #mapIsReady = false
   #maxZoom = MAX_ZOOM
   #minZoom = MIN_ZOOM
   #printFormat = null
@@ -29,26 +26,20 @@ class LocrMapCustomElement extends HTMLElement {
   #style = DEFAULT_STYLE
   #zoom = DEFAULT_ZOOM
 
-  static observedAttributes = [ 'access-key', 'print-format' ]
+  static observedAttributes = ['access-key', 'map-style', 'print-format']
 
-  constructor() {
+  constructor () {
     super()
 
     this.#parseAttributes()
 
-    if ( this.#minZoom > this.#maxZoom ) {
-      window.console.warn(
-        `locr-map element: min-zoom attribute value (${
-          this.#minZoom
-        }) is greater than max-zoom attribute value (${
-          this.#maxZoom
-        }). Setting min-zoom to ${ MIN_ZOOM }.`
-      )
+    if (this.#minZoom > this.#maxZoom) {
+      console.warn(`locr-map element: min-zoom attribute value (${this.#minZoom}) is greater than max-zoom attribute value (${this.#maxZoom}). Setting min-zoom to ${MIN_ZOOM}.`)
       this.#minZoom = MIN_ZOOM
     }
   }
 
-  connectedCallback() {
+  connectedCallback () {
     if (!this.style.display) {
       this.style.display = 'block'
     }
@@ -61,150 +52,141 @@ class LocrMapCustomElement extends HTMLElement {
    * @param {string} oldValue
    * @param {string} newValue
    */
-  attributeChangedCallback( name, oldValue, newValue ) {
-    if ( oldValue === newValue ) {
+  attributeChangedCallback (name, oldValue, newValue) {
+    if (oldValue === newValue) {
       return
     }
 
-    if ( name === 'access-key' ) {
+    if (name === 'access-key') {
       this.#accessKey = this.#parseAccessKeyAttribute()
-      if ( this.#accessKey ) {
+      if (this.#accessKey) {
         this.#initMap()
       }
     }
 
-    if ( name === 'print-format' ) {
+    if (name === 'map-style') {
+      this.#style = this.#parseMapStyleAttribute()
+      this.setStyle(this.#style)
+    }
+
+    if (name === 'print-format') {
       this.#printFormat = this.#parsePrintFormatAttribute()
-      if ( this.#printFormat ) {
-        this.setPrintFormat( this.#printFormat, false )
+      if (this.#printFormat) {
+        this.setPrintFormat(this.#printFormat, false)
       }
     }
   }
 
-  async #initMap() {
-    if (
-      this.#initState === 'initializing' ||
-      this.#initState === 'initialized'
-    ) {
+  async #initMap () {
+    if (this.#initState === 'initializing' || this.#initState === 'initialized') {
       return
     }
 
     this.innerHTML = ''
 
     try {
-      if ( this.#accessKey === '' ) {
-        throw new Error(
-          'An Access-Key is required to display a locrMAP!'
-        )
+      if (this.#accessKey === '') {
+        throw new Error('An Access-Key is required to display a locrMAP!')
       }
 
       this.#initState = 'initializing'
 
-      const response = await fetch(
-        `https://users.locr.com/api/api_key/${
-          this.#accessKey
-        }/constraints`
-      )
-      if ( response.status === 404 ) {
-        throw new Error( 'Access-Key not found for locrMAP!' )
+      const response = await fetch(`https://users.locr.com/api/api_key/${this.#accessKey}/constraints`)
+      if (response.status === 404) {
+        throw new Error('Access-Key not found for locrMAP!')
       }
-      if ( response.status >= 400 ) {
-        throw new Error( 'Invalid Access-Key for locrMAP!' )
+      if (response.status >= 400) {
+        throw new Error('Invalid Access-Key for locrMAP!')
       }
 
       const layerOptions = {
         attribution: '',
         accessKey: this.#accessKey,
-        style: this.#style,
+        style: this.#style
       }
 
       this.#constraints = await response.json()
-      if ( typeof this.#constraints[ 'vms2-server' ] === 'string' ) {
-        let vms2Server = this.#constraints[ 'vms2-server' ].trim()
-        if ( vms2Server !== '' ) {
-          if (
-            ! vms2Server.startsWith( 'http://' ) &&
-            ! vms2Server.startsWith( 'https://' )
-          ) {
-            vms2Server = `https://${ vms2Server }`
+      if (typeof this.#constraints['vms2-server'] === 'string') {
+        let vms2Server = this.#constraints['vms2-server'].trim()
+        if (vms2Server !== '') {
+          if (!vms2Server.startsWith('http://') && !vms2Server.startsWith('https://')) {
+            vms2Server = `https://${vms2Server}`
           }
-          if ( ! vms2Server.endsWith( '/' ) ) {
+          if (!vms2Server.endsWith('/')) {
             vms2Server += '/'
           }
-          layerOptions.tileUrl = `${ vms2Server }api/tile/{z}/{y}/{x}?k={key}&v={value}&t={type}`
-          layerOptions.styleUrl = `${ vms2Server }api/style/{style_id}`
-          layerOptions.assetsUrl = `${ vms2Server }api/styles/assets`
+          layerOptions.tileUrl = `${vms2Server}api/tile/{z}/{y}/{x}?k={key}&v={value}&t={type}`
+          layerOptions.styleUrl = `${vms2Server}api/style/{style_id}`
+          layerOptions.assetsUrl = `${vms2Server}api/styles/assets`
         }
       }
 
-      this.#map = L.map( this, {
+      this.#map = L.map(this, {
         minZoom: this.#minZoom,
-        maxZoom: this.#maxZoom,
-      } )
-      this.#map.attributionControl.setPrefix( '' )
-      this.#layer = L.gridLayer.vms2( layerOptions )
-      this.#layer.addTo( this.#map )
+        maxZoom: this.#maxZoom
+      })
+      this.#map.whenReady(() => {
+        this.#mapIsReady = true
+      })
+      this.#map.attributionControl.setPrefix('')
+      this.#layer = L.gridLayer.vms2(layerOptions)
+      this.#layer.addTo(this.#map)
 
-      const center = L.latLng( 0, 0 )
-      this.#map.setView( center, this.#zoom )
+      const center = L.latLng(0, 0)
+      this.#map.setView(center, this.#zoom)
 
-      if ( this.#printFormat ) {
-        this.setPrintFormat( this.#printFormat, false )
+      if (this.#printFormat) {
+        this.setPrintFormat(this.#printFormat, false)
       }
 
       this.#initResizeObserver()
 
       this.#initState = 'initialized'
-      this.dispatchEvent(
-        new CustomEvent( 'custom-element-initialized', { detail: {} } )
-      )
-    } catch ( error ) {
+      this.dispatchEvent(new CustomEvent('custom-element-initialized', { detail: {} }))
+    } catch (error) {
       this.#initState = 'uninitialized'
 
-      const span = document.createElement( 'span' )
-      span.classList.add( 'locr-map-error' )
+      const span = document.createElement('span')
+      span.classList.add('locr-map-error')
       span.style.color = 'red'
       span.style.fontWeight = 'bold'
 
-      if ( error instanceof Error ) {
+      if (error instanceof Error) {
         span.textContent = error.message
       } else {
-        span.textContent =
-          'An error occurred while retrieving Access-Key data for the locrMAP!'
+        span.textContent = 'An error occurred while retrieving Access-Key data for the locrMAP!'
       }
-      this.appendChild( span )
+      this.appendChild(span)
     }
   }
 
-  #initResizeObserver() {
-    this.#resizeObserver = new ResizeObserver( ( entries ) => {
-      for ( const entry of entries ) {
-        if ( entry.target === this ) {
+  #initResizeObserver () {
+    this.#resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === this) {
           this.#map.invalidateSize()
         }
       }
-    } )
-    this.#resizeObserver.observe( this )
+    })
+    this.#resizeObserver.observe(this)
   }
 
-  #parseAttributes() {
+  #parseAttributes () {
     this.#accessKey = this.#parseAccessKeyAttribute()
     this.#printFormat = this.#parsePrintFormatAttribute()
     this.#style = this.#parseMapStyleAttribute()
     this.#zoom = this.#parseZoomAttribute()
-    this.#minZoom = this.#parseZoomAttribute( 'min-zoom', MIN_ZOOM )
-    this.#maxZoom = this.#parseZoomAttribute( 'max-zoom', MAX_ZOOM )
+    this.#minZoom = this.#parseZoomAttribute('min-zoom', MIN_ZOOM)
+    this.#maxZoom = this.#parseZoomAttribute('max-zoom', MAX_ZOOM)
   }
 
   /**
    * @param {string|null} attributeName
    * @return {string} Access key
    */
-  #parseAccessKeyAttribute( attributeName ) {
-    const attribute = this.attributes.getNamedItem(
-      attributeName || 'access-key'
-    )
-    if ( attribute ) {
+  #parseAccessKeyAttribute (attributeName) {
+    const attribute = this.attributes.getNamedItem(attributeName || 'access-key')
+    if (attribute) {
       return attribute.value.trim()
     }
 
@@ -215,11 +197,9 @@ class LocrMapCustomElement extends HTMLElement {
    * @param {string|null} attributeName
    * @return {string} Style
    */
-  #parseMapStyleAttribute( attributeName ) {
-    const attribute = this.attributes.getNamedItem(
-      attributeName || 'map-style'
-    )
-    if ( attribute && attribute.value.trim() !== '' ) {
+  #parseMapStyleAttribute (attributeName) {
+    const attribute = this.attributes.getNamedItem(attributeName || 'map-style')
+    if (attribute && attribute.value.trim() !== '') {
       return attribute.value.trim()
     }
 
@@ -230,14 +210,12 @@ class LocrMapCustomElement extends HTMLElement {
    * @param {string|null} attributeName
    * @return {PrintFormat?} Print Format
    */
-  #parsePrintFormatAttribute( attributeName ) {
-    const attribute = this.attributes.getNamedItem(
-      attributeName || 'print-format'
-    )
-    if ( attribute ) {
+  #parsePrintFormatAttribute (attributeName) {
+    const attribute = this.attributes.getNamedItem(attributeName || 'print-format')
+    if (attribute) {
       const trimmedAttribute = attribute.value.trim()
-      if ( trimmedAttribute !== '' ) {
-        return this.#parsePrintFormatString( trimmedAttribute )
+      if (trimmedAttribute !== '') {
+        return this.#parsePrintFormatString(trimmedAttribute)
       }
     }
 
@@ -249,25 +227,19 @@ class LocrMapCustomElement extends HTMLElement {
    * @param {number}      defaultValue
    * @return {number} Zoom level
    */
-  #parseZoomAttribute( attributeName, defaultValue ) {
-    const attribute = this.attributes.getNamedItem(
-      attributeName || 'zoom'
-    )
-    if ( ! attribute || attribute.value.trim() === '' ) {
+  #parseZoomAttribute (attributeName, defaultValue) {
+    const attribute = this.attributes.getNamedItem(attributeName || 'zoom')
+    if (!attribute || attribute.value.trim() === '') {
       return defaultValue || DEFAULT_ZOOM
     }
 
-    const parsedZoom = parseInt( attribute.value.trim() )
-    if ( isNaN( parsedZoom ) ) {
-      window.console.warn(
-        `locr-map element: Invalid ${ attributeName } attribute value (${ attribute.value }).`
-      )
+    const parsedZoom = parseInt(attribute.value.trim())
+    if (isNaN(parsedZoom)) {
+      console.warn(`locr-map element: Invalid ${attributeName} attribute value (${attribute.value}).`)
       return defaultValue || DEFAULT_ZOOM
     }
-    if ( parsedZoom < MIN_ZOOM || parsedZoom > MAX_ZOOM ) {
-      window.console.warn(
-        `locr-map element: Invalid ${ attributeName } attribute value (${ attribute.value }) is out of range (${ MIN_ZOOM } <= x <= ${ MAX_ZOOM }).`
-      )
+    if (parsedZoom < MIN_ZOOM || parsedZoom > MAX_ZOOM) {
+      console.warn(`locr-map element: Invalid ${attributeName} attribute value (${attribute.value}) is out of range (${MIN_ZOOM} <= x <= ${MAX_ZOOM}).`)
       return defaultValue || DEFAULT_ZOOM
     }
 
@@ -278,129 +250,122 @@ class LocrMapCustomElement extends HTMLElement {
    * @param {string} printFormatString
    * @return {PrintFormat} Print format
    */
-  #parsePrintFormatString( printFormatString ) {
-    const sizeMatch =
-      RegExp( PRINT_FORMAT_PATTERN ).exec( printFormatString )
-    if ( ! sizeMatch ) {
-      throw new Error(
-        `locr-map element: Invalid print format size string => ${ printFormatString }`
-      )
+  #parsePrintFormatString (printFormatString) {
+    const sizeMatch = RegExp(PRINT_FORMAT_PATTERN).exec(printFormatString)
+    if (!sizeMatch) {
+      throw new Error(`locr-map element: Invalid print format size string => ${printFormatString}`)
     }
 
     const printSizeInfo = {
-      width: parseFloat( sizeMatch.groups.width ),
-      height: parseFloat( sizeMatch.groups.height ),
+      width: parseFloat(sizeMatch.groups.width),
+      height: parseFloat(sizeMatch.groups.height),
       unitType: 'cm',
-      dpi: 300,
+      dpi: 300
     }
-    if ( sizeMatch.groups.unitType ) {
+    if (sizeMatch.groups.unitType) {
       printSizeInfo.unitType = sizeMatch.groups.unitType
     }
-    if ( sizeMatch.groups.dpi ) {
-      printSizeInfo.dpi = parseInt( sizeMatch.groups.dpi )
+    if (sizeMatch.groups.dpi) {
+      printSizeInfo.dpi = parseInt(sizeMatch.groups.dpi)
     }
 
-    return new PrintFormat( printSizeInfo )
+    return new PrintFormat(printSizeInfo)
   }
 
   /**
    * @param {L.Marker} marker
    */
-  addMarker( marker ) {
-    if ( ! this.#map ) {
-      window.console.warn(
-        'locr-map element: Leaflet map is not initialized for addMarker( marker ), yet!'
-      )
+  addMarker (marker) {
+    if (!this.#map) {
+      console.warn('locr-map element: Leaflet map is not initialized for addMarker( marker ), yet!')
       return
     }
-    if ( ! ( marker instanceof L.Marker ) ) {
-      window.console.warn(
-        'locr-map element: Invalid marker object in addMarker( marker )!' +
-          ' It must be an instance of L.Marker.'
-      )
+    if (!(marker instanceof L.Marker)) {
+      console.warn('locr-map element: Invalid marker object in addMarker( marker )! It must be an instance of L.Marker.')
       return
     }
 
-    marker.addTo( this.#map )
+    marker.addTo(this.#map)
   }
 
   /**
    * @param {{icnoData: {iconUrl: string, iconSize: [number, number], iconAnchor: [number, number]}, latitude: number, longitude: number}} poi
    */
-  addOrReplacePoiToMapOverlay( poi ) {
-    if ( ! this.#map ) {
-      window.console.warn(
-        'locr-map element: Leaflet map is not initialized for addOrReplacePoiToMapOverlay( poi ), yet!'
-      )
+  addOrReplacePoiToMapOverlay (poi) {
+    if (!this.#map) {
+      console.warn('locr-map element: Leaflet map is not initialized for addOrReplacePoiToMapOverlay( poi ), yet!')
       return
     }
-    if ( ! this.#layer ) {
-      window.console.warn(
-        'locr-map element: Leaflet layer is not initialized for addOrReplacePoiToMapOverlay( poi ), yet!'
-      )
+    if (!this.#layer) {
+      console.warn('locr-map element: Leaflet layer is not initialized for addOrReplacePoiToMapOverlay( poi ), yet!')
       return
     }
 
-    if ( ! this.#layer.mapOverlay ) {
-      window.console.warn(
-        'locr-map element: MapOverlay is not initialized for addOrReplacePoiToMapOverlay( poi ), yet!'
-      )
+    if (!this.#layer.mapOverlay) {
+      console.warn('locr-map element: MapOverlay is not initialized for addOrReplacePoiToMapOverlay( poi ), yet!')
       return
     }
 
-    const poiLayer = new PoiLayer( poi )
-    this.#layer.mapOverlay.addOrReplace( poiLayer )
-    this.#layer.setMapOverlay( this.#layer.mapOverlay )
+    const poiLayer = new PoiLayer(poi)
+    this.#layer.mapOverlay.addOrReplace(poiLayer)
+    this.#layer.setMapOverlay(this.#layer.mapOverlay)
   }
 
   /**
    * Wrapper for the Leaflet map.fitBounds method.
    */
-  fitBounds() {
-    this.#map?.fitBounds( ...arguments )
+  fitBounds () {
+    this.#map?.fitBounds(...arguments)
   }
 
   /**
    * Wrapper for the Leaflet map.getBounds method.
    */
-  getBounds() {
+  getBounds () {
     return this.#map?.getBounds()
   }
 
   /**
    * Wrapper for the Leaflet map.getCenter method.
    */
-  getCenter() {
+  getCenter () {
     return this.#map?.getCenter()
   }
 
   /**
    * Wrapper for the Leaflet map.getContainer method.
    */
-  getContainer() {
+  getContainer () {
     return this.#map?.getContainer()
   }
 
   /**
    * @return {L.GridLayer} The locr map leaflet layer.
    */
-  getLayer() {
+  getLayer () {
     return this.#layer
+  }
+
+  getMapCanvas (options) {
+    return this.#layer.getMapCanvas(options)
+  }
+
+  /**
+   * Wrapper for the Leaflet map.getPixelBounds method.
+   */
+  getPixelBounds () {
+    return this.#map?.getPixelBounds()
   }
 
   /**
    * @param {*} options
    */
-  async getPrintCanvas( options ) {
-    if ( ! this.#map ) {
-      throw new Error(
-        'locr-map element: Leaflet map is not initialized for getPrintCanvas( options ), yet!'
-      )
+  async getPrintCanvas (options) {
+    if (!this.#map) {
+      throw new Error('locr-map element: Leaflet map is not initialized for getPrintCanvas( options ), yet!')
     }
-    if ( ! this.#layer ) {
-      throw new Error(
-        'locr-map element: Leaflet layer is not initialized for getPrintCanvas( options ), yet!'
-      )
+    if (!this.#layer) {
+      throw new Error('locr-map element: Leaflet layer is not initialized for getPrintCanvas( options ), yet!')
     }
 
     const mapBounds = this.#map.getBounds()
@@ -413,260 +378,227 @@ class LocrMapCustomElement extends HTMLElement {
       longitudeMax: mapBounds.getEast(),
       width: mapContainer.clientWidth,
       height: mapContainer.clientHeight,
-      ...options,
+      ...options
     }
 
-    if ( this.#layer.options && this.#layer.options.printFormat ) {
+    if (this.#layer.options && this.#layer.options.printFormat) {
       options.printFormat = this.#layer.options.printFormat
     }
 
-    return await this.#layer.getPrintCanvas( options )
+    return await this.#layer.getPrintCanvas(options)
+  }
+
+  /**
+   * Wrapper for the Leaflet map.getSize method.
+   */
+  getSize () {
+    return this.#map?.getSize()
   }
 
   /**
    * Wrapper for the Leaflet map.getZoom method.
    */
-  getZoom() {
+  getZoom () {
     return this.#map?.getZoom()
   }
 
   /**
    * Wrapper for the Leaflet map.invalidateSize method.
    */
-  invalidateSize() {
+  invalidateSize () {
     this.#map?.invalidateSize()
   }
 
   /**
    * Wrapper for the Leaflet map.on method.
    */
-  on() {
-    if ( ! this.#map ) {
-      window.console.warn(
-        'locr-map element: Leaflet map is not initialized for on( event, handler ), yet!'
-      )
+  on () {
+    if (!this.#map) {
+      console.warn('locr-map element: Leaflet map is not initialized for on( event, handler ), yet!')
       return
     }
 
-    if ( this.#map._loaded ) {
-      arguments[ 1 ]()
+    if (this.#mapIsReady) {
+      arguments[1]()
     } else {
-      this.#map.on( ...arguments )
+      this.#map.on(...arguments)
     }
+  }
+
+  /**
+   * Wrapper for the Leaflet map.pointToLatLng method.
+   */
+  pointToLatLng (point) {
+    return this.#map?.options.crs.pointToLatLng(point, this.#map.getZoom())
   }
 
   /**
    * @param {*} data
    */
-  setMapOverlayByData( data ) {
-    if ( ! this.#layer ) {
-      window.console.warn(
-        'locr-map element: Leaflet map-layer is not initialized for setMapOverlayByData( data ), yet!'
-      )
+  setMapOverlayByData (data) {
+    if (!this.#layer) {
+      console.warn('locr-map element: Leaflet map-layer is not initialized for setMapOverlayByData( data ), yet!')
       return
     }
 
-    const mapOverlay = new MapOverlay( {
+    const mapOverlay = new MapOverlay({
       width: 1000,
       height: 1000,
-      dpi: 300,
-    } )
+      dpi: 300
+    })
 
-    if ( data.fontFaces instanceof Array ) {
-      for ( const fontFace of data.fontFaces ) {
-        if ( fontFace.family && fontFace.source ) {
-          mapOverlay.addFontFace(
-            new CustomFontFace(
-              fontFace.family,
-              fontFace.source,
-              fontFace.descriptors
-            )
-          )
+    if (data.fontFaces instanceof Array) {
+      for (const fontFace of data.fontFaces) {
+        if (fontFace.family && fontFace.source) {
+          mapOverlay.addFontFace(new CustomFontFace(fontFace.family, fontFace.source, fontFace.descriptors))
         }
       }
     }
 
-    if ( data.layers instanceof Array ) {
+    if (data.layers instanceof Array) {
       const domParser = new DOMParser()
 
-      for ( const layerIndex in data.layers ) {
-        const layer = data.layers[ layerIndex ]
+      for (const layerIndex in data.layers) {
+        const layer = data.layers[layerIndex]
 
-        if ( typeof layer.type !== 'string' ) {
-          window.console.warn(
-            `locr-map element: data.layers[${ layerIndex }].type is not a string in setMapOverlayByData( data )!`
-          )
+        if (typeof layer.type !== 'string') {
+          console.warn(`locr-map element: data.layers[${layerIndex}].type is not a string in setMapOverlayByData( data )!`)
           continue
         }
-        if ( typeof layer.id !== 'string' ) {
-          window.console.warn(
-            `locr-map element: data.layers[${ layerIndex }].id is not a string in setMapOverlayByData( data )!`
-          )
+        if (typeof layer.id !== 'string') {
+          console.warn(`locr-map element: data.layers[${layerIndex}].id is not a string in setMapOverlayByData( data )!`)
           continue
         }
         const layerId = layer.id.trim()
-        if ( layerId === '' ) {
-          window.console.warn(
-            `locr-map element: data.layers[${ layerIndex }].id is an empty string in setMapOverlayByData( data )!`
-          )
+        if (layerId === '') {
+          console.warn(`locr-map element: data.layers[${layerIndex}].id is an empty string in setMapOverlayByData( data )!`)
           continue
         }
 
         let overlayLayer = null
-        switch ( layer.type ) {
-        case 'svg':
-          if ( typeof layer.content === 'string' ) {
-            const parsedDom = domParser.parseFromString(
-              layer.content,
-              'application/xml'
-            )
-            if (
-              parsedDom instanceof XMLDocument &&
-  parsedDom.children.length > 0
-            ) {
-              parsedDom.documentElement.id = layerId
-              layer.content =
-  parsedDom.documentElement.outerHTML
+        switch (layer.type) {
+          case 'svg':
+            if (typeof layer.content === 'string') {
+              const parsedDom = domParser.parseFromString(layer.content, 'application/xml')
+              if (parsedDom instanceof XMLDocument && parsedDom.children.length > 0) {
+                parsedDom.documentElement.id = layerId
+                layer.content = parsedDom.documentElement.outerHTML
+              }
+              overlayLayer = new SvgLayer(layer.content)
             }
-            overlayLayer = new SvgLayer( layer.content )
-          }
-          break
+            break
 
-        case 'text':
-          if ( typeof layer.content === 'string' ) {
-            overlayLayer = this.#buildTextMapOverlay(
-              layer.id,
-              layer.content,
-              layer.attributes
-            )
-          }
-          break
+          case 'text':
+            if (typeof layer.content === 'string') {
+              overlayLayer = this.#buildTextMapOverlay(layer.id, layer.content, layer.attributes)
+            }
+            break
 
-        default:
-          window.console.warn(
-            `locr-map element: Invalid data.layers.type (${ layer.type }) in setMapOverlayByData( data )!`,
-            layer
-          )
-          break
+          default:
+            console.warn(`locr-map element: Invalid data.layers.type (${layer.type}) in setMapOverlayByData( data )!`, layer)
+            break
         }
 
-        if ( overlayLayer !== null ) {
-          mapOverlay.addOrReplace( overlayLayer )
+        if (overlayLayer !== null) {
+          mapOverlay.addOrReplace(overlayLayer)
         }
       }
     }
 
-    if ( this.#layer.mapOverlay ) {
+    if (this.#layer.mapOverlay) {
       const poiDatas = this.#layer.mapOverlay.getPoiDatas()
-      if ( poiDatas instanceof Array ) {
-        for ( const poiData of poiDatas ) {
-          mapOverlay.addOrReplace( new PoiLayer( poiData ) )
+      if (poiDatas instanceof Array) {
+        for (const poiData of poiDatas) {
+          mapOverlay.addOrReplace(new PoiLayer(poiData))
         }
       }
     }
 
-    this.#layer.setMapOverlay( mapOverlay )
+    this.#layer.setMapOverlay(mapOverlay)
   }
 
   /**
    * @return {PrintFormat?} Print format
    */
-  getPrintFormat() {
-    return this.#layer?.options.printFormat
+  getPrintFormat () {
+    return this.#layer?.printFormat
   }
 
   /**
    * @param {string|PrintFormat} printFormat
    * @param {boolean}            adjustRatio
    */
-  setPrintFormat( printFormat, adjustRatio = true ) {
-    if ( typeof printFormat === 'undefined' ) {
-      window.console.warn(
-        'locr-map element: printFormat is undefined in setPrintFormat( printFormat )!'
-      )
+  setPrintFormat (printFormat, adjustRatio = true) {
+    if (typeof printFormat === 'undefined') {
+      console.warn('locr-map element: printFormat is undefined in setPrintFormat( printFormat )!')
       return
     }
-    if ( printFormat === null ) {
-      window.console.warn(
-        'locr-map element: printFormat is null in setPrintFormat( printFormat )!'
-      )
+    if (printFormat === null) {
+      console.warn('locr-map element: printFormat is null in setPrintFormat( printFormat )!')
       return
     }
-    if ( typeof printFormat === 'string' ) {
-      printFormat = this.#parsePrintFormatString( printFormat )
+    if (typeof printFormat === 'string') {
+      printFormat = this.#parsePrintFormatString(printFormat)
     }
 
-    if ( ! ( printFormat instanceof PrintFormat ) ) {
-      window.console.warn(
-        'locr-map element: Invalid print format object in setPrintFormat( printFormat )!'
-      )
+    if (!(printFormat instanceof PrintFormat)) {
+      console.warn('locr-map element: Invalid print format object in setPrintFormat( printFormat )!')
       return
     }
 
-    if ( ! this.#layer ) {
-      window.console.warn(
-        'locr-map element: Leaflet layer is not initialized for setPrintFormat( printFormat ), yet!'
-      )
+    if (!this.#layer) {
+      console.warn('locr-map element: Leaflet layer is not initialized for setPrintFormat( printFormat ), yet!')
       return
     }
 
-    if ( adjustRatio ) {
+    if (adjustRatio) {
       const printFormatSize = printFormat.getSize()
       const sizeRatio = printFormatSize.width / printFormatSize.height
 
       const mapParentElement = this.parentElement
-      const mapParentContainerRatio =
-        mapParentElement.offsetWidth / mapParentElement.offsetHeight
+      const mapParentContainerRatio = mapParentElement.offsetWidth / mapParentElement.offsetHeight
 
-      if ( sizeRatio > mapParentContainerRatio ) {
+      if (sizeRatio > mapParentContainerRatio) {
         this.style.width = '100%'
-        const calculatedHeight =
-          mapParentElement.offsetWidth / sizeRatio
-        this.style.height = `${ calculatedHeight }px`
+        const calculatedHeight = mapParentElement.offsetWidth / sizeRatio
+        this.style.height = `${calculatedHeight}px`
       } else {
         this.style.height = '100%'
-        const calculatedWidth =
-          mapParentElement.offsetHeight * sizeRatio
-        this.style.width = `${ calculatedWidth }px`
+        const calculatedWidth = mapParentElement.offsetHeight * sizeRatio
+        this.style.width = `${calculatedWidth}px`
       }
     }
 
-    this.#layer.setPrintFormat( printFormat )
+    this.#layer.setPrintFormat(printFormat)
 
-    this.dispatchEvent(
-      new CustomEvent( 'set-print-format', { detail: { printFormat } } )
-    )
+    this.dispatchEvent(new CustomEvent('set-print-format', { detail: { printFormat } }))
   }
 
   /**
    * @param {string} style
    */
-  setStyle( style ) {
-    if ( ! this.#layer ) {
-      window.console.warn(
-        'locr-map element: Leaflet layer is not initialized for setStyle( style ), yet!'
-      )
+  setStyle (style) {
+    if (!this.#layer) {
+      console.warn('locr-map element: Leaflet layer is not initialized for setStyle( style ), yet!')
       return
     }
 
     this.#layer.options.style = style
-    this.#layer._onResize()
+    this.#layer.redraw()
   }
 
   /**
    * @param {string} id
    * @param {string} textContent
    */
-  replaceTextSvgLayerContent( id, textContent ) {
-    if ( ! this.#layer ) {
-      throw new Error(
-        'locr-map element: Leaflet layer is not initialized for replaceTextSvgLayerContent( id, textContent ), yet!'
-      )
+  replaceTextSvgLayerContent (id, textContent) {
+    if (!this.#layer) {
+      throw new Error('locr-map element: Leaflet layer is not initialized for replaceTextSvgLayerContent( id, textContent ), yet!')
     }
 
-    if ( this.#layer.mapOverlay ) {
-      this.#layer.mapOverlay.replaceTextContent( id, textContent )
-      this.#layer.setMapOverlay( this.#layer.mapOverlay )
+    if (this.#layer.mapOverlay) {
+      this.#layer.mapOverlay.replaceTextContent(id, textContent)
+      this.#layer.setMapOverlay(this.#layer.mapOverlay)
     }
   }
 
@@ -676,11 +608,9 @@ class LocrMapCustomElement extends HTMLElement {
    * @param {Object} attributes
    * @return {TextSvgLayer} a new TextSvgLayer instance.
    */
-  #buildTextMapOverlay( id, content, attributes ) {
-    if ( ! this.#map || ! this.#layer ) {
-      throw new Error(
-        'locr-map element: Leaflet map is not initialized for #buildTextMapOverlay( id, content, attributes ), yet!'
-      )
+  #buildTextMapOverlay (id, content, attributes) {
+    if (!this.#map || !this.#layer) {
+      throw new Error('locr-map element: Leaflet map is not initialized for #buildTextMapOverlay( id, content, attributes ), yet!')
     }
 
     const textInfo = {
@@ -694,26 +624,26 @@ class LocrMapCustomElement extends HTMLElement {
       'font-size': '5cm',
       'font-family': 'Barlow Condensed',
       'font-weight': '500',
-      'font-style': 'normal',
+      'font-style': 'normal'
     }
 
-    if ( attributes ) {
-      for ( const key in attributes ) {
-        textInfo[ key ] = attributes[ key ]
+    if (attributes) {
+      for (const key in attributes) {
+        textInfo[key] = attributes[key]
       }
     }
 
-    return new TextSvgLayer( textInfo )
+    return new TextSvgLayer(textInfo)
   }
 
   /**
    * Wrapper for the Leaflet map.setView method.
    */
-  setView() {
-    this.#map?.setView( ...arguments )
+  setView () {
+    this.#map?.setView(...arguments)
   }
 }
 
-if ( ! window.customElements.get( 'locr-map' ) ) {
-  window.customElements.define( 'locr-map', LocrMapCustomElement )
+if (!window.customElements.get('locr-map')) {
+  window.customElements.define('locr-map', LocrMapCustomElement)
 }

@@ -2,7 +2,7 @@ import BaseMap from "./BaseMap.js"
 
 export default class CreatePrintMapButton {
   /**
-   * @param {BaseMap} baseMap
+   * @param {BaseMap|LocrMapCustomerElement} baseMap
    */
   static init(baseMap) {
     const createMapButton = document.getElementById('create-map')

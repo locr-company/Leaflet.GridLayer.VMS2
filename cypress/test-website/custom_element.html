@@ -11,23 +11,19 @@
             import CreatePrintMapButton from './js/CreatePrintMapButton.js';
             import CreateMapButton from './js/CreateMapButton.js';
 
+            const locrMapElement = document.getElementById('map');
             const searchParams = new URLSearchParams(window.location.search)
             const accessKey = searchParams.get('access_key')
             if (typeof accessKey === 'string' && accessKey !== '') {
-                const locrMapElement = document.getElementById('map');
                 locrMapElement?.setAttribute('access-key', accessKey);
             }
 
-            /*
-            const baseMap = new BaseMap();
-
-            CreatePrintMapButton.init(baseMap);
-            CreateMapButton.init(baseMap);
-            */
+            CreatePrintMapButton.init(locrMapElement);
+            CreateMapButton.init(locrMapElement);
         </script>
     </head>
     <body style="margin: 0; padding: 0;">
-        <locr-map id="map" print-format="14.8x21cm" style="border: 1px solid black; width: 500px; height: 500px; margin-left: auto; margin-right: auto;"></locr-map>
+        <locr-map id="map" map-style="4201" print-format="14.8x21cm" style="border: 1px solid black; width: 500px; height: 500px; margin-left: auto; margin-right: auto;"></locr-map>
         <div style="text-align: center; margin-top: 10px;"><button id="create-print-map">createPrintMap</button> <button id="create-map">createMap</button></div>
         <div id="print-map" style="text-align: center; margin-top: 10px;"></div>
         <div id="map-canvas" style="text-align: center; margin-top: 10px;"></div>
