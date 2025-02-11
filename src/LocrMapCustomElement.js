@@ -77,9 +77,99 @@ class LocrMapCustomElement extends HTMLElement {
   }
 
   /**
+   * @param {Array} dataLayers
+   * @param {MapOverlay} mapOverlay
+   */
+  #addDataLayersToMapOverlay (dataLayers, mapOverlay) {
+    if (!(dataLayers instanceof Array)) {
+      return
+    }
+
+    const domParser = new DOMParser()
+
+    for (const layerIndex in dataLayers) {
+      const layer = dataLayers[layerIndex]
+
+      if (typeof layer.type !== 'string') {
+        console.warn(`locr-map element: dataLayers[${layerIndex}].type is not a string in setMapOverlayByData( data )!`)
+        continue
+      }
+      if (typeof layer.id !== 'string') {
+        console.warn(`locr-map element: dataLayers[${layerIndex}].id is not a string in setMapOverlayByData( data )!`)
+        continue
+      }
+      const layerId = layer.id.trim()
+      if (layerId === '') {
+        console.warn(`locr-map element: dataLayers[${layerIndex}].id is an empty string in setMapOverlayByData( data )!`)
+        continue
+      }
+
+      let overlayLayer = null
+      switch (layer.type) {
+        case 'svg':
+          if (typeof layer.content === 'string') {
+            const parsedDom = domParser.parseFromString(layer.content, 'application/xml')
+            if (parsedDom instanceof XMLDocument && parsedDom.children.length > 0) {
+              parsedDom.documentElement.id = layerId
+              layer.content = parsedDom.documentElement.outerHTML
+            }
+            overlayLayer = new SvgLayer(layer.content)
+          }
+          break
+
+        case 'text':
+          if (typeof layer.content === 'string') {
+            overlayLayer = this.#buildTextMapOverlay(layer.id, layer.content, layer.attributes)
+          }
+          break
+
+        default:
+          console.warn(`locr-map element: Invalid dataLayers.type (${layer.type}) in setMapOverlayByData( data )!`, layer)
+          break
+      }
+
+      if (overlayLayer !== null) {
+        mapOverlay.addOrReplace(overlayLayer)
+      }
+    }
+  }
+
+  /**
+   * @param {Array} fontFaces
+   * @param {MapOverlay} mapOverlay
+   */
+  #addFontFacesToMapOverlay (fontFaces, mapOverlay) {
+    if (!(fontFaces instanceof Array)) {
+      return
+    }
+
+    for (const fontFace of fontFaces) {
+      if (fontFace.family && fontFace.source) {
+        mapOverlay.addFontFace(new CustomFontFace(fontFace.family, fontFace.source, fontFace.descriptors))
+      }
+    }
+  }
+
+  /**
+   * @param {MapOverlay} mapOverlay
+   */
+  #addOrReplacePoiDatasToMapOverlay (mapOverlay) {
+    if (!this.#layer.mapOverlay) {
+      return
+    }
+
+    const poiDatas = this.#layer.mapOverlay.getPoiDatas()
+    if (poiDatas instanceof Array) {
+      for (const poiData of poiDatas) {
+        mapOverlay.addOrReplace(new PoiLayer(poiData))
+      }
+    }
+  }
+
+  /**
    * @param {*} layerOptions
    */
-  async #applyLayerOptionsIfConstraintsAreMet(layerOptions) {
+  async #applyLayerOptionsIfConstraintsAreMet (layerOptions) {
     const response = await fetch(`https://users.locr.com/api/api_key/${this.#accessKey}/constraints`)
     if (response.status === 404) {
       throw new Error('Access-Key not found for locrMAP!')
@@ -452,72 +542,9 @@ class LocrMapCustomElement extends HTMLElement {
       dpi: 300
     })
 
-    if (data.fontFaces instanceof Array) {
-      for (const fontFace of data.fontFaces) {
-        if (fontFace.family && fontFace.source) {
-          mapOverlay.addFontFace(new CustomFontFace(fontFace.family, fontFace.source, fontFace.descriptors))
-        }
-      }
-    }
-
-    if (data.layers instanceof Array) {
-      const domParser = new DOMParser()
-
-      for (const layerIndex in data.layers) {
-        const layer = data.layers[layerIndex]
-
-        if (typeof layer.type !== 'string') {
-          console.warn(`locr-map element: data.layers[${layerIndex}].type is not a string in setMapOverlayByData( data )!`)
-          continue
-        }
-        if (typeof layer.id !== 'string') {
-          console.warn(`locr-map element: data.layers[${layerIndex}].id is not a string in setMapOverlayByData( data )!`)
-          continue
-        }
-        const layerId = layer.id.trim()
-        if (layerId === '') {
-          console.warn(`locr-map element: data.layers[${layerIndex}].id is an empty string in setMapOverlayByData( data )!`)
-          continue
-        }
-
-        let overlayLayer = null
-        switch (layer.type) {
-          case 'svg':
-            if (typeof layer.content === 'string') {
-              const parsedDom = domParser.parseFromString(layer.content, 'application/xml')
-              if (parsedDom instanceof XMLDocument && parsedDom.children.length > 0) {
-                parsedDom.documentElement.id = layerId
-                layer.content = parsedDom.documentElement.outerHTML
-              }
-              overlayLayer = new SvgLayer(layer.content)
-            }
-            break
-
-          case 'text':
-            if (typeof layer.content === 'string') {
-              overlayLayer = this.#buildTextMapOverlay(layer.id, layer.content, layer.attributes)
-            }
-            break
-
-          default:
-            console.warn(`locr-map element: Invalid data.layers.type (${layer.type}) in setMapOverlayByData( data )!`, layer)
-            break
-        }
-
-        if (overlayLayer !== null) {
-          mapOverlay.addOrReplace(overlayLayer)
-        }
-      }
-    }
-
-    if (this.#layer.mapOverlay) {
-      const poiDatas = this.#layer.mapOverlay.getPoiDatas()
-      if (poiDatas instanceof Array) {
-        for (const poiData of poiDatas) {
-          mapOverlay.addOrReplace(new PoiLayer(poiData))
-        }
-      }
-    }
+    this.#addFontFacesToMapOverlay(data.fontFaces, mapOverlay)
+    this.#addDataLayersToMapOverlay(data.layers, mapOverlay)
+    this.#addOrReplacePoiDatasToMapOverlay(mapOverlay)
 
     this.#layer.setMapOverlay(mapOverlay)
   }
