@@ -51,6 +51,13 @@ export default class BaseMap {
     }
   }
 
+  /**
+   * @returns {{x: number, y: number}}
+   */
+  getSize() {
+    return this.#map.getSize()
+  }
+
   getMapCanvas(args) {
     return this.#vms2Layer.getMapCanvas(args)
   }

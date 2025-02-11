@@ -2,7 +2,7 @@ import BaseMap from "./BaseMap.js"
 
 export default class CreatePrintMapButton {
   /**
-   * @param {BaseMap} baseMap
+   * @param {BaseMap|LocrMapCustomerElement} baseMap
    */
   static init(baseMap) {
     const createPrintMapButton = document.getElementById('create-print-map')
@@ -12,8 +12,8 @@ export default class CreatePrintMapButton {
           const printMap = document.getElementById('print-map')
           if (printMap) {
             const printFormat = baseMap.getPrintFormat()
-            const mapContainerSize = baseMap.getMapContainerSize()
-            const virtualMapSize = printFormat.calculateVirtualMapContainerSize(mapContainerSize.width, mapContainerSize.height)
+            const mapContainerSize = baseMap.getSize()
+            const virtualMapSize = printFormat.calculateVirtualMapContainerSize(mapContainerSize.x, mapContainerSize.y)
             canvas.style.width = `${virtualMapSize.width}px`
 
             printMap.innerHTML = ''
