@@ -1,19 +1,19 @@
 export default class PrintFormat {
-  static get DEFAULT_PRINT_DPI() { return 300 }
-  static get DEFAULT_UNIT_TYPE() { return 'px' }
+  static get DEFAULT_PRINT_DPI () { return 300 }
+  static get DEFAULT_UNIT_TYPE () { return 'px' }
 
-  static get CM_PER_INCH() { return 2.54 }
-  static get MM_PER_INCH() { return 25.4 }
+  static get CM_PER_INCH () { return 2.54 }
+  static get MM_PER_INCH () { return 25.4 }
 
-  static get DEFAULT_PRINT_SCALE() { return 2 * 3604 / 2480 }
+  static get DEFAULT_PRINT_SCALE () { return 2 * 3604 / 2480 }
 
   #unitTypeConversionFunctions = {
-    'px': (width, height, dpi) => ({ width, height }),
-    'cm': (width, height, dpi) => ({ width: width * dpi / PrintFormat.CM_PER_INCH, height: height * dpi / PrintFormat.CM_PER_INCH }),
-    'mm': (width, height, dpi) => ({ width: width * dpi / PrintFormat.MM_PER_INCH, height: height * dpi / PrintFormat.MM_PER_INCH }),
-    'in': (width, height, dpi) => ({ width: width * dpi, height: height * dpi }),
-    'pt': (width, height, dpi) => ({ width: width * dpi / 72, height: height * dpi / 72 }),
-    'pc': (width, height, dpi) => ({ width: width * dpi / 6, height: height * dpi / 6 }),
+    px: (width, height, dpi) => ({ width, height }),
+    cm: (width, height, dpi) => ({ width: width * dpi / PrintFormat.CM_PER_INCH, height: height * dpi / PrintFormat.CM_PER_INCH }),
+    mm: (width, height, dpi) => ({ width: width * dpi / PrintFormat.MM_PER_INCH, height: height * dpi / PrintFormat.MM_PER_INCH }),
+    in: (width, height, dpi) => ({ width: width * dpi, height: height * dpi }),
+    pt: (width, height, dpi) => ({ width: width * dpi / 72, height: height * dpi / 72 }),
+    pc: (width, height, dpi) => ({ width: width * dpi / 6, height: height * dpi / 6 })
   }
 
   #width = 0
@@ -26,7 +26,7 @@ export default class PrintFormat {
   /**
    * @param {{width: number, height: number, dpi?: number, printScale?: number, unitType?: 'px'|'cm'|'mm'|'in'|'pt'|'pc'}} printSizeInfo
    */
-  constructor(printSizeInfo) {
+  constructor (printSizeInfo) {
     if (typeof printSizeInfo !== 'object' || printSizeInfo === null) {
       throw new TypeError('printSizeInfo must be an object')
     }
@@ -86,7 +86,7 @@ export default class PrintFormat {
    * @param {number} mapContainerHeight
    * @returns {string}
    */
-  buildMaskForClipPath(mapContainerWidth, mapContainerHeight) {
+  buildMaskForClipPath (mapContainerWidth, mapContainerHeight) {
     const size = this.getSize()
 
     const aspectRatio = size.width / size.height
@@ -110,7 +110,7 @@ export default class PrintFormat {
    * @param {number} mapContainerHeight
    * @returns {number}
    */
-  calculateMapScale(mapContainerWidth, mapContainerHeight) {
+  calculateMapScale (mapContainerWidth, mapContainerHeight) {
     const size = this.getSize()
 
     const aspectRatio = size.width / size.height
@@ -128,7 +128,7 @@ export default class PrintFormat {
    * @param {number} mapContainerHeight
    * @returns {{width: number, height: number}}
    */
-  calculateVirtualMapContainerSize(mapContainerWidth, mapContainerHeight) {
+  calculateVirtualMapContainerSize (mapContainerWidth, mapContainerHeight) {
     const virtualSize = {
       width: mapContainerWidth,
       height: mapContainerHeight
@@ -151,7 +151,7 @@ export default class PrintFormat {
   /**
    * @returns {{width: number, height: number, dpi: number, printScale: number}}
    */
-  getSize() {
+  getSize () {
     return {
       width: this.#width,
       height: this.#height,

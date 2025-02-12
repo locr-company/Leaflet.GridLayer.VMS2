@@ -8,7 +8,7 @@
     "cy:run": "cypress run",
     "cypress-test": "start-server-and-test start-dev-server http://localhost:9876 cy:run",
     "lint:js": "eslint src/*.js",
-    "lint:standardjs": "npx standard",
+    "lint:standardjs": "npx standard src/LocrMapCustomElement.js src/MapOverlay.js src/PrintFormat.js src/unicode.js",
     "start-dev-server": "node dev-server.mjs",
     "test": "mocha"
   },
