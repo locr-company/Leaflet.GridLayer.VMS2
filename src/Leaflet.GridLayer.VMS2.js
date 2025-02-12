@@ -1,3 +1,6 @@
+/* global DOMMatrix, DOMParser, FileReader, FontFace, Image, L, Worker, XMLSerializer */
+/* eslint-disable no-new-func */
+
 import unicodeDataTable from './unicode.js'
 import MapOverlay from './MapOverlay.js'
 import PrintFormat from './PrintFormat.js'
@@ -24,11 +27,11 @@ const RandomGenerator = function () {
   this.state = 624
 }
 
-RandomGenerator.prototype['init_seed'] = function (number) {
+RandomGenerator.prototype.init_seed = function (number) {
   this.state = number
 }
 
-RandomGenerator.prototype['random'] = function () {
+RandomGenerator.prototype.random = function () {
   let x = this.state
 
   x ^= x << 13
@@ -40,7 +43,7 @@ RandomGenerator.prototype['random'] = function () {
   return (x / 0xffffffff) + 0.5
 }
 
-RandomGenerator.prototype['random_int'] = function () {
+RandomGenerator.prototype.random_int = function () {
   let x = this.state
 
   x ^= x << 13
@@ -52,7 +55,7 @@ RandomGenerator.prototype['random_int'] = function () {
   return x
 }
 
-RandomGenerator.prototype['random_pick'] = function (elements, elementCounts) {
+RandomGenerator.prototype.random_pick = function (elements, elementCounts) {
   if (elementCounts) {
     const expandedElements = []
 
@@ -231,7 +234,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     return tileCanvas
   },
-  setPrintFormat(printFormat) {
+  setPrintFormat (printFormat) {
     if (!(printFormat instanceof PrintFormat)) {
       throw new TypeError('printFormat is not an instance of PrintFormat')
     }
@@ -244,7 +247,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       this._map.fire('resize')
     }
   },
-  setMapOverlay(mapOverlay) {
+  setMapOverlay (mapOverlay) {
     if (!(mapOverlay instanceof MapOverlay)) {
       throw new TypeError('mapOverlay is not an instance of MapOverlay')
     }
@@ -282,13 +285,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       const mapRatio = normalizedWidth / normalizedHeight
       const printRatio = printFormatSize.width / printFormatSize.height
 
-      let markerScale = 1
-
       if (printRatio <= mapRatio) {
         longitudeMin -= (mapDegreesWidth * printRatio / mapRatio - mapDegreesWidth) / 2
         longitudeMax += (mapDegreesWidth * printRatio / mapRatio - mapDegreesWidth) / 2
-
-        markerScale = printFormatSize.width / this._map.getSize().x
       } else {
         let normalizedMin = this._latitudeToNormalized(latitudeMin)
         let normalizedMax = this._latitudeToNormalized(latitudeMax)
@@ -298,8 +297,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
         latitudeMin = this._normalizedToLatitude(normalizedMin)
         latitudeMax = this._normalizedToLatitude(normalizedMax)
-
-        markerScale = printFormatSize.height / this._map.getSize().y
       }
 
       const mapInfo = {
@@ -324,12 +321,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       this.getMapCanvas(mapInfo)
         .then(mapCanvas => {
           if (this.mapOverlay) {
-            let printCanvas = document.createElement('canvas')
+            const printCanvas = document.createElement('canvas')
 
             printCanvas.width = printFormatSize.width
             printCanvas.height = printFormatSize.height
 
-            let printCanvasContext = printCanvas.getContext('2d')
+            const printCanvasContext = printCanvas.getContext('2d')
 
             printCanvasContext.drawImage(mapCanvas, 0, 0)
 
@@ -369,7 +366,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
             const urlStringMatches = [...svgString.matchAll(/url\('((https?:\/\/[^\s']+)|(.*\/[^\s']+))'/g)].concat([...svgString.matchAll(/href="((https?:\/\/[^\s"]+)|(.*\/[^\s"]+))"/g)])
 
-            function fetchAndConvertToDataURL(urlString) {
+            function fetchAndConvertToDataURL (urlString) {
               return new Promise((resolve, reject) => {
                 fetch(urlString)
                   .then(response => response.blob())
@@ -421,9 +418,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   },
   getMapCanvas: async function (mapInfo) {
     if (mapInfo &&
-      typeof (mapInfo.width) === 'number' && typeof (mapInfo.height) === 'number' &&
-      (typeof (mapInfo.x) === 'number' && typeof (mapInfo.y) === 'number' && typeof (mapInfo.z) === 'number' ||
-        typeof (mapInfo.latitudeMin) === 'number' && typeof (mapInfo.longitudeMin) === 'number' && typeof (mapInfo.latitudeMax) === 'number' && typeof (mapInfo.longitudeMax) === 'number')) {
+      typeof mapInfo.width === 'number' && typeof mapInfo.height === 'number' &&
+      (
+        (typeof mapInfo.x === 'number' && typeof mapInfo.y === 'number' && typeof mapInfo.z === 'number') ||
+        (typeof mapInfo.latitudeMin === 'number' && typeof mapInfo.longitudeMin === 'number' && typeof mapInfo.latitudeMax === 'number' && typeof mapInfo.longitudeMax === 'number')
+      )
+    ) {
       /*
        * Start of billing related code block. Do not change or skip it, neither block its function.
        * It must be executed when this function is being called.
@@ -432,7 +432,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       if (this.options.accessKey) {
         const meta = {
           function: this.getMapCanvas.name,
-          mapInfo: mapInfo
+          mapInfo
         }
 
         const metaJson = JSON.stringify(meta)
@@ -683,7 +683,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     this.mapOverlayMarkerDatas = []
 
-    if (this.mapOverlayMarkerDatas.length == 0) {
+    if (this.mapOverlayMarkerDatas.length === 0) {
       const poiDatas = this.mapOverlay.getPoiDatas()
 
       for (const poiData of poiDatas) {
@@ -916,92 +916,84 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     const wkbType = geometry.getUint32(dataOffset, true)
 
     switch (wkbType) {
-    case 1: // WKBPoint.
-      dataOffset = this._drawPoint(drawingInfo, geometry, dataOffset)
+      case 1: // WKBPoint.
+        dataOffset = this._drawPoint(drawingInfo, geometry, dataOffset)
+        break
 
-      break
+      case 2: // WKBLineString.
+        dataOffset = this._drawLineString(drawingInfo, geometry, dataOffset)
+        break
 
-    case 2: // WKBLineString.
-      dataOffset = this._drawLineString(drawingInfo, geometry, dataOffset)
-
-      break
-
-    case 3: // WKBPolygon.
-      if (drawingInfo.isIcon || drawingInfo.isText) {
-        this._drawIcon(drawingInfo, drawingInfo.objectData.Center.x, drawingInfo.objectData.Center.y)
-        dataOffset = this._skipPolygon(geometry, dataOffset)
-      } else {
-        const polygons = []
-        dataOffset = this._preparePolygon(drawingInfo, geometry, dataOffset, polygons)
-        this._drawPolygons(drawingInfo, polygons)
-      }
-
-      break
-
-    case 4: // WKBMultiPoint.
-      // console.log('Unhandled WKB type found: ' + wkbType + ' => MultiPoint')
-
-      break
-
-    case 5: // WKBMultiLineString.
-      {
-        dataOffset += 4
-
-        const numberOfLineStrings = geometry.getUint32(dataOffset, true)
-        dataOffset += 4
-
-        for (let lineStringIndex = 0; lineStringIndex < numberOfLineStrings; lineStringIndex++) {
-          dataOffset = this._drawLineString(drawingInfo, geometry, dataOffset)
-        }
-      }
-
-      break
-
-    case 6: // WKBMultiPolygon.
-      dataOffset += 4
-
-      if (drawingInfo.isIcon || drawingInfo.isText) {
-        this._drawIcon(drawingInfo, drawingInfo.objectData.Center.x, drawingInfo.objectData.Center.y)
-
-        const numberOfPolygons = geometry.getUint32(dataOffset, true)
-        dataOffset += 4
-
-        for (let polygonIndex = 0; polygonIndex < numberOfPolygons; polygonIndex++) {
+      case 3: // WKBPolygon.
+        if (drawingInfo.isIcon || drawingInfo.isText) {
+          this._drawIcon(drawingInfo, drawingInfo.objectData.Center.x, drawingInfo.objectData.Center.y)
           dataOffset = this._skipPolygon(geometry, dataOffset)
-        }
-      } else {
-        const polygons = []
-
-        const numberOfPolygons = geometry.getUint32(dataOffset, true)
-        dataOffset += 4
-
-        for (let polygonIndex = 0; polygonIndex < numberOfPolygons; polygonIndex++) {
+        } else {
+          const polygons = []
           dataOffset = this._preparePolygon(drawingInfo, geometry, dataOffset, polygons)
+          this._drawPolygons(drawingInfo, polygons)
         }
+        break
 
-        this._drawPolygons(drawingInfo, polygons)
-      }
+      case 4: // WKBMultiPoint.
+        // console.log('Unhandled WKB type found: ' + wkbType + ' => MultiPoint')
+        break
 
-      break
+      case 5: // WKBMultiLineString.
+        {
+          dataOffset += 4
 
-    case 7: // WKBGeometryCollection.
-      {
+          const numberOfLineStrings = geometry.getUint32(dataOffset, true)
+          dataOffset += 4
+
+          for (let lineStringIndex = 0; lineStringIndex < numberOfLineStrings; lineStringIndex++) {
+            dataOffset = this._drawLineString(drawingInfo, geometry, dataOffset)
+          }
+        }
+        break
+
+      case 6: // WKBMultiPolygon.
         dataOffset += 4
 
-        const numberOfGeometries = geometry.getUint32(dataOffset, true)
-        dataOffset += 4
+        if (drawingInfo.isIcon || drawingInfo.isText) {
+          this._drawIcon(drawingInfo, drawingInfo.objectData.Center.x, drawingInfo.objectData.Center.y)
 
-        for (let geometryIndex = 0; geometryIndex < numberOfGeometries; geometryIndex++) {
-          dataOffset = this._drawGeometry(drawingInfo, geometry, dataOffset)
+          const numberOfPolygons = geometry.getUint32(dataOffset, true)
+          dataOffset += 4
+
+          for (let polygonIndex = 0; polygonIndex < numberOfPolygons; polygonIndex++) {
+            dataOffset = this._skipPolygon(geometry, dataOffset)
+          }
+        } else {
+          const polygons = []
+
+          const numberOfPolygons = geometry.getUint32(dataOffset, true)
+          dataOffset += 4
+
+          for (let polygonIndex = 0; polygonIndex < numberOfPolygons; polygonIndex++) {
+            dataOffset = this._preparePolygon(drawingInfo, geometry, dataOffset, polygons)
+          }
+
+          this._drawPolygons(drawingInfo, polygons)
         }
-      }
+        break
 
-      break
+      case 7: // WKBGeometryCollection.
+        {
+          dataOffset += 4
 
-    default:
-      // console.log('Unhandled WKB type found: ' + wkbType_)
+          const numberOfGeometries = geometry.getUint32(dataOffset, true)
+          dataOffset += 4
 
-      break
+          for (let geometryIndex = 0; geometryIndex < numberOfGeometries; geometryIndex++) {
+            dataOffset = this._drawGeometry(drawingInfo, geometry, dataOffset)
+          }
+        }
+        break
+
+      default:
+        // console.log('Unhandled WKB type found: ' + wkbType_)
+        break
     }
 
     return dataOffset
@@ -1104,109 +1096,109 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             const gapY = drawingInfo.iconHeight * drawingInfo.iconTextPlacement[placementCode]
 
             switch (placementCode) {
-            case 't':
-              textDisplacementBoxes.push({
-                x: drawingInfo.iconImageOffsetX,
-                y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
-                left: x + drawingInfo.iconImageOffsetX - textBoxWidth / 2 - spacingX,
-                right: x + drawingInfo.iconImageOffsetX + textBoxWidth / 2 + spacingX,
-                top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
-                bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
-                align: 'center',
-                baseline: 'top'
-              })
-              break
+              case 't':
+                textDisplacementBoxes.push({
+                  x: drawingInfo.iconImageOffsetX,
+                  y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
+                  left: x + drawingInfo.iconImageOffsetX - textBoxWidth / 2 - spacingX,
+                  right: x + drawingInfo.iconImageOffsetX + textBoxWidth / 2 + spacingX,
+                  top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
+                  bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
+                  align: 'center',
+                  baseline: 'top'
+                })
+                break
 
-            case 'b':
-              textDisplacementBoxes.push({
-                x: drawingInfo.iconImageOffsetX,
-                y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
-                left: x + drawingInfo.iconImageOffsetX - textBoxWidth / 2 - spacingX,
-                right: x + drawingInfo.iconImageOffsetX + textBoxWidth / 2 + spacingX,
-                top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
-                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
-                align: 'center',
-                baseline: 'top'
-              })
-              break
+              case 'b':
+                textDisplacementBoxes.push({
+                  x: drawingInfo.iconImageOffsetX,
+                  y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
+                  left: x + drawingInfo.iconImageOffsetX - textBoxWidth / 2 - spacingX,
+                  right: x + drawingInfo.iconImageOffsetX + textBoxWidth / 2 + spacingX,
+                  top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
+                  bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
+                  align: 'center',
+                  baseline: 'top'
+                })
+                break
 
-            case 'l':
-              textDisplacementBoxes.push({
-                x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
-                y: drawingInfo.iconImageOffsetY - textBoxHeight / 2,
-                left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
-                right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
-                top: y - drawingInfo.iconImageOffsetY + textBoxHeight / 2 + spacingY,
-                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight / 2 - spacingY,
-                align: 'right',
-                baseline: 'top'
-              })
-              break
+              case 'l':
+                textDisplacementBoxes.push({
+                  x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
+                  y: drawingInfo.iconImageOffsetY - textBoxHeight / 2,
+                  left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
+                  right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
+                  top: y - drawingInfo.iconImageOffsetY + textBoxHeight / 2 + spacingY,
+                  bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight / 2 - spacingY,
+                  align: 'right',
+                  baseline: 'top'
+                })
+                break
 
-            case 'r':
-              textDisplacementBoxes.push({
-                x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
-                y: drawingInfo.iconImageOffsetY - textBoxHeight / 2,
-                left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 - spacingX + gapX,
-                right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 + spacingX + gapX,
-                top: y - drawingInfo.iconImageOffsetY + textBoxHeight / 2 + spacingY,
-                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight / 2 - spacingY,
-                align: 'left',
-                baseline: 'top'
-              })
-              break
+              case 'r':
+                textDisplacementBoxes.push({
+                  x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
+                  y: drawingInfo.iconImageOffsetY - textBoxHeight / 2,
+                  left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 - spacingX + gapX,
+                  right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 + spacingX + gapX,
+                  top: y - drawingInfo.iconImageOffsetY + textBoxHeight / 2 + spacingY,
+                  bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight / 2 - spacingY,
+                  align: 'left',
+                  baseline: 'top'
+                })
+                break
 
-            case 'tl':
-              textDisplacementBoxes.push({
-                x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
-                y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
-                left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
-                right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
-                top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
-                bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
-                align: 'right',
-                baseline: 'top'
-              })
-              break
+              case 'tl':
+                textDisplacementBoxes.push({
+                  x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
+                  y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
+                  left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
+                  right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
+                  top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
+                  bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
+                  align: 'right',
+                  baseline: 'top'
+                })
+                break
 
-            case 'tr':
-              textDisplacementBoxes.push({
-                x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
-                y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
-                left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + spacingX + gapX,
-                right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 - spacingX + gapX,
-                top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
-                bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
-                align: 'left',
-                baseline: 'top'
-              })
-              break
+              case 'tr':
+                textDisplacementBoxes.push({
+                  x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
+                  y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
+                  left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + spacingX + gapX,
+                  right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 - spacingX + gapX,
+                  top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
+                  bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
+                  align: 'left',
+                  baseline: 'top'
+                })
+                break
 
-            case 'bl':
-              textDisplacementBoxes.push({
-                x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
-                y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
-                left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
-                right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
-                top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
-                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
-                align: 'right',
-                baseline: 'top'
-              })
-              break
+              case 'bl':
+                textDisplacementBoxes.push({
+                  x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
+                  y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
+                  left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
+                  right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
+                  top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
+                  bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
+                  align: 'right',
+                  baseline: 'top'
+                })
+                break
 
-            case 'br':
-              textDisplacementBoxes.push({
-                x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
-                y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
-                left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 - spacingX + gapX,
-                right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 + spacingX + gapX,
-                top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
-                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
-                align: 'left',
-                baseline: 'top'
-              })
-              break
+              case 'br':
+                textDisplacementBoxes.push({
+                  x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
+                  y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
+                  left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 - spacingX + gapX,
+                  right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 + spacingX + gapX,
+                  top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
+                  bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
+                  align: 'left',
+                  baseline: 'top'
+                })
+                break
             }
           }
         } else {
@@ -1280,7 +1272,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               drawingInfo.context.beginGroup(drawingInfo.text)
 
               if (drawingInfo.isIcon && drawingInfo.iconPositions[drawingInfo.text]) {
-                drawingInfo.iconPositions[drawingInfo.text].push({ x: x, y: y })
+                drawingInfo.iconPositions[drawingInfo.text].push({ x, y })
               }
 
               drawingInfo.context.textAlign = textDisplacementBox.align
@@ -1754,166 +1746,95 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   },
   _convertGeojsonToTileLayer: function (geojsonData, tileLayer, properties) {
     switch (geojsonData.type) {
-    case 'FeatureCollection':
-      for (const feature of geojsonData.features) {
-        this._convertGeojsonToTileLayer(feature, tileLayer)
-      }
-
-      break
-
-    case 'Feature':
-      this._convertGeojsonToTileLayer(geojsonData.geometry, tileLayer, geojsonData.properties)
-
-      break
-
-    case 'Point':
-      {
-        const objectData = {
-          info: {
-            Envelope: {},
-            Center: {}
-          }
+      case 'FeatureCollection':
+        for (const feature of geojsonData.features) {
+          this._convertGeojsonToTileLayer(feature, tileLayer)
         }
 
-        if (properties) {
-          objectData.info.tags = properties
-        }
+        break
 
-        objectData.geometry = null
+      case 'Feature':
+        this._convertGeojsonToTileLayer(geojsonData.geometry, tileLayer, geojsonData.properties)
 
-        const x = this._longitudeToMeters(geojsonData.coordinates[0])
-        const y = this._latitudeToMeters(geojsonData.coordinates[1])
+        break
 
-        objectData.info.Envelope.left = x
-        objectData.info.Envelope.right = x
-        objectData.info.Envelope.top = y
-        objectData.info.Envelope.bottom = y
-
-        objectData.info.Center.x = x
-        objectData.info.Center.y = y
-
-        tileLayer.push(objectData)
-      }
-
-      break
-
-    case 'LineString':
-      {
-        const objectData = {
-          info: {
-            Envelope: {},
-            Center: {}
-          }
-        }
-
-        if (properties) {
-          objectData.info.tags = properties
-        }
-
-        objectData.geometry = new DataView(new Uint8Array(4 + 4 + geojsonData.coordinates.length * 4 * 2).buffer)
-
-        let geometryDataOffset = 0
-
-        objectData.geometry.setUint32(geometryDataOffset, 2, true) // wkbType = 2 (WKBLineString)
-        geometryDataOffset += 4
-
-        objectData.geometry.setUint32(geometryDataOffset, geojsonData.coordinates.length, true)
-        geometryDataOffset += 4
-
-        let previousX = 0
-        let previousY = 0
-        let length = -1
-
-        for (const coordinate of geojsonData.coordinates) {
-          const x = this._longitudeToMeters(coordinate[0])
-          const y = this._latitudeToMeters(coordinate[1])
-
-          if (length < 0) {
-            length = 0
-          } else {
-            const deltaX = (x - previousX)
-            const deltaY = (y - previousY)
-
-            length += Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-          }
-
-          objectData.info.length = length
-
-          previousX = x
-          previousY = y
-
-          if (geometryDataOffset === 4 + 4) {
-            objectData.info.Envelope.left = x
-            objectData.info.Envelope.right = x
-            objectData.info.Envelope.top = y
-            objectData.info.Envelope.bottom = y
-          } else {
-            if (x < objectData.info.Envelope.left) {
-              objectData.info.Envelope.left = x
-            } else if (x > objectData.info.Envelope.right) {
-              objectData.info.Envelope.right = x
-            }
-
-            if (y < objectData.info.Envelope.bottom) {
-              objectData.info.Envelope.bottom = y
-            } else if (y > objectData.info.Envelope.top) {
-              objectData.info.Envelope.top = y
+      case 'Point':
+        {
+          const objectData = {
+            info: {
+              Envelope: {},
+              Center: {}
             }
           }
 
-          objectData.geometry.setFloat32(geometryDataOffset, x, true)
-          geometryDataOffset += 4
-
-          objectData.geometry.setFloat32(geometryDataOffset, y, true)
-          geometryDataOffset += 4
-        }
-
-        objectData.info.Center.x = (objectData.info.Envelope.left + objectData.info.Envelope.right) / 2
-        objectData.info.Center.y = (objectData.info.Envelope.top + objectData.info.Envelope.bottom) / 2
-
-        tileLayer.push(objectData)
-      }
-
-      break
-
-    case 'Polygon':
-      {
-        const objectData = {
-          info: {
-            Envelope: {},
-            Center: {}
+          if (properties) {
+            objectData.info.tags = properties
           }
+
+          objectData.geometry = null
+
+          const x = this._longitudeToMeters(geojsonData.coordinates[0])
+          const y = this._latitudeToMeters(geojsonData.coordinates[1])
+
+          objectData.info.Envelope.left = x
+          objectData.info.Envelope.right = x
+          objectData.info.Envelope.top = y
+          objectData.info.Envelope.bottom = y
+
+          objectData.info.Center.x = x
+          objectData.info.Center.y = y
+
+          tileLayer.push(objectData)
         }
 
-        if (properties) {
-          objectData.info.tags = properties
-        }
+        break
 
-        let arraySize = 4 + 4 + 4
+      case 'LineString':
+        {
+          const objectData = {
+            info: {
+              Envelope: {},
+              Center: {}
+            }
+          }
 
-        for (let ring of geojsonData.coordinates) {
-          arraySize += ring.length * 4 * 2
-        }
+          if (properties) {
+            objectData.info.tags = properties
+          }
 
-        objectData.geometry = new DataView(new Uint8Array(arraySize).buffer)
+          objectData.geometry = new DataView(new Uint8Array(4 + 4 + geojsonData.coordinates.length * 4 * 2).buffer)
 
-        let geometryDataOffset = 0
+          let geometryDataOffset = 0
 
-        objectData.geometry.setUint32(geometryDataOffset, 3, true) // wkbType = 3 (WKBPolygon)
-        geometryDataOffset += 4
-
-        objectData.geometry.setUint32(geometryDataOffset, geojsonData.coordinates.length, true)
-        geometryDataOffset += 4
-
-        for (let ring of geojsonData.coordinates) {
-          objectData.geometry.setUint32(geometryDataOffset, ring.length, true)
+          objectData.geometry.setUint32(geometryDataOffset, 2, true) // wkbType = 2 (WKBLineString)
           geometryDataOffset += 4
 
-          for (const coordinate of ring) {
+          objectData.geometry.setUint32(geometryDataOffset, geojsonData.coordinates.length, true)
+          geometryDataOffset += 4
+
+          let previousX = 0
+          let previousY = 0
+          let length = -1
+
+          for (const coordinate of geojsonData.coordinates) {
             const x = this._longitudeToMeters(coordinate[0])
             const y = this._latitudeToMeters(coordinate[1])
 
-            if (geometryDataOffset === 4 + 4 + 4) {
+            if (length < 0) {
+              length = 0
+            } else {
+              const deltaX = (x - previousX)
+              const deltaY = (y - previousY)
+
+              length += Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+            }
+
+            objectData.info.length = length
+
+            previousX = x
+            previousY = y
+
+            if (geometryDataOffset === 4 + 4) {
               objectData.info.Envelope.left = x
               objectData.info.Envelope.right = x
               objectData.info.Envelope.top = y
@@ -1938,15 +1859,84 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             objectData.geometry.setFloat32(geometryDataOffset, y, true)
             geometryDataOffset += 4
           }
+
+          objectData.info.Center.x = (objectData.info.Envelope.left + objectData.info.Envelope.right) / 2
+          objectData.info.Center.y = (objectData.info.Envelope.top + objectData.info.Envelope.bottom) / 2
+
+          tileLayer.push(objectData)
         }
+        break
 
-        objectData.info.Center.x = (objectData.info.Envelope.left + objectData.info.Envelope.right) / 2
-        objectData.info.Center.y = (objectData.info.Envelope.top + objectData.info.Envelope.bottom) / 2
+      case 'Polygon':
+        {
+          const objectData = {
+            info: {
+              Envelope: {},
+              Center: {}
+            }
+          }
 
-        tileLayer.push(objectData)
-      }
+          if (properties) {
+            objectData.info.tags = properties
+          }
 
-      break
+          let arraySize = 4 + 4 + 4
+
+          for (const ring of geojsonData.coordinates) {
+            arraySize += ring.length * 4 * 2
+          }
+
+          objectData.geometry = new DataView(new Uint8Array(arraySize).buffer)
+
+          let geometryDataOffset = 0
+
+          objectData.geometry.setUint32(geometryDataOffset, 3, true) // wkbType = 3 (WKBPolygon)
+          geometryDataOffset += 4
+
+          objectData.geometry.setUint32(geometryDataOffset, geojsonData.coordinates.length, true)
+          geometryDataOffset += 4
+
+          for (const ring of geojsonData.coordinates) {
+            objectData.geometry.setUint32(geometryDataOffset, ring.length, true)
+            geometryDataOffset += 4
+
+            for (const coordinate of ring) {
+              const x = this._longitudeToMeters(coordinate[0])
+              const y = this._latitudeToMeters(coordinate[1])
+
+              if (geometryDataOffset === 4 + 4 + 4) {
+                objectData.info.Envelope.left = x
+                objectData.info.Envelope.right = x
+                objectData.info.Envelope.top = y
+                objectData.info.Envelope.bottom = y
+              } else {
+                if (x < objectData.info.Envelope.left) {
+                  objectData.info.Envelope.left = x
+                } else if (x > objectData.info.Envelope.right) {
+                  objectData.info.Envelope.right = x
+                }
+
+                if (y < objectData.info.Envelope.bottom) {
+                  objectData.info.Envelope.bottom = y
+                } else if (y > objectData.info.Envelope.top) {
+                  objectData.info.Envelope.top = y
+                }
+              }
+
+              objectData.geometry.setFloat32(geometryDataOffset, x, true)
+              geometryDataOffset += 4
+
+              objectData.geometry.setFloat32(geometryDataOffset, y, true)
+              geometryDataOffset += 4
+            }
+          }
+
+          objectData.info.Center.x = (objectData.info.Envelope.left + objectData.info.Envelope.right) / 2
+          objectData.info.Center.y = (objectData.info.Envelope.top + objectData.info.Envelope.bottom) / 2
+
+          tileLayer.push(objectData)
+        }
+        break
     }
   },
   _getTileLayers: function (tileCanvas, tileInfo, mapStyle) {
@@ -2029,11 +2019,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     let objectScale = drawingInfo.objectScale
 
-    if (typeof(saveStyle.ZoomScale) === 'number') {
+    if (typeof saveStyle.ZoomScale === 'number') {
       objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, saveStyle.ZoomScale)
     }
 
-    if (typeof(saveStyle.StrokeWidth) === 'number') {
+    if (typeof saveStyle.StrokeWidth === 'number') {
       drawingInfo.context.lineWidth = saveStyle.StrokeWidth * objectScale * drawingInfo.scale * drawingInfo.adjustedObjectScale
 
       drawingInfo.context.setLineDash([])
@@ -2063,10 +2053,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         continue
       }
 
-      mapObject.info['locr_layer'] = layer.layerName
+      mapObject.info.locr_layer = layer.layerName
 
       if (!mapObject.type) {
-        if (typeof(mapObject.info.length) === 'number') {
+        if (typeof mapObject.info.length === 'number') {
           mapObject.type = 'line'
         } else if (mapObject.geometry === null) {
           mapObject.type = 'point'
@@ -2108,11 +2098,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
       let objectScale = drawingInfo.objectScale
 
-      if (typeof(objectStyle.ZoomScale) === 'number') {
+      if (typeof objectStyle.ZoomScale === 'number') {
         objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
       }
 
-      if (typeof(objectStyle.FillAlpha) !== 'number') {
+      if (typeof objectStyle.FillAlpha !== 'number') {
         objectStyle.FillAlpha = 1
       }
 
@@ -2124,11 +2114,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         drawingInfo.isFilled = false
       }
 
-      if (typeof(objectStyle.StrokeAlpha) !== 'number') {
+      if (typeof objectStyle.StrokeAlpha !== 'number') {
         objectStyle.StrokeAlpha = 1
       }
 
-      if (typeof(objectStyle.StrokeWidth) === 'number') {
+      if (typeof objectStyle.StrokeWidth === 'number') {
         drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.scale * drawingInfo.adjustedObjectScale)
       }
 
@@ -2214,7 +2204,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         }
 
         if (!mapObject.type) {
-          if (typeof(mapObject.info.length) === 'number') {
+          if (typeof mapObject.info.length === 'number') {
             mapObject.type = 'line'
           } else if (mapObject.geometry === null) {
             mapObject.type = 'point'
@@ -2256,7 +2246,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       if (!mapObject.type) {
-        if (typeof(mapObject.info.length) === 'number') {
+        if (typeof mapObject.info.length === 'number') {
           mapObject.type = 'line'
         } else if (mapObject.geometry === null) {
           mapObject.type = 'point'
@@ -2331,12 +2321,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       if (objectStyle) {
         let objectScale = drawingInfo.objectScale
 
-        if (typeof(objectStyle.ZoomScale) === 'number') {
+        if (typeof objectStyle.ZoomScale === 'number') {
           objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
         }
 
         if (activeObjectStyle !== objectStyle) {
-          if (typeof(objectStyle.FillAlpha) !== 'number') {
+          if (typeof objectStyle.FillAlpha !== 'number') {
             objectStyle.FillAlpha = 1
           }
 
@@ -2348,11 +2338,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             drawingInfo.isFilled = false
           }
 
-          if (typeof(objectStyle.StrokeAlpha) !== 'number') {
+          if (typeof objectStyle.StrokeAlpha !== 'number') {
             objectStyle.StrokeAlpha = 1
           }
 
-          if (typeof(objectStyle.StrokeWidth) === 'number') {
+          if (typeof objectStyle.StrokeWidth === 'number') {
             drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.scale * drawingInfo.adjustedObjectScale)
           }
 
@@ -2459,7 +2449,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
 
       if (!mapObject.type) {
-        if (typeof(mapObject.info.length) === 'number') {
+        if (typeof mapObject.info.length === 'number') {
           mapObject.type = 'line'
         } else if (mapObject.geometry === null) {
           mapObject.type = 'point'
@@ -2534,12 +2524,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       if (objectStyle) {
         let objectScale = drawingInfo.objectScale
 
-        if (typeof(objectStyle.ZoomScale) === 'number') {
+        if (typeof objectStyle.ZoomScale === 'number') {
           objectScale = drawingInfo.objectScale / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, objectStyle.ZoomScale)
         }
 
         if (activeObjectStyle !== objectStyle) {
-          if (typeof(objectStyle.FillAlpha) !== 'number') {
+          if (typeof objectStyle.FillAlpha !== 'number') {
             objectStyle.FillAlpha = 1
           }
 
@@ -2551,11 +2541,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             drawingInfo.isFilled = false
           }
 
-          if (typeof(objectStyle.StrokeAlpha) !== 'number') {
+          if (typeof objectStyle.StrokeAlpha !== 'number') {
             objectStyle.StrokeAlpha = 1
           }
 
-          if (typeof(objectStyle.StrokeWidth) === 'number') {
+          if (typeof objectStyle.StrokeWidth === 'number') {
             drawingInfo.context.lineWidth = objectStyle.StrokeWidth * (objectStyle.DisplayUnit === 'px' ? 1 : objectScale * drawingInfo.scale * drawingInfo.adjustedObjectScale)
           }
 
@@ -2865,7 +2855,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
               tileInfo.mapBounds = {}
 
-              if (typeof(tileInfo.x) === 'number' && typeof(tileInfo.y) === 'number' && typeof(tileInfo.z) === 'number') {
+              if (typeof tileInfo.x === 'number' && typeof tileInfo.y === 'number' && typeof tileInfo.z === 'number') {
                 tileInfo.mapBounds.longitudeMin = this._tileToLongitude(tileInfo.x, tileInfo.z, this.options.zoomPowerBase)
                 tileInfo.mapBounds.longitudeMax = this._tileToLongitude(tileInfo.x + 1, tileInfo.z, this.options.zoomPowerBase)
                 tileInfo.mapBounds.latitudeMin = this._tileToLatitude(tileInfo.y + 1, tileInfo.z, this.options.zoomPowerBase)
@@ -2907,7 +2897,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 tileInfo.z = Math.log(360 * tileInfo.width / tileSize / (tileInfo.mapBounds.longitudeMax - tileInfo.mapBounds.longitudeMin)) / Math.log(this.options.zoomPowerBase)
               }
 
-              let tileAreaDrawingExtension = TILE_AREA_DRAWING_EXTENSION * userMapScale
+              const tileAreaDrawingExtension = TILE_AREA_DRAWING_EXTENSION * userMapScale
 
               tileInfo.drawingMapBounds = {
                 latitudeMin: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMin, tileInfo.z, this.options.zoomPowerBase) + tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase),
@@ -2916,7 +2906,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 longitudeMax: this._tileToLongitude(this._longitudeToTile(tileInfo.mapBounds.longitudeMax, tileInfo.z, this.options.zoomPowerBase) + tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase)
               }
 
-              let tileAreaSaveExtension = TILE_AREA_SAVE_EXTENSION * userMapScale
+              const tileAreaSaveExtension = TILE_AREA_SAVE_EXTENSION * userMapScale
 
               tileInfo.saveMapBounds = {
                 latitudeMin: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMin, tileInfo.z, this.options.zoomPowerBase) + tileAreaSaveExtension, tileInfo.z, this.options.zoomPowerBase),
@@ -2979,11 +2969,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                 const drawingInfo = {
                   mapArea,
-                  extendedMapArea: extendedMapArea,
+                  extendedMapArea,
                   mapWidth_: tileInfo.width,
                   mapHeight: tileInfo.height,
 
-                  userMapScale: userMapScale,
+                  userMapScale,
                   objectScale: this.options.objectScale * userMapScale,
 
                   drawingArea: mapArea,
@@ -3318,7 +3308,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                       const pattern = await this._getPattern(drawingInfo.context, patternName)
 
                       pattern.transformMatrix = new DOMMatrix().translate(-drawingInfo.mapArea.left * drawingInfo.scale * drawingInfo.patternScale, -drawingInfo.mapArea.top * drawingInfo.scale * drawingInfo.patternScale).scale(drawingInfo.patternScale)
-                      //pattern_.transformMatrix = new DOMMatrix().scale(drawingInfo.patternScale)
+                      // pattern_.transformMatrix = new DOMMatrix().scale(drawingInfo.patternScale)
 
                       pattern.setTransform(pattern.transformMatrix)
 
@@ -3326,7 +3316,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                       drawingInfo.context.fillRect(0, 0, tileInfo.width, tileInfo.height)
                     }
                   } else {
-                    if (typeof(mapStyle.BackgroundAlpha) !== 'number') {
+                    if (typeof mapStyle.BackgroundAlpha !== 'number') {
                       mapStyle.BackgroundAlpha = 1
                     }
 
@@ -3349,18 +3339,16 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     let detailZooms = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14]
 
     switch (layerId) {
-    case 'terrain':
-    case 'depth':
-      detailZooms = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 12]
+      case 'terrain':
+      case 'depth':
+        detailZooms = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 12]
+        break
 
-      break
-
-    case 'bathymetry':
-    case 'blue_marble':
-    case 'elevation':
-      detailZooms = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 10, 10, 10]
-
-      break
+      case 'bathymetry':
+      case 'blue_marble':
+      case 'elevation':
+        detailZooms = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 10, 10, 10]
+        break
     }
 
     let detailZoom = detailZooms[Math.max(Math.min(z, 14), 0)]
@@ -3444,14 +3432,14 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       tileLayerData.resolve = resolve
       tileLayerData.reject = reject
 
-      let fetchTileZ = tileLayerData.tileInfo.vms2TileZ + Math.max(-tileLayerData.tileInfo.vms2TileZ, (tileLayerData.layerStyle.Detail || 0) + this.options.detailOffset)
+      const fetchTileZ = tileLayerData.tileInfo.vms2TileZ + Math.max(-tileLayerData.tileInfo.vms2TileZ, (tileLayerData.layerStyle.Detail || 0) + this.options.detailOffset)
 
       let fetchTileStartX = Math.floor(this._longitudeToTile(tileLayerData.tileInfo.mapBounds.longitudeMin, fetchTileZ))
       let fetchTileEndX = Math.floor(this._longitudeToTile(tileLayerData.tileInfo.mapBounds.longitudeMax, fetchTileZ))
       let fetchTileStartY = Math.floor(this._latitudeToTile(tileLayerData.tileInfo.mapBounds.latitudeMax, fetchTileZ))
       let fetchTileEndY = Math.floor(this._latitudeToTile(tileLayerData.tileInfo.mapBounds.latitudeMin, fetchTileZ))
 
-      if (typeof(tileLayerData.tileInfo.x) === 'number' && typeof(tileLayerData.tileInfo.y) === 'number' && typeof(tileLayerData.tileInfo.z) === 'number') {
+      if (typeof tileLayerData.tileInfo.x === 'number' && typeof tileLayerData.tileInfo.y === 'number' && typeof tileLayerData.tileInfo.z === 'number') {
         if (tileLayerData.layerStyle.needsAreaExtension) {
           fetchTileStartX = Math.floor(this._longitudeToTile(tileLayerData.tileInfo.drawingMapBounds.longitudeMin, fetchTileZ))
           fetchTileEndX = Math.floor(this._longitudeToTile(tileLayerData.tileInfo.drawingMapBounds.longitudeMax, fetchTileZ))
@@ -3498,7 +3486,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         const y = geometry.getFloat32(dataOffset, true)
         dataOffset += 4
 
-        polygonPoints.push({ x: x, y: y })
+        polygonPoints.push({ x, y })
       }
 
       polygonRings.push(polygonPoints)
@@ -3789,7 +3777,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               throw new Error({
                 code: response.status,
                 message: response.statusText,
-                response: response
+                response
               })
             }
 
