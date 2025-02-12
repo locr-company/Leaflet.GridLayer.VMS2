@@ -391,20 +391,20 @@ class LocrMapCustomElement extends HTMLElement {
   }
 
   /**
-   * @param {{icnoData: {iconUrl: string, iconSize: [number, number], iconAnchor: [number, number]}, latitude: number, longitude: number}} poi
+   * @param {{iconData: {iconUrl: string, iconSize: [number, number], iconAnchor: [number, number]}, latitude?: number, longitude?: number}} poi
    */
   addOrReplacePoiToMapOverlay (poi) {
     if (!this.#map) {
-      console.warn('locr-map element: Leaflet map is not initialized for addOrReplacePoiToMapOverlay( poi ), yet!')
+      console.warn('locr-map element: Leaflet map is not initialized for addOrReplacePoiToMapOverlay (poi), yet!')
       return
     }
     if (!this.#layer) {
-      console.warn('locr-map element: Leaflet layer is not initialized for addOrReplacePoiToMapOverlay( poi ), yet!')
+      console.warn('locr-map element: Leaflet layer is not initialized for addOrReplacePoiToMapOverlay (poi), yet!')
       return
     }
 
     if (!this.#layer.mapOverlay) {
-      console.warn('locr-map element: MapOverlay is not initialized for addOrReplacePoiToMapOverlay( poi ), yet!')
+      console.warn('locr-map element: MapOverlay is not initialized for addOrReplacePoiToMapOverlay (poi), yet!')
       return
     }
 
