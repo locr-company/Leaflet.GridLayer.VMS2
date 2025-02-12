@@ -1,3 +1,5 @@
+/* global DOMParser */
+
 export default class MapOverlay {
   #width = 0
   #height = 0
@@ -11,7 +13,7 @@ export default class MapOverlay {
   /**
    * @param {{width: number, height: number}} mapData
    */
-  constructor(mapData) {
+  constructor (mapData) {
     if (typeof mapData !== 'object' || mapData === null) {
       throw new TypeError('mapData must be an object')
     }
@@ -38,14 +40,14 @@ export default class MapOverlay {
   /**
    * @returns {number}
    */
-  get width() {
+  get width () {
     return this.#width
   }
 
   /**
    * @returns {number}
    */
-  get height() {
+  get height () {
     return this.#height
   }
 
@@ -53,7 +55,7 @@ export default class MapOverlay {
    * @param {SvgLayer} layer
    * @returns {void}
    */
-  add(layer) {
+  add (layer) {
     if (!(layer instanceof SvgLayer) && !(layer instanceof PoiLayer)) {
       throw new TypeError('layer must be an instance of SvgLayer or PoiLayer')
     }
@@ -65,7 +67,7 @@ export default class MapOverlay {
    * @param {CustomFontFace} fontFace
    * @returns {void}
    */
-  addFontFace(fontFace) {
+  addFontFace (fontFace) {
     if (!(fontFace instanceof CustomFontFace)) {
       throw new TypeError('fontFace must be an instance of CustomFontFace')
     }
@@ -77,12 +79,12 @@ export default class MapOverlay {
    * @param {SvgLayer} layer
    * @returns {void}
    */
-  addOrReplace(layer) {
+  addOrReplace (layer) {
     if (!(layer instanceof SvgLayer) && !(layer instanceof PoiLayer)) {
       throw new TypeError('layer must be an instance of SvgLayer or PoiLayer')
     }
 
-    if(layer instanceof SvgLayer) {
+    if (layer instanceof SvgLayer) {
       const domParser = new DOMParser()
 
       const parsedLayerDom = domParser.parseFromString(layer.getSvgSource(), 'application/xml')
@@ -92,7 +94,7 @@ export default class MapOverlay {
         for (const layerIndex in this.#layers) {
           const currentLayer = this.#layers[layerIndex]
 
-          if(currentLayer instanceof SvgLayer) {
+          if (currentLayer instanceof SvgLayer) {
             const currentParsedLayerDom = domParser.parseFromString(currentLayer.getSvgSource(), 'application/xml')
 
             if (currentParsedLayerDom.documentElement.id === layerId) {
@@ -103,14 +105,14 @@ export default class MapOverlay {
           }
         }
       }
-    } else if(layer instanceof PoiLayer) {
+    } else if (layer instanceof PoiLayer) {
       const poiData = layer.getPoiData()
 
-      if(poiData.id !== '') {
+      if (poiData.id !== '') {
         for (const layerIndex in this.#layers) {
           const currentLayer = this.#layers[layerIndex]
-  
-          if(currentLayer instanceof PoiLayer) {
+
+          if (currentLayer instanceof PoiLayer) {
             const currentPoiData = currentLayer.getPoiData()
 
             if (currentPoiData.id === poiData.id) {
@@ -118,14 +120,14 @@ export default class MapOverlay {
               if (typeof currentPoiData.latitude === 'number' && typeof currentPoiData.longitude === 'number' && currentPoiData.marker) {
                 currentPoiData.marker.setLatLng([currentPoiData.latitude, currentPoiData.longitude])
               }
-  
+
               return
             }
           }
         }
       }
     }
-  
+
     this.add(layer)
   }
 
@@ -133,7 +135,7 @@ export default class MapOverlay {
    * @param {{width?: number, height?: number}|undefined} size
    * @returns {string}
    */
-  getSvgOverlay(size) {
+  getSvgOverlay (size) {
     let width = this.#width
     let height = this.#height
     if (size !== undefined && size !== null && size.constructor === Object) {
@@ -173,11 +175,11 @@ export default class MapOverlay {
     return svgString
   }
 
-  getPoiDatas() {
+  getPoiDatas () {
     const poiDatas = []
 
     for (const layer of this.#layers) {
-      if(layer instanceof PoiLayer) {
+      if (layer instanceof PoiLayer) {
         poiDatas.push(layer.getPoiData())
       }
     }
@@ -189,7 +191,7 @@ export default class MapOverlay {
    * @param {string} id
    * @param {string} textContent
    */
-  replaceTextContent(id, textContent) {
+  replaceTextContent (id, textContent) {
     if (typeof id !== 'string') {
       throw new TypeError('id must be a string')
     }
@@ -200,7 +202,7 @@ export default class MapOverlay {
     for (const layerIndex in this.#layers) {
       const currentLayer = this.#layers[layerIndex]
 
-      if(!(currentLayer instanceof TextSvgLayer)) {
+      if (!(currentLayer instanceof TextSvgLayer)) {
         continue
       }
       const domParser = new DOMParser()
@@ -224,7 +226,7 @@ class SvgLayer {
   /**
    * @param {string} svgString
    */
-  constructor(svgString) {
+  constructor (svgString) {
     if (svgString === undefined || svgString === null) {
       return
     }
@@ -239,7 +241,7 @@ class SvgLayer {
   /**
    * @returns {string}
    */
-  getSvgSource() {
+  getSvgSource () {
     return this.#svgString
   }
 }
@@ -248,7 +250,7 @@ class ImageSvgLayer extends SvgLayer {
   /**
    * @param {{href: string, x: string|number, y: string|number, [key: string]: any}} imageInfo
    */
-  constructor(imageInfo) {
+  constructor (imageInfo) {
     if (imageInfo === undefined || imageInfo === null || imageInfo.constructor !== Object) {
       throw new TypeError('imageInfo must be an object')
     }
@@ -281,7 +283,7 @@ class TextSvgLayer extends SvgLayer {
   /**
    * @param {{text: string, x: string|number, y: string|number, [key: string]: any}} textInfo
    */
-  constructor(textInfo) {
+  constructor (textInfo) {
     if (textInfo === undefined || textInfo === null || textInfo.constructor !== Object) {
       throw new TypeError('textInfo must be an object')
     }
@@ -304,11 +306,11 @@ class TextSvgLayer extends SvgLayer {
         const tspan = document.createElement('tspan')
         tspan.textContent = lineSplittedText[lineIndex]
         tspan.setAttribute('x', textInfo.x)
-    
+
         if (lineIndex > 0) {
           tspan.setAttribute('dy', '1.2em')
         }
-    
+
         svgTextElement.appendChild(tspan)
       }
     } else {
@@ -332,7 +334,7 @@ class TextSvgLayer extends SvgLayer {
    * @param {string} textContent
    * @returns {TextSvgLayer}
    */
-  buildLayerWithReplacedTextContent(textContent) {
+  buildLayerWithReplacedTextContent (textContent) {
     return new TextSvgLayer({ ...this.#data, text: textContent })
   }
 }
@@ -340,15 +342,15 @@ class TextSvgLayer extends SvgLayer {
 class PoiLayer {
   #poiData
 
-  constructor(poiData) {
+  constructor (poiData) {
     this.#poiData = poiData
   }
 
-  getPoiData() {
+  getPoiData () {
     return this.#poiData
   }
 
-  getSvgSource() {
+  getSvgSource () {
     return ''
   }
 }
@@ -361,7 +363,7 @@ class CustomFontFace {
    * @param {string} source
    * @param {FontFaceDescriptors?} descriptors
    */
-  constructor(family, source, descriptors) {
+  constructor (family, source, descriptors) {
     if (typeof family !== 'string') {
       throw new TypeError('family must be a string')
     }
@@ -400,8 +402,8 @@ class CustomFontFace {
   /**
    * @returns {string}
    */
-  buildCssFontFace() {
-    let cssFontFace = `@font-face {\n`
+  buildCssFontFace () {
+    let cssFontFace = '@font-face {\n'
     cssFontFace += `  font-family: '${this.family}';\n`
     cssFontFace += `  src: url('${this.#source}');\n`
     if (this.style) {
@@ -416,7 +418,7 @@ class CustomFontFace {
     if (this.unicodeRange) {
       cssFontFace += `  unicode-range: ${this.unicodeRange};\n`
     }
-    cssFontFace += `}`
+    cssFontFace += '}'
 
     return cssFontFace
   }
