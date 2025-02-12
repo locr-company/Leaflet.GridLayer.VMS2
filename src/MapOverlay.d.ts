@@ -23,6 +23,6 @@ export class TextSvgLayer extends SvgLayer {
 }
 
 export class CustomFontFace {
-    constructor(family: string, source: string, descriptors: FontFaceDescriptors?);
+    constructor(family: string, source: string, descriptors?: FontFaceDescriptors);
     buildCssFontFace(): string;
 }
