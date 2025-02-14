@@ -18,15 +18,21 @@ export default class MapOverlay {
       throw new TypeError('mapData must be an object')
     }
 
-    if (isNaN(mapData.width) || isNaN(mapData.height)) {
-      throw new ReferenceError('width and height values need to be defined')
+    if (mapData.width === undefined || mapData.width === null) {
+      throw new ReferenceError('width value is required')
     }
-
-    if (typeof mapData.width !== 'number') {
+    if (mapData.height === undefined || mapData.height === null) {
+      throw new ReferenceError('height value is required')
+    }
+    if (typeof mapData.width === 'string') {
       mapData.width = parseFloat(mapData.width)
     }
-    if (typeof mapData.height !== 'number') {
+    if (typeof mapData.height === 'string') {
       mapData.height = parseFloat(mapData.height)
+    }
+
+    if (Number.isNaN(mapData.width) || Number.isNaN(mapData.height)) {
+      throw new ReferenceError('width and height values must be numbers')
     }
 
     if (mapData.width <= 0 || mapData.height <= 0) {
@@ -139,19 +145,21 @@ export default class MapOverlay {
     let width = this.#width
     let height = this.#height
     if (size !== undefined && size !== null && size.constructor === Object) {
-      if (isNaN(size.width)) {
-        if (size.width !== undefined && size.width !== null) {
-          throw new TypeError('size.width must be a number')
-        }
-      } else {
-        width = parseFloat(size.width)
+      if (typeof size.width === 'string') {
+        size.width = parseFloat(size.width)
       }
-      if (isNaN(size.height)) {
-        if (size.height !== undefined && size.height !== null) {
-          throw new TypeError('size.height must be a number')
-        }
+      if (typeof size.height === 'string') {
+        size.height = parseFloat(size.height)
+      }
+      if (size.width !== undefined && size.width !== null && Number.isNaN(size.width)) {
+        throw new TypeError('size.width must be a number')
       } else {
-        height = parseFloat(size.height)
+        width = size.width
+      }
+      if (size.height !== undefined && size.height !== null && Number.isNaN(size.height)) {
+        throw new TypeError('size.height must be a number')
+      } else {
+        height = size.height
       }
     }
 
@@ -264,10 +272,9 @@ class ImageSvgLayer extends SvgLayer {
       throw new TypeError('imageInfo.y must be a string or a number')
     }
 
-    const svgImageElement = document.createElement('image')
-
+    const svgImageElement = document.createElementNS('http://www.w3.org/2000/svg', 'image')
     for (const [key, value] of Object.entries(imageInfo)) {
-      svgImageElement.setAttribute(key, value)
+      svgImageElement.setAttributeNS(null, key, value)
     }
 
     super(svgImageElement.outerHTML)

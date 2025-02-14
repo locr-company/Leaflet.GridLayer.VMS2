@@ -89,8 +89,8 @@ describe('PrintFormat', () => {
   })
 
   it('constructor with invalid width or height types throws an error', () => {
-    assert.throws(() => new PrintFormat({width: 'a', height: 200}), ReferenceError)
-    assert.throws(() => new PrintFormat({width: 100, height: 'b'}), ReferenceError)
+    assert.throws(() => new PrintFormat({width: 'a', height: 200}), TypeError)
+    assert.throws(() => new PrintFormat({width: 100, height: 'b'}), TypeError)
   })
 
   it('constructor with invalid width or height values throws an error', () => {
