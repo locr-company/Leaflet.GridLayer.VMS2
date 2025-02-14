@@ -418,10 +418,10 @@ describe('MapOverlay', () => {
         y: '200'
       }
 
-      const expectedSvg = document.createElement('image')
-      expectedSvg.setAttribute('href', imageInfo.href)
-      expectedSvg.setAttribute('x', imageInfo.x)
-      expectedSvg.setAttribute('y', imageInfo.y)
+      const expectedSvg = document.createElementNS('http://www.w3.org/2000/svg', 'image')
+      expectedSvg.setAttributeNS(null, 'href', imageInfo.href)
+      expectedSvg.setAttributeNS(null, 'x', imageInfo.x)
+      expectedSvg.setAttributeNS(null, 'y', imageInfo.y)
 
       const imageLayer = new ImageSvgLayer(imageInfo)
 

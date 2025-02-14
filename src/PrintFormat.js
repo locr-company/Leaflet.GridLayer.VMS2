@@ -31,35 +31,40 @@ export default class PrintFormat {
       throw new TypeError('printSizeInfo must be an object')
     }
 
-    if (isNaN(printSizeInfo.width) || isNaN(printSizeInfo.height)) {
-      throw new ReferenceError('width and height values need to be defined')
+    if (printSizeInfo.width === undefined || printSizeInfo.width === null) {
+      throw new ReferenceError('width value needs to be defined')
     }
-
-    if (typeof printSizeInfo.width !== 'number') {
-      printSizeInfo.width = parseFloat(printSizeInfo.width)
+    if (printSizeInfo.height === undefined || printSizeInfo.height === null) {
+      throw new ReferenceError('height value needs to be defined')
     }
-    if (typeof printSizeInfo.height !== 'number') {
-      printSizeInfo.height = parseFloat(printSizeInfo.height)
+    if (typeof printSizeInfo.width === 'string') {
+      printSizeInfo.width = Number.parseFloat(printSizeInfo.width)
+    }
+    if (typeof printSizeInfo.height === 'string') {
+      printSizeInfo.height = Number.parseFloat(printSizeInfo.height)
+    }
+    if (Number.isNaN(printSizeInfo.width) || Number.isNaN(printSizeInfo.height)) {
+      throw new TypeError('width and height values need to be defined')
     }
 
     if (printSizeInfo.width <= 0 || printSizeInfo.height <= 0) {
       throw new RangeError('width and height values need to be greater than 0')
     }
 
-    if (!isNaN(printSizeInfo.dpi)) {
-      if (typeof printSizeInfo.dpi !== 'number') {
-        printSizeInfo.dpi = parseInt(printSizeInfo.dpi)
-      }
+    if (typeof printSizeInfo.dpi === 'string') {
+      printSizeInfo.dpi = Number.parseInt(printSizeInfo.dpi)
+    }
+    if (printSizeInfo.dpi !== undefined && printSizeInfo.dpi !== null && !Number.isNaN(printSizeInfo.dpi)) {
       if (printSizeInfo.dpi <= 0) {
         throw new RangeError('dpi value needs to be greater than 0')
       }
       this.#dpi = printSizeInfo.dpi
     }
 
-    if (!isNaN(printSizeInfo.printScale)) {
-      if (typeof printSizeInfo.printScale !== 'number') {
-        printSizeInfo.printScale = parseInt(printSizeInfo.printScale)
-      }
+    if (typeof printSizeInfo.printScale === 'string') {
+      printSizeInfo.printScale = Number.parseFloat(printSizeInfo.printScale)
+    }
+    if (printSizeInfo.printScale !== undefined && printSizeInfo.printScale !== null && !Number.isNaN(printSizeInfo.printScale)) {
       if (printSizeInfo.printScale <= 0) {
         throw new RangeError('printScale value needs to be greater than 0')
       }
