@@ -17,14 +17,15 @@ export default class BaseMap {
     }).setView([52.27645, 10.53453], 15)
 
     const vms2Options = {
-      style: '4502'
+      style: '4502',
+      tileUrl: '/api/tile/{z}/{y}/{x}?k={key}&v={value}&t={type}'
     }
     const searchParams = new URLSearchParams(window.location.search)
     const accessKey = searchParams.get('access_key')
     if (typeof accessKey === 'string' && accessKey !== '') {
       vms2Options.accessKey = accessKey
     } else {
-      vms2Options.disableDecode = true
+      //vms2Options.disableDecode = true
     }
     this.#vms2Layer = L.gridLayer.vms2(vms2Options)
 
