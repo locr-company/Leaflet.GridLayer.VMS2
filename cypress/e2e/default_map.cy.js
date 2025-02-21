@@ -12,7 +12,7 @@ describe('basic map specs', () => {
             return
           }
 
-          cy.wrap(layer.getPrintCanvas(), { timeout: 30000 }).then(canvas => {
+          cy.wrap(layer.getPrintCanvas(), { timeout: 20000 }).then(canvas => {
             const image = canvas[0].toDataURL('image/png')
             cy.fixture('default_map.png').then(refImage => {
               expect(refImage).to.equal(image.slice(prefix.length))
