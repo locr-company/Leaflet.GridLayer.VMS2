@@ -3,8 +3,7 @@ import helmet from 'helmet'
 import serveIndex from 'serve-index'
 import { SQLite } from '@locr-company/vms2-tile-db-reader'
 
-const tileDb = new SQLite('cypress/test-website/braunschweig.sqlite')
-//const tileDb = new SQLite('/zfs_pool/data/vms2/tiles.sqlite')
+const tileDb = new SQLite('cypress/test-website/test_data.sqlite')
 
 const app = express()
 

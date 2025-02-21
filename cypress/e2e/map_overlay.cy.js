@@ -1,7 +1,7 @@
 describe('map overlay specs', () => {
   const prefix = 'data:image/png;base64,'
   const visitAndCompare = (baseFilename) => {
-    cy.visit(`http://localhost:9876/${baseFilename}.html`)
+    cy.visit(`http://localhost:9876/${baseFilename}.html?disable_decode=true&zoom=15`)
 
     cy.window().then(win => {
       const map = win.document.getElementById('map')
