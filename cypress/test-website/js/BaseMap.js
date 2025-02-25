@@ -7,25 +7,57 @@ export default class BaseMap {
   #vms2Layer
 
   constructor() {
+    const searchParams = new URLSearchParams(window.location.search)
+
     L.Map.addInitHook(function () {
       this.getContainer().leafletMap = this
     })
 
+    const center = [52.27645, 10.53453]
+    let zoom = 17
+
+    const latitude = searchParams.get('latitude')
+    const longitude = searchParams.get('longitude')
+    if (typeof latitude === 'string') {
+      const parsedLatitude = Number.parseFloat(latitude)
+      if (!Number.isNaN(parsedLatitude)) {
+        center[0] = parsedLatitude
+      }
+    }
+    if (typeof longitude === 'string') {
+      const parsedLongitude = Number.parseFloat(longitude)
+      if (!Number.isNaN(parsedLongitude)) {
+        center[1] = parsedLongitude
+      }
+    }
+
+    const zoomLevel = searchParams.get('zoom')
+    if (typeof zoomLevel === 'string') {
+      const parsedZoom = Number.parseInt(zoomLevel, 10)
+      if (!Number.isNaN(parsedZoom)) {
+        zoom = parsedZoom
+      }
+    }
+
     this.#map = L.map('map', {
       minZoom: 0,
       maxZoom: 19
-    }).setView([52.27645, 10.53453], 15)
+    }).setView(center, zoom)
 
     const vms2Options = {
-      style: '4502'
+      style: '4502',
+      tileUrl: '/api/tile/{z}/{y}/{x}?k={key}&v={value}&t={type}'
     }
-    const searchParams = new URLSearchParams(window.location.search)
     const accessKey = searchParams.get('access_key')
     if (typeof accessKey === 'string' && accessKey !== '') {
       vms2Options.accessKey = accessKey
-    } else {
+    }
+
+    const disableDecode = searchParams.get('disable_decode')
+    if (typeof disableDecode === 'string' && (disableDecode === 'true' || disableDecode === '1')) {
       vms2Options.disableDecode = true
     }
+
     this.#vms2Layer = L.gridLayer.vms2(vms2Options)
 
     this.#vms2Layer.addTo(this.#map)

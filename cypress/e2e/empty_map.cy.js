@@ -2,7 +2,7 @@ describe('basic map specs', () => {
   const prefix = 'data:image/png;base64,'
 
   it('can display an empty (blue-water) map.', () => {
-    cy.visit('http://localhost:9876/empty_map.html')
+    cy.visit('http://localhost:9876/default_map.html?disable_decode=true&zoom=15')
 
     cy.window().then(win => {
       const map = win.document.getElementById('map')
