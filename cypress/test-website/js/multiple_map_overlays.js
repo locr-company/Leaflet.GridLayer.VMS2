@@ -1,5 +1,6 @@
 import BaseMap from '../js/BaseMap.js'
 import CreatePrintMapButton from '../js/CreatePrintMapButton.js'
+import CreateMapButton from '../js/CreateMapButton.js';
 import PrintFormat from '../Leaflet.GridLayer.VMS2/PrintFormat.js'
 import MapOverlay, { CustomFontFace, ImageSvgLayer, PoiLayer, SvgLayer, TextSvgLayer } from '../Leaflet.GridLayer.VMS2/MapOverlay.js'
 
@@ -228,3 +229,4 @@ refreshMapOverlay()
 refreshMapContainerFormat()
 
 CreatePrintMapButton.init(baseMap);
+CreateMapButton.init(baseMap);
