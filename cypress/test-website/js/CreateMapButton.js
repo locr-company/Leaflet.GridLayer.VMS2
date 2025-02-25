@@ -53,15 +53,17 @@ export default class CreatePrintMapButton {
           longitudeMax: canvasLatLngMax.lng
         }
        
-        baseMap.getMapCanvas(mapCanvasOptions).then(canvas => {
-          const mapCanvas = document.getElementById('map-canvas')
-          if (mapCanvas) {
-            canvas.style.width = `${canvasWidth}px`
+        baseMap.getMapCanvas(mapCanvasOptions)
+          .then(canvas => {
+            const mapCanvas = document.getElementById('map-canvas')
+            if (mapCanvas) {
+              canvas.style.width = `${canvasWidth}px`
 
-            mapCanvas.innerHTML = ''
-            mapCanvas.appendChild(canvas)
-          }
-        })
+              mapCanvas.innerHTML = ''
+              mapCanvas.appendChild(canvas)
+            }
+          })
+          .catch(console.error)
       })
     }
   }
