@@ -8,19 +8,21 @@ export default class CreatePrintMapButton {
     const createPrintMapButton = document.getElementById('create-print-map')
     if (createPrintMapButton) {
       createPrintMapButton.addEventListener('click', () => {
-        baseMap.getPrintCanvas().then(canvas => {
-          const printMap = document.getElementById('print-map')
-          if (printMap) {
-            const printFormat = baseMap.getPrintFormat()
-            const mapContainerSize = baseMap.getSize()
-            const virtualMapSize = printFormat.calculateVirtualMapContainerSize(mapContainerSize.x, mapContainerSize.y)
-            canvas.style.width = `${virtualMapSize.width}px`
+        baseMap.getPrintCanvas()
+          .then(canvas => {
+            const printMap = document.getElementById('print-map')
+            if (printMap) {
+              const printFormat = baseMap.getPrintFormat()
+              const mapContainerSize = baseMap.getSize()
+              const virtualMapSize = printFormat.calculateVirtualMapContainerSize(mapContainerSize.x, mapContainerSize.y)
+              canvas.style.width = `${virtualMapSize.width}px`
 
-            printMap.innerHTML = ''
-            printMap.appendChild(canvas)
-          }
+              printMap.innerHTML = ''
+              printMap.appendChild(canvas)
+            }
+          })
+          .catch(console.error)
         })
-      })
     }
   }
 }

@@ -1,0 +1,6 @@
+{
+    "sonarlint.connectedMode.project": {
+        "connectionId": "locr-company",
+        "projectKey": "locr-company_Leaflet.GridLayer.VMS2"
+    }
+}

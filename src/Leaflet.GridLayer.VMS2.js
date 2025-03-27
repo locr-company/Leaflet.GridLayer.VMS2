@@ -202,7 +202,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     this.mapOverlayMarkerDatas = []
   },
-  createTile: function (tileInfo, doneFunction_) {
+  createTile: function (tileInfo, doneFunction) {
     let tileCanvas = null
 
     for (const canvas of this.tileCanvases) {
@@ -230,7 +230,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     tileCanvas.hasBeenRemoved = false
 
     this._drawTile(tileCanvas, tileInfo)
-      .then(() => doneFunction_(null, tileCanvas))
+      .then(() => doneFunction(null, tileCanvas))
+      .catch(console.error)
 
     return tileCanvas
   },
@@ -366,7 +367,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
             const urlStringMatches = [...svgString.matchAll(/url\('((https?:\/\/[^\s']+)|(.*\/[^\s']+))'/g)].concat([...svgString.matchAll(/href="((https?:\/\/[^\s"]+)|(.*\/[^\s"]+))"/g)])
 
-            function fetchAndConvertToDataURL (urlString) {
+            const fetchAndConvertToDataURL = function (urlString) {
               return new Promise((resolve, reject) => {
                 fetch(urlString)
                   .then(response => response.blob())
@@ -387,11 +388,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                     reader.readAsDataURL(blob)
                   })
+                  .catch(console.error)
               })
             }
 
             const fetchPromises = []
-
             for (const urlStringMatch of urlStringMatches) {
               fetchPromises.push(fetchAndConvertToDataURL(urlStringMatch[1]))
             }
@@ -401,7 +402,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 const mapOverlaySvgBlobUrl = URL.createObjectURL(new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' }))
 
                 mapOverlayImage.src = mapOverlaySvgBlobUrl
-
                 mapOverlayImage.addEventListener('load', () => {
                   URL.revokeObjectURL(mapOverlaySvgBlobUrl)
 
@@ -410,10 +410,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   resolve(printCanvas)
                 })
               })
+              .catch(console.error)
           } else {
             resolve(mapCanvas)
           }
         })
+        .catch(console.error)
     })
   },
   getMapCanvas: async function (mapInfo) {
@@ -446,10 +448,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         })
       }
       /*
-     * End of billing related code block. Do not change or skip it, neither block its function.
-     * It must be executed when this function is being called.
-     * Refer to the license for more information.
-     */
+       * End of billing related code block. Do not change or skip it, neither block its function.
+       * It must be executed when this function is being called.
+       * Refer to the license for more information.
+       */
 
       const mapCanvas = document.createElement('canvas')
 
@@ -480,16 +482,15 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     tileCanvas.isDummy = true
 
     this._drawTile(tileCanvas, tileInfo)
-      .then(tileLayers => {
-        doneFunction(tileLayers)
-      })
+      .then(doneFunction)
+      .catch(console.error)
   },
   _pruneTilesOld: function () {
     if (!this._map) {
       return
     }
 
-    let key, tile
+    let tile
 
     const zoom = this._map.getZoom()
     if (
@@ -500,12 +501,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       return
     }
 
-    for (key in this._tiles) {
+    for (const key in this._tiles) {
       tile = this._tiles[key]
       tile.retain = tile.current
     }
 
-    for (key in this._tiles) {
+    for (const key in this._tiles) {
       tile = this._tiles[key]
       if (tile.current && !tile.active) {
         const coords = tile.coords
@@ -515,7 +516,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       }
     }
 
-    for (key in this._tiles) {
+    for (const key in this._tiles) {
       if (!this._tiles[key].retain) {
         this._removeTile(key)
       }
@@ -1992,15 +1993,17 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
             const tileLayerData = { tileCanvas, tileInfo, dataLayerId: layerLayoutId, layerStyle: layer, tileIds: [], objects: [], tileCount: 0 }
 
-            this._getTileLayer(tileLayerData).then(() => {
-              tileLayers[layerName] = tileLayers[layerName].concat(tileLayerData.objects)
+            this._getTileLayer(tileLayerData)
+              .then(() => {
+                tileLayers[layerName] = tileLayers[layerName].concat(tileLayerData.objects)
 
-              layerLayoutIdCount--
+                layerLayoutIdCount--
 
-              if (layerLayoutIdCount === 0) {
-                resolve(tileLayers)
-              }
-            })
+                if (layerLayoutIdCount === 0) {
+                  resolve(tileLayers)
+                }
+              })
+              .catch(console.error)
 
             layerLayoutIdCount++
           }
@@ -2813,6 +2816,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
               globalThis.vms2Context.styleRequestQueues[styleId] = []
             })
+            .catch(console.error)
         }
       }
     })
@@ -2917,422 +2921,426 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
               tileInfo.vms2TileZ = Math.round(Math.log2(Math.pow(this.options.zoomPowerBase, tileInfo.z) / userMapScale))
 
-              this._getTileLayers(tileCanvas, tileInfo, mapStyle).then(async tileLayers => {
-                if (tileCanvas.isDummy) {
-                  return resolve(tileLayers)
-                }
-
-                if (tileCanvas.hasBeenRemoved) {
-                  return resolve()
-                }
-
-                if (tileCanvas.hasBeenCreated) {
-                  this.tileCanvases.push(tileCanvas)
-
-                  tileCanvas.hasBeenCreated = false
-                }
-
-                if (!tileCanvas.context) {
-                  tileCanvas.context = tileCanvas.getContext('2d')
-
-                  tileCanvas.context.patterns = {}
-
-                  tileCanvas.context.beginGroup = function (name) {
+              this._getTileLayers(tileCanvas, tileInfo, mapStyle)
+                .then(async tileLayers => {
+                  if (tileCanvas.isDummy) {
+                    return resolve(tileLayers)
                   }
 
-                  tileCanvas.context.endGroup = function () {
-                  }
-                }
-
-                tileCanvas.context.clearRect(0, 0, tileCanvas.width, tileCanvas.height)
-
-                const mapArea = {
-                  left: this._longitudeToMeters(tileInfo.mapBounds.longitudeMin),
-                  right: this._longitudeToMeters(tileInfo.mapBounds.longitudeMax),
-                  bottom: this._latitudeToMeters(tileInfo.mapBounds.latitudeMin),
-                  top: this._latitudeToMeters(tileInfo.mapBounds.latitudeMax)
-                }
-
-                const extendedMapArea = {
-                  left: this._longitudeToMeters(tileInfo.drawingMapBounds.longitudeMin),
-                  right: this._longitudeToMeters(tileInfo.drawingMapBounds.longitudeMax),
-                  bottom: this._latitudeToMeters(tileInfo.drawingMapBounds.latitudeMin),
-                  top: this._latitudeToMeters(tileInfo.drawingMapBounds.latitudeMax)
-                }
-
-                const saveDataArea = {
-                  left: this._longitudeToMeters(tileInfo.saveMapBounds.longitudeMin),
-                  right: this._longitudeToMeters(tileInfo.saveMapBounds.longitudeMax),
-                  bottom: this._latitudeToMeters(tileInfo.saveMapBounds.latitudeMin),
-                  top: this._latitudeToMeters(tileInfo.saveMapBounds.latitudeMax)
-                }
-
-                const drawingInfo = {
-                  mapArea,
-                  extendedMapArea,
-                  mapWidth_: tileInfo.width,
-                  mapHeight: tileInfo.height,
-
-                  userMapScale,
-                  objectScale: this.options.objectScale * userMapScale,
-
-                  drawingArea: mapArea,
-                  boundingArea: mapArea,
-
-                  mapCanvas: null,
-
-                  saveDataArea,
-                  saveDataCanvas: null,
-
-                  workCanvases_: {},
-
-                  iconPositions: {},
-
-                  patternScale: tileInfo.dpi * 72 / DEFAULT_PRINT_DPI / DEFAULT_PRINT_DPI * userMapScale,
-                  scale: tileInfo.width / (mapArea.right - mapArea.left),
-                  adjustedObjectScale: Math.abs(tileInfo.vms2TileZ < 6 ? 0.7 : 0.7 / Math.cos(tileInfo.mapBounds.latitudeMin * Math.PI / 180)),
-
-                  displacementLayers: {
-                    '': {
-                      shift: 26 - Math.round(tileInfo.vms2TileZ),
-                      regions: {},
-                      allowedMapArea: null // { left: mapArea.left, right: mapArea.right, top: mapArea.top, bottom: mapArea.bottom } }
-                    }
-                  },
-                  displacementLayerNames: [''],
-
-                  saveDataIds: {},
-                  saveDataPixels: null
-                }
-
-                drawingInfo.mapCanvas = tileCanvas
-
-                if (this.options.allowedMapArea) {
-                  if (this.options.allowedMapArea === true) {
-                    drawingInfo.displacementLayers[''].allowedMapArea = drawingInfo.mapArea
-                  } else {
-                    drawingInfo.displacementLayers[''].allowedMapArea = {
-                      left: this._longitudeToMeters(this.options.allowedMapArea.longitudeMin),
-                      right: this._longitudeToMeters(this.options.allowedMapArea.longitudeMax),
-                      top: this._latitudeToMeters(this.options.allowedMapArea.latitudeMax),
-                      bottom: this._latitudeToMeters(this.options.allowedMapArea.latitudeMin)
-                    }
-                  }
-                }
-
-                if (this.options.displacementIcons) {
-                  const displacementBoxes = []
-
-                  for (const displacementIcon of this.options.displacementIcons) {
-                    const width = displacementIcon.size[0]
-                    const height = displacementIcon.size[1]
-
-                    const anchorX = displacementIcon.anchor ? displacementIcon.anchor[0] : (width / 2)
-                    const anchorY = height - (displacementIcon.anchor ? displacementIcon.anchor[1] : (height / 2))
-
-                    const left = this._longitudeToMeters(displacementIcon.longitude) - anchorX * tileInfo.width / (this.tileSize * drawingInfo.scale)
-                    const right = this._longitudeToMeters(displacementIcon.longitude) + (width - anchorX) * tileInfo.width / (this.tileSize * drawingInfo.scale)
-                    const top = this._latitudeToMeters(displacementIcon.latitude) + (height - anchorY) * tileInfo.width / (this.tileSize * drawingInfo.scale)
-                    const bottom = this._latitudeToMeters(displacementIcon.latitude) - anchorY * tileInfo.width / (this.tileSize * drawingInfo.scale)
-
-                    displacementBoxes.push({ left, right, top, bottom })
+                  if (tileCanvas.hasBeenRemoved) {
+                    return resolve()
                   }
 
-                  this._checkAndSetDisplacement(drawingInfo.displacementLayers, drawingInfo.displacementLayerNames, displacementBoxes)
-                }
+                  if (tileCanvas.hasBeenCreated) {
+                    this.tileCanvases.push(tileCanvas)
 
-                // Process all style layers.
-
-                for (const layerName of mapStyle.Order) {
-                  if (drawingInfo.mapCanvas.hasBeenRemoved) {
-                    continue
+                    tileCanvas.hasBeenCreated = false
                   }
 
-                  const layer = mapStyle.Layers[layerName]
+                  if (!tileCanvas.context) {
+                    tileCanvas.context = tileCanvas.getContext('2d')
 
-                  let styleType = this._getLayerStyleType(layer)
+                    tileCanvas.context.patterns = {}
 
-                  if (
-                    !layer ||
-                    (this.options.type && this.options.type !== styleType) ||
-                    layer.Enable === false ||
-                    tileInfo.vms2TileZ < (layer.ZoomRange[0] > 0 ? layer.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
-                    tileInfo.vms2TileZ >= (layer.ZoomRange[1] + this.options.zoomRangeOffset)
-                  ) {
-                    continue
+                    tileCanvas.context.beginGroup = function (name) {
+                    }
+
+                    tileCanvas.context.endGroup = function () {
+                    }
                   }
 
-                  const mapObjects = tileLayers[layerName] || []
+                  tileCanvas.context.clearRect(0, 0, tileCanvas.width, tileCanvas.height)
 
-                  // Create grid points.
+                  const mapArea = {
+                    left: this._longitudeToMeters(tileInfo.mapBounds.longitudeMin),
+                    right: this._longitudeToMeters(tileInfo.mapBounds.longitudeMax),
+                    bottom: this._latitudeToMeters(tileInfo.mapBounds.latitudeMin),
+                    top: this._latitudeToMeters(tileInfo.mapBounds.latitudeMax)
+                  }
 
-                  if (layer.Grid) {
-                    drawingInfo.isGrid = true
+                  const extendedMapArea = {
+                    left: this._longitudeToMeters(tileInfo.drawingMapBounds.longitudeMin),
+                    right: this._longitudeToMeters(tileInfo.drawingMapBounds.longitudeMax),
+                    bottom: this._latitudeToMeters(tileInfo.drawingMapBounds.latitudeMin),
+                    top: this._latitudeToMeters(tileInfo.drawingMapBounds.latitudeMax)
+                  }
 
-                    const gridZoomScale = 1 / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, layer.Grid.ZoomScale || 1)
+                  const saveDataArea = {
+                    left: this._longitudeToMeters(tileInfo.saveMapBounds.longitudeMin),
+                    right: this._longitudeToMeters(tileInfo.saveMapBounds.longitudeMax),
+                    bottom: this._latitudeToMeters(tileInfo.saveMapBounds.latitudeMin),
+                    top: this._latitudeToMeters(tileInfo.saveMapBounds.latitudeMax)
+                  }
 
-                    const gridSize = [layer.Grid.Size[0] * drawingInfo.objectScale * gridZoomScale, layer.Grid.Size[1] * drawingInfo.objectScale * gridZoomScale]
+                  const drawingInfo = {
+                    mapArea,
+                    extendedMapArea,
+                    mapWidth_: tileInfo.width,
+                    mapHeight: tileInfo.height,
 
-                    const gridOffset = [0, 0]
+                    userMapScale,
+                    objectScale: this.options.objectScale * userMapScale,
 
-                    if (layer.Grid.Offset) {
-                      gridOffset[0] = layer.Grid.Offset[0] * drawingInfo.objectScale * gridZoomScale
-                      gridOffset[1] = layer.Grid.Offset[1] * drawingInfo.objectScale * gridZoomScale
-                    }
+                    drawingArea: mapArea,
+                    boundingArea: mapArea,
 
-                    const gridSkew = [0, 0]
+                    mapCanvas: null,
 
-                    if (layer.Grid.Skew) {
-                      gridSkew[0] = layer.Grid.Skew[0] * drawingInfo.objectScale * gridZoomScale
-                      gridSkew[1] = layer.Grid.Skew[1] * drawingInfo.objectScale * gridZoomScale
-                    }
+                    saveDataArea,
+                    saveDataCanvas: null,
 
-                    const randomDistribution = [0, 0]
+                    workCanvases_: {},
 
-                    if (layer.Grid.RandomDistribution) {
-                      randomDistribution[0] = layer.Grid.RandomDistribution[0] * drawingInfo.objectScale * gridZoomScale
-                      randomDistribution[1] = layer.Grid.RandomDistribution[1] * drawingInfo.objectScale * gridZoomScale
-                    }
+                    iconPositions: {},
 
-                    const randomAngle = [0, 0]
+                    patternScale: tileInfo.dpi * 72 / DEFAULT_PRINT_DPI / DEFAULT_PRINT_DPI * userMapScale,
+                    scale: tileInfo.width / (mapArea.right - mapArea.left),
+                    adjustedObjectScale: Math.abs(tileInfo.vms2TileZ < 6 ? 0.7 : 0.7 / Math.cos(tileInfo.mapBounds.latitudeMin * Math.PI / 180)),
 
-                    if (layer.Grid.RandomAngle) {
-                      randomAngle[0] = layer.Grid.RandomAngle[0] * Math.PI * 2
-                      randomAngle[1] = layer.Grid.RandomAngle[1] * Math.PI * 2
-                    }
-
-                    const worldTop = this._tileYToMeters(0, 0)
-                    const worldLeft = this._tileXToMeters(0, 0)
-
-                    const gridStartIndexX = Math.floor((drawingInfo.saveDataArea.left - worldLeft) / gridSize[0]) - 1
-                    let gridIndexY = Math.floor((worldTop - drawingInfo.saveDataArea.top) / gridSize[1]) - 1
-
-                    const gridLeft = gridStartIndexX * gridSize[0] + worldLeft
-                    const gridRight = drawingInfo.saveDataArea.right
-                    const gridTop = worldTop - gridIndexY * gridSize[1]
-                    const gridBottom = drawingInfo.saveDataArea.bottom
-
-                    const gridPoints = []
-
-                    for (let gridY = gridTop; gridY >= gridBottom; gridIndexY++) {
-                      gridY = worldTop - gridIndexY * gridSize[1]
-
-                      const gridSkewX = (gridIndexY * gridSkew[0]) % gridSize[0]
-
-                      for (let gridX = gridLeft, gridIndexX = gridStartIndexX; gridX <= gridRight; gridIndexX++) {
-                        gridX = gridIndexX * gridSize[0] + worldLeft
-
-                        this.randomGenerator.init_seed((Math.round(gridIndexX) + 0xaffeaffe) * (Math.round(gridIndexY) + 0xaffeaffe))
-
-                        const gridSkewY = (gridIndexX * gridSkew[1]) % gridSize[1]
-
-                        gridPoints.push({
-                          x: gridX + gridSkewX + gridOffset[0] + randomDistribution[0] * this.randomGenerator.random(),
-                          y: gridY - gridSkewY - gridOffset[1] - randomDistribution[1] * this.randomGenerator.random(),
-                          angle: randomAngle[0] + randomAngle[1] * this.randomGenerator.random()
-                        })
+                    displacementLayers: {
+                      '': {
+                        shift: 26 - Math.round(tileInfo.vms2TileZ),
+                        regions: {},
+                        allowedMapArea: null // { left: mapArea.left, right: mapArea.right, top: mapArea.top, bottom: mapArea.bottom } }
                       }
-                    }
+                    },
+                    displacementLayerNames: [''],
 
-                    gridPoints.sort((a, b) => { return (b.y - a.y) })
-
-                    for (const gridPoint of gridPoints) {
-                      const center = {}
-
-                      center.x = gridPoint.x
-                      center.y = gridPoint.y
-
-                      const envelope = {}
-
-                      envelope.left = envelope.right = gridPoint.x
-                      envelope.bottom = envelope.top = gridPoint.y
-
-                      const objectInfo = { Center: center, Envelope: envelope, Angle: gridPoint.angle }
-
-                      mapObjects.push({ info: objectInfo, geometry: null })
-                    }
-
-                    styleType = 'text'
-                  } else {
-                    drawingInfo.isGrid = false
+                    saveDataIds: {},
+                    saveDataPixels: null
                   }
 
-                  // Sort map objects.
+                  drawingInfo.mapCanvas = tileCanvas
 
-                  if (layer.SortFunction) {
-                    const sortFunction = new Function('a', 'b', 'return (' + layer.SortFunction + ')')
-
-                    mapObjects.sort((a, b) => {
-                      if (a && b) {
-                        return sortFunction(a.info, b.info)
-                      } else {
-                        return 0
-                      }
-                    })
-                  }
-
-                  // Draw objects on all defined canvases.
-
-                  const layerCanvasNames = [''] // layer_.CanvasNames || [ '' ]
-
-                  if (layer.Save) {
-                    layerCanvasNames.push('save')
-                  }
-
-                  for (const layerCanvasName of layerCanvasNames) {
-                    if (layerCanvasName === 'save') {
-                      if (!drawingInfo.saveDataCanvas) {
-                        let saveDataCanvas = null
-
-                        for (const canvas of this.saveDataCanvases) {
-                          if (!canvas.inUse) {
-                            saveDataCanvas = canvas
-
-                            break
-                          }
-                        }
-
-                        if (!drawingInfo.mapCanvas.isTile || !saveDataCanvas) {
-                          saveDataCanvas = document.createElement('canvas')
-
-                          saveDataCanvas.width = drawingInfo.mapCanvas.width * (1 + 2 * TILE_AREA_SAVE_EXTENSION)
-                          saveDataCanvas.height = drawingInfo.mapCanvas.height * (1 + 2 * TILE_AREA_SAVE_EXTENSION)
-
-                          saveDataCanvas.context = saveDataCanvas.getContext('2d', { willReadFrequently: true })
-
-                          saveDataCanvas.context.patterns = {}
-
-                          saveDataCanvas.context.beginGroup = function (name_) {
-                          }
-
-                          saveDataCanvas.context.endGroup = function () {
-                          }
-
-                          this.saveDataCanvases.push(saveDataCanvas)
-                        }
-
-                        saveDataCanvas.context.clearRect(0, 0, saveDataCanvas.width, saveDataCanvas.height)
-
-                        saveDataCanvas.inUse = true
-
-                        drawingInfo.saveDataCanvas = saveDataCanvas
-                      }
-
-                      drawingInfo.context = drawingInfo.saveDataCanvas.context
-
-                      drawingInfo.drawingArea = drawingInfo.saveDataArea
+                  if (this.options.allowedMapArea) {
+                    if (this.options.allowedMapArea === true) {
+                      drawingInfo.displacementLayers[''].allowedMapArea = drawingInfo.mapArea
                     } else {
-                      drawingInfo.context = drawingInfo.mapCanvas.context
+                      drawingInfo.displacementLayers[''].allowedMapArea = {
+                        left: this._longitudeToMeters(this.options.allowedMapArea.longitudeMin),
+                        right: this._longitudeToMeters(this.options.allowedMapArea.longitudeMax),
+                        top: this._latitudeToMeters(this.options.allowedMapArea.latitudeMax),
+                        bottom: this._latitudeToMeters(this.options.allowedMapArea.latitudeMin)
+                      }
+                    }
+                  }
 
-                      drawingInfo.drawingArea = drawingInfo.mapArea
+                  if (this.options.displacementIcons) {
+                    const displacementBoxes = []
+
+                    for (const displacementIcon of this.options.displacementIcons) {
+                      const width = displacementIcon.size[0]
+                      const height = displacementIcon.size[1]
+
+                      const anchorX = displacementIcon.anchor ? displacementIcon.anchor[0] : (width / 2)
+                      const anchorY = height - (displacementIcon.anchor ? displacementIcon.anchor[1] : (height / 2))
+
+                      const left = this._longitudeToMeters(displacementIcon.longitude) - anchorX * tileInfo.width / (this.tileSize * drawingInfo.scale)
+                      const right = this._longitudeToMeters(displacementIcon.longitude) + (width - anchorX) * tileInfo.width / (this.tileSize * drawingInfo.scale)
+                      const top = this._latitudeToMeters(displacementIcon.latitude) + (height - anchorY) * tileInfo.width / (this.tileSize * drawingInfo.scale)
+                      const bottom = this._latitudeToMeters(displacementIcon.latitude) - anchorY * tileInfo.width / (this.tileSize * drawingInfo.scale)
+
+                      displacementBoxes.push({ left, right, top, bottom })
                     }
 
-                    if (layerCanvasName !== 'save' && !layer.Style && !layer.Filters) {
+                    this._checkAndSetDisplacement(drawingInfo.displacementLayers, drawingInfo.displacementLayerNames, displacementBoxes)
+                  }
+
+                  // Process all style layers.
+
+                  for (const layerName of mapStyle.Order) {
+                    if (drawingInfo.mapCanvas.hasBeenRemoved) {
                       continue
                     }
 
-                    if (layer.needsAreaExtension) {
-                      drawingInfo.boundingArea = drawingInfo.extendedMapArea
+                    const layer = mapStyle.Layers[layerName]
+
+                    let styleType = this._getLayerStyleType(layer)
+
+                    if (
+                      !layer ||
+                      (this.options.type && this.options.type !== styleType) ||
+                      layer.Enable === false ||
+                      tileInfo.vms2TileZ < (layer.ZoomRange[0] > 0 ? layer.ZoomRange[0] + this.options.zoomRangeOffset : 0) ||
+                      tileInfo.vms2TileZ >= (layer.ZoomRange[1] + this.options.zoomRangeOffset)
+                    ) {
+                      continue
+                    }
+
+                    const mapObjects = tileLayers[layerName] || []
+
+                    // Create grid points.
+
+                    if (layer.Grid) {
+                      drawingInfo.isGrid = true
+
+                      const gridZoomScale = 1 / drawingInfo.userMapScale / Math.pow(DEFAULT_PRINT_DPI * drawingInfo.scale / drawingInfo.userMapScale / tileInfo.dpi, layer.Grid.ZoomScale || 1)
+
+                      const gridSize = [layer.Grid.Size[0] * drawingInfo.objectScale * gridZoomScale, layer.Grid.Size[1] * drawingInfo.objectScale * gridZoomScale]
+
+                      const gridOffset = [0, 0]
+
+                      if (layer.Grid.Offset) {
+                        gridOffset[0] = layer.Grid.Offset[0] * drawingInfo.objectScale * gridZoomScale
+                        gridOffset[1] = layer.Grid.Offset[1] * drawingInfo.objectScale * gridZoomScale
+                      }
+
+                      const gridSkew = [0, 0]
+
+                      if (layer.Grid.Skew) {
+                        gridSkew[0] = layer.Grid.Skew[0] * drawingInfo.objectScale * gridZoomScale
+                        gridSkew[1] = layer.Grid.Skew[1] * drawingInfo.objectScale * gridZoomScale
+                      }
+
+                      const randomDistribution = [0, 0]
+
+                      if (layer.Grid.RandomDistribution) {
+                        randomDistribution[0] = layer.Grid.RandomDistribution[0] * drawingInfo.objectScale * gridZoomScale
+                        randomDistribution[1] = layer.Grid.RandomDistribution[1] * drawingInfo.objectScale * gridZoomScale
+                      }
+
+                      const randomAngle = [0, 0]
+
+                      if (layer.Grid.RandomAngle) {
+                        randomAngle[0] = layer.Grid.RandomAngle[0] * Math.PI * 2
+                        randomAngle[1] = layer.Grid.RandomAngle[1] * Math.PI * 2
+                      }
+
+                      const worldTop = this._tileYToMeters(0, 0)
+                      const worldLeft = this._tileXToMeters(0, 0)
+
+                      const gridStartIndexX = Math.floor((drawingInfo.saveDataArea.left - worldLeft) / gridSize[0]) - 1
+                      let gridIndexY = Math.floor((worldTop - drawingInfo.saveDataArea.top) / gridSize[1]) - 1
+
+                      const gridLeft = gridStartIndexX * gridSize[0] + worldLeft
+                      const gridRight = drawingInfo.saveDataArea.right
+                      const gridTop = worldTop - gridIndexY * gridSize[1]
+                      const gridBottom = drawingInfo.saveDataArea.bottom
+
+                      const gridPoints = []
+
+                      for (let gridY = gridTop; gridY >= gridBottom; gridIndexY++) {
+                        gridY = worldTop - gridIndexY * gridSize[1]
+
+                        const gridSkewX = (gridIndexY * gridSkew[0]) % gridSize[0]
+
+                        for (let gridX = gridLeft, gridIndexX = gridStartIndexX; gridX <= gridRight; gridIndexX++) {
+                          gridX = gridIndexX * gridSize[0] + worldLeft
+
+                          this.randomGenerator.init_seed((Math.round(gridIndexX) + 0xaffeaffe) * (Math.round(gridIndexY) + 0xaffeaffe))
+
+                          const gridSkewY = (gridIndexX * gridSkew[1]) % gridSize[1]
+
+                          gridPoints.push({
+                            x: gridX + gridSkewX + gridOffset[0] + randomDistribution[0] * this.randomGenerator.random(),
+                            y: gridY - gridSkewY - gridOffset[1] - randomDistribution[1] * this.randomGenerator.random(),
+                            angle: randomAngle[0] + randomAngle[1] * this.randomGenerator.random()
+                          })
+                        }
+                      }
+
+                      gridPoints.sort((a, b) => { return (b.y - a.y) })
+
+                      for (const gridPoint of gridPoints) {
+                        const center = {}
+
+                        center.x = gridPoint.x
+                        center.y = gridPoint.y
+
+                        const envelope = {}
+
+                        envelope.left = envelope.right = gridPoint.x
+                        envelope.bottom = envelope.top = gridPoint.y
+
+                        const objectInfo = { Center: center, Envelope: envelope, Angle: gridPoint.angle }
+
+                        mapObjects.push({ info: objectInfo, geometry: null })
+                      }
+
+                      styleType = 'text'
                     } else {
-                      drawingInfo.boundingArea = drawingInfo.mapArea
+                      drawingInfo.isGrid = false
                     }
 
-                    // Canvas preparation.
+                    // Sort map objects.
 
-                    drawingInfo.context.beginGroup(layerName)
+                    if (layer.SortFunction) {
+                      const sortFunction = new Function('a', 'b', 'return (' + layer.SortFunction + ')')
 
-                    drawingInfo.context.setTransform(new DOMMatrix())
-
-                    drawingInfo.context.globalCompositeOperation = layer.CompositeOperation || 'source-over'
-                    drawingInfo.context.filter = layer.CanvasFilter || 'none'
-
-                    drawingInfo.context.fillStyle = '#00000000'
-                    drawingInfo.context.strokeStyle = '#00000000'
-                    drawingInfo.context.lineWidth = 0
-                    drawingInfo.context.setLineDash([])
-                    drawingInfo.context.textAlign = 'center'
-                    drawingInfo.context.textBaseline = 'middle'
-
-                    drawingInfo.tileBoundingBox = null
-
-                    // Draw map objects.
-
-                    if (layerCanvasName === 'save') {
-                      layer.layerName = layerName
-
-                      await this._drawSaveLayer(drawingInfo, mapObjects, tileInfo, layer)
-
-                      drawingInfo.saveDataPixels = null // Invalidate pixels
-                    } else if (styleType === 'text') {
-                      await this._drawObjectsLayer(drawingInfo, mapObjects, tileInfo, layer)
-                    } else {
-                      await this._drawBaseLayer(drawingInfo, mapObjects, tileInfo, layer)
+                      mapObjects.sort((a, b) => {
+                        if (a && b) {
+                          return sortFunction(a.info, b.info)
+                        } else {
+                          return 0
+                        }
+                      })
                     }
 
-                    if (drawingInfo.isGrid) { // TODO!
-                      drawingInfo.displacementLayers[''].regions = {}
+                    // Draw objects on all defined canvases.
+
+                    const layerCanvasNames = [''] // layer_.CanvasNames || [ '' ]
+
+                    if (layer.Save) {
+                      layerCanvasNames.push('save')
                     }
 
-                    drawingInfo.context.endGroup()
+                    for (const layerCanvasName of layerCanvasNames) {
+                      if (layerCanvasName === 'save') {
+                        if (!drawingInfo.saveDataCanvas) {
+                          let saveDataCanvas = null
+
+                          for (const canvas of this.saveDataCanvases) {
+                            if (!canvas.inUse) {
+                              saveDataCanvas = canvas
+
+                              break
+                            }
+                          }
+
+                          if (!drawingInfo.mapCanvas.isTile || !saveDataCanvas) {
+                            saveDataCanvas = document.createElement('canvas')
+
+                            saveDataCanvas.width = drawingInfo.mapCanvas.width * (1 + 2 * TILE_AREA_SAVE_EXTENSION)
+                            saveDataCanvas.height = drawingInfo.mapCanvas.height * (1 + 2 * TILE_AREA_SAVE_EXTENSION)
+
+                            saveDataCanvas.context = saveDataCanvas.getContext('2d', { willReadFrequently: true })
+
+                            saveDataCanvas.context.patterns = {}
+
+                            saveDataCanvas.context.beginGroup = function (name_) {
+                            }
+
+                            saveDataCanvas.context.endGroup = function () {
+                            }
+
+                            this.saveDataCanvases.push(saveDataCanvas)
+                          }
+
+                          saveDataCanvas.context.clearRect(0, 0, saveDataCanvas.width, saveDataCanvas.height)
+
+                          saveDataCanvas.inUse = true
+
+                          drawingInfo.saveDataCanvas = saveDataCanvas
+                        }
+
+                        drawingInfo.context = drawingInfo.saveDataCanvas.context
+
+                        drawingInfo.drawingArea = drawingInfo.saveDataArea
+                      } else {
+                        drawingInfo.context = drawingInfo.mapCanvas.context
+
+                        drawingInfo.drawingArea = drawingInfo.mapArea
+                      }
+
+                      if (layerCanvasName !== 'save' && !layer.Style && !layer.Filters) {
+                        continue
+                      }
+
+                      if (layer.needsAreaExtension) {
+                        drawingInfo.boundingArea = drawingInfo.extendedMapArea
+                      } else {
+                        drawingInfo.boundingArea = drawingInfo.mapArea
+                      }
+
+                      // Canvas preparation.
+
+                      drawingInfo.context.beginGroup(layerName)
+
+                      drawingInfo.context.setTransform(new DOMMatrix())
+
+                      drawingInfo.context.globalCompositeOperation = layer.CompositeOperation || 'source-over'
+                      drawingInfo.context.filter = layer.CanvasFilter || 'none'
+
+                      drawingInfo.context.fillStyle = '#00000000'
+                      drawingInfo.context.strokeStyle = '#00000000'
+                      drawingInfo.context.lineWidth = 0
+                      drawingInfo.context.setLineDash([])
+                      drawingInfo.context.textAlign = 'center'
+                      drawingInfo.context.textBaseline = 'middle'
+
+                      drawingInfo.tileBoundingBox = null
+
+                      // Draw map objects.
+
+                      if (layerCanvasName === 'save') {
+                        layer.layerName = layerName
+
+                        await this._drawSaveLayer(drawingInfo, mapObjects, tileInfo, layer)
+
+                        drawingInfo.saveDataPixels = null // Invalidate pixels
+                      } else if (styleType === 'text') {
+                        await this._drawObjectsLayer(drawingInfo, mapObjects, tileInfo, layer)
+                      } else {
+                        await this._drawBaseLayer(drawingInfo, mapObjects, tileInfo, layer)
+                      }
+
+                      if (drawingInfo.isGrid) { // TODO!
+                        drawingInfo.displacementLayers[''].regions = {}
+                      }
+
+                      drawingInfo.context.endGroup()
+                    }
                   }
-                }
 
-                if (drawingInfo.saveDataCanvas) {
-                  drawingInfo.saveDataCanvas.inUse = false
-                }
+                  if (drawingInfo.saveDataCanvas) {
+                    drawingInfo.saveDataCanvas.inUse = false
+                  }
 
-                drawingInfo.context = drawingInfo.mapCanvas.context
+                  drawingInfo.context = drawingInfo.mapCanvas.context
 
-                // Fill water areas.
+                  // Fill water areas.
 
-                drawingInfo.context.beginGroup('background')
+                  drawingInfo.context.beginGroup('background')
 
-                drawingInfo.context.setTransform(new DOMMatrix())
+                  drawingInfo.context.setTransform(new DOMMatrix())
 
-                drawingInfo.context.globalCompositeOperation = 'destination-over'
+                  drawingInfo.context.globalCompositeOperation = 'destination-over'
 
-                if (this.options.type !== 'text') {
-                  if (mapStyle.BackgroundPatternFunction) {
-                    if (typeof mapStyle.BackgroundPatternFunction === 'string') {
-                      mapStyle.BackgroundPatternFunction = new Function(
-                        'ObjectData',
-                        'MapZoom',
-                        'RandomGenerator',
-                        'return ' + mapStyle.BackgroundPatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
-                      )
-                    }
+                  if (this.options.type !== 'text') {
+                    if (mapStyle.BackgroundPatternFunction) {
+                      if (typeof mapStyle.BackgroundPatternFunction === 'string') {
+                        mapStyle.BackgroundPatternFunction = new Function(
+                          'ObjectData',
+                          'MapZoom',
+                          'RandomGenerator',
+                          'return ' + mapStyle.BackgroundPatternFunction.replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']').replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
+                        )
+                      }
 
-                    const patternName = mapStyle.BackgroundPatternFunction(null, tileInfo.vms2TileZ, this.randomGenerator)
+                      const patternName = mapStyle.BackgroundPatternFunction(null, tileInfo.vms2TileZ, this.randomGenerator)
 
-                    if (patternName) {
-                      const pattern = await this._getPattern(drawingInfo.context, patternName)
+                      if (patternName) {
+                        const pattern = await this._getPattern(drawingInfo.context, patternName)
 
-                      pattern.transformMatrix = new DOMMatrix().translate(-drawingInfo.mapArea.left * drawingInfo.scale * drawingInfo.patternScale, -drawingInfo.mapArea.top * drawingInfo.scale * drawingInfo.patternScale).scale(drawingInfo.patternScale)
-                      // pattern_.transformMatrix = new DOMMatrix().scale(drawingInfo.patternScale)
+                        pattern.transformMatrix = new DOMMatrix().translate(-drawingInfo.mapArea.left * drawingInfo.scale * drawingInfo.patternScale, -drawingInfo.mapArea.top * drawingInfo.scale * drawingInfo.patternScale).scale(drawingInfo.patternScale)
+                        // pattern_.transformMatrix = new DOMMatrix().scale(drawingInfo.patternScale)
 
-                      pattern.setTransform(pattern.transformMatrix)
+                        pattern.setTransform(pattern.transformMatrix)
 
-                      drawingInfo.context.fillStyle = pattern
+                        drawingInfo.context.fillStyle = pattern
+                        drawingInfo.context.fillRect(0, 0, tileInfo.width, tileInfo.height)
+                      }
+                    } else {
+                      if (typeof mapStyle.BackgroundAlpha !== 'number') {
+                        mapStyle.BackgroundAlpha = 1
+                      }
+
+                      drawingInfo.context.fillStyle = '#' + this._hexify32([mapStyle.BackgroundColor[0], mapStyle.BackgroundColor[1], mapStyle.BackgroundColor[2], Math.round(mapStyle.BackgroundAlpha * 255)])
                       drawingInfo.context.fillRect(0, 0, tileInfo.width, tileInfo.height)
                     }
-                  } else {
-                    if (typeof mapStyle.BackgroundAlpha !== 'number') {
-                      mapStyle.BackgroundAlpha = 1
-                    }
-
-                    drawingInfo.context.fillStyle = '#' + this._hexify32([mapStyle.BackgroundColor[0], mapStyle.BackgroundColor[1], mapStyle.BackgroundColor[2], Math.round(mapStyle.BackgroundAlpha * 255)])
-                    drawingInfo.context.fillRect(0, 0, tileInfo.width, tileInfo.height)
                   }
-                }
 
-                drawingInfo.context.endGroup()
+                  drawingInfo.context.endGroup()
 
-                drawingInfo.mapCanvas.inUse = false
+                  drawingInfo.mapCanvas.inUse = false
 
-                resolve()
-              })
+                  resolve()
+                })
+                .catch(console.error)
             })
+            .catch(console.error)
         })
+        .catch(console.error)
     })
   },
   _getCachedTile: function (layerId, x, y, z, tileLayer) {
@@ -3584,6 +3592,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
             image.src = `data:image/svg+xml;base64,${btoa(svgImage)}`
           })
+          .catch(console.error)
       } else {
         image.onload = () => {
           imageCache[imageUrlString].isLoading = false
@@ -3624,6 +3633,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 resolves.shift()()
               }
             })
+            .catch(console.error)
         }
       }
     })
@@ -3872,7 +3882,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       const patternImage = await this._requestImage(patternUrl)
 
       globalThis.vms2Context.patternCache[patternName] = context.createPattern(patternImage, 'repeat')
-
       globalThis.vms2Context.patternCache[patternName].patternImage = patternImage
     }
 

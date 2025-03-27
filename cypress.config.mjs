@@ -6,6 +6,7 @@ import pixelmatch from "pixelmatch";
 export default defineConfig({
   e2e: {
     baseUrl: 'http://localhost:9876',
+    defaultCommandTimeout: 30000,
     setupNodeEvents(on, config) {
       on('task', {
         comparePngs({ base, compare, diffPath }) {

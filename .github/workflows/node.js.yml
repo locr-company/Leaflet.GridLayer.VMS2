@@ -29,12 +29,17 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'npm'
     - run: npm ci
     - run: npm run lint:js
     - run: npm run lint:standardjs
     - run: npm run test
-    - run: npm run cypress-test
+
+    - name: Cypress Tests with no real data
+      run: npm run cypress-test-no-real-data
+    
+    - name: Cypress Tests with real data
+      if: ${{ matrix.os-version == 'ubuntu-latest' }}
+      run: npm run cypress-test-real-data
 
     - name: Upload images as artifacts
       if: ${{ always() }}
