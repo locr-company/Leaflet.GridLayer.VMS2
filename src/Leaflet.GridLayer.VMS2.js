@@ -312,7 +312,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         width: printFormatSize.width,
         height: printFormatSize.height,
 
-        mapScale: printFormatSize.printScale,
+        mapScale: printFormatSize.printScale * DEFAULT_PRINT_DPI / printFormatSize.dpi,
 
         objectScale: this.options.objectScale,
         detailOffset: this.options.detailOffset,
