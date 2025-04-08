@@ -49,20 +49,20 @@
   },
   "devDependencies": {
     "@locr-company/vms2-tile-db-reader": "^1.0.1",
-    "@types/leaflet": "^1.9.16",
-    "@typescript-eslint/eslint-plugin": "^8.25.0",
-    "@typescript-eslint/parser": "^8.25.0",
+    "@types/leaflet": "^1.9.17",
+    "@typescript-eslint/eslint-plugin": "^8.29.1",
+    "@typescript-eslint/parser": "^8.29.1",
     "chai": "^5.2.0",
-    "cypress": "^14.0.3",
-    "eslint": "^9.21.0",
+    "cypress": "^14.2.1",
+    "eslint": "^9.24.0",
     "express": "^5.1.0",
-    "helmet": "^8.0.0",
+    "helmet": "^8.1.0",
     "jsdom": "^26.0.0",
     "jsdom-global": "^3.0.2",
-    "mocha": "^11.1.0",
+    "mocha": "^11.2.0",
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
     "serve-index": "^1.9.1",
-    "start-server-and-test": "^2.0.10"
+    "start-server-and-test": "^2.0.11"
   }
 }
