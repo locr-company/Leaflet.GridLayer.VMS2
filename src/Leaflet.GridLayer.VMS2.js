@@ -2768,7 +2768,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     return 'base'
   },
   _requestStyle: function () {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
       if (this.options.style.Order && Array.isArray(this.options.style.Order)) {
         resolve(this.options.style)
       } else {
@@ -2809,6 +2809,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               }
 
               globalThis.vms2Context.styleRequestQueues[styleId] = []
+            })
+            .catch(error => {
+              console.error(error)
+              reject(error)
             })
         }
       }
