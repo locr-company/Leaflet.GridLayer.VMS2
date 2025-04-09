@@ -2811,7 +2811,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               globalThis.vms2Context.styleRequestQueues[styleId] = []
             })
             .catch(error => {
-              console.error(error);
+              console.error(error)
               reject(error)
             })
         }
