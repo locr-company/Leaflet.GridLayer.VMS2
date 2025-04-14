@@ -231,7 +231,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     this._drawTile(tileCanvas, tileInfo)
       .then(() => doneFunction(null, tileCanvas))
-      .catch(console.error)
 
     return tileCanvas
   },
@@ -388,7 +387,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                     reader.readAsDataURL(blob)
                   })
-                  .catch(console.error)
               })
             }
 
@@ -410,12 +408,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   resolve(printCanvas)
                 })
               })
-              .catch(console.error)
           } else {
             resolve(mapCanvas)
           }
         })
-        .catch(console.error)
     })
   },
   getMapCanvas: async function (mapInfo) {
@@ -483,7 +479,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     this._drawTile(tileCanvas, tileInfo)
       .then(doneFunction)
-      .catch(console.error)
   },
   _pruneTilesOld: function () {
     if (!this._map) {
@@ -2003,7 +1998,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   resolve(tileLayers)
                 }
               })
-              .catch(console.error)
 
             layerLayoutIdCount++
           }
@@ -2774,7 +2768,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     return 'base'
   },
   _requestStyle: function () {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
       if (this.options.style.Order && Array.isArray(this.options.style.Order)) {
         resolve(this.options.style)
       } else {
@@ -2816,7 +2810,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
               globalThis.vms2Context.styleRequestQueues[styleId] = []
             })
-            .catch(console.error)
+            .catch(error => {
+              console.error(error)
+              reject(error)
+            })
         }
       }
     })
@@ -3336,11 +3333,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                   resolve()
                 })
-                .catch(console.error)
             })
-            .catch(console.error)
         })
-        .catch(console.error)
     })
   },
   _getCachedTile: function (layerId, x, y, z, tileLayer) {
@@ -3592,7 +3586,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
             image.src = `data:image/svg+xml;base64,${btoa(svgImage)}`
           })
-          .catch(console.error)
       } else {
         image.onload = () => {
           imageCache[imageUrlString].isLoading = false
@@ -3633,7 +3626,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 resolves.shift()()
               }
             })
-            .catch(console.error)
         }
       }
     })
