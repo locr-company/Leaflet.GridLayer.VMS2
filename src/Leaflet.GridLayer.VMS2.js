@@ -457,7 +457,29 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       mapCanvas.inUse = true
       mapCanvas.hasBeenRemoved = false
 
-      await this._drawTile(mapCanvas, mapInfo)
+      if(typeof mapInfo.latitudeMin === 'number' && typeof mapInfo.longitudeMin === 'number' && typeof mapInfo.latitudeMax === 'number' && typeof mapInfo.longitudeMax === 'number') {
+        let longitudeMin = (mapInfo.longitudeMin + 180) % 360
+
+        if(longitudeMin < 0) {
+          longitudeMin += 360
+        }
+
+        longitudeMin -= 180
+
+        let longitudeMax = longitudeMin + mapInfo.longitudeMax - mapInfo.longitudeMin
+        
+        while(longitudeMax > -180) {
+          mapInfo.longitudeMin = longitudeMin
+          mapInfo.longitudeMax = longitudeMax
+
+          await this._drawTile(mapCanvas, mapInfo)
+
+          longitudeMin -= 360
+          longitudeMax -= 360
+        }
+      } else {
+        await this._drawTile(mapCanvas, mapInfo)
+      }
 
       return mapCanvas
     } else {
@@ -2939,14 +2961,26 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                     tileCanvas.context.patterns = {}
 
-                    tileCanvas.context.beginGroup = function (name) {
+                    tileCanvas.context.beginGroup = function (id) {
+                      if(id == 'clipRect') {
+                        tileCanvas.context.save()
+                      }
                     }
 
-                    tileCanvas.context.endGroup = function () {
+                    tileCanvas.context.endGroup = function (id) {
+                      if(id == 'clipRect') {
+                        tileCanvas.context.restore()
+                      }
+                    }
+
+                    tileCanvas.context.clipRect = function (x, y, width, height) {
+                      tileCanvas.context.beginPath()
+
+                      tileCanvas.context.rect(x, y, width, height)
+    
+                      tileCanvas.context.clip()
                     }
                   }
-
-                  tileCanvas.context.clearRect(0, 0, tileCanvas.width, tileCanvas.height)
 
                   const mapArea = {
                     left: this._longitudeToMeters(tileInfo.mapBounds.longitudeMin),
@@ -3006,6 +3040,47 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                     saveDataIds: {},
                     saveDataPixels: null
                   }
+                  /*
+                  tileCanvas.context.clearRect(
+                    (this._longitudeToMeters(-180) - mapArea.left) * drawingInfo.scale, 
+                    0, 
+                    (this._longitudeToMeters(180) - this._longitudeToMeters(-180)) * drawingInfo.scale, 
+                    tileInfo.height
+                  )
+                  */
+
+
+
+
+
+
+
+                  /*
+                  tileCanvas.context.save()
+
+                  tileCanvas.context.beginPath()
+
+                  tileCanvas.context.rect(
+                    (this._longitudeToMeters(-180.01) - mapArea.left) * drawingInfo.scale, 
+                    0, 
+                    (this._longitudeToMeters(180.01) - this._longitudeToMeters(-180)) * drawingInfo.scale, 
+                    tileInfo.height
+                  )
+
+                  tileCanvas.context.clip()
+                  */
+
+
+                  tileCanvas.context.beginGroup('clipRect')
+
+                  tileCanvas.context.clipRect(
+                    (this._longitudeToMeters(-180.01) - mapArea.left) * drawingInfo.scale, 
+                    0, 
+                    (this._longitudeToMeters(180.01) - this._longitudeToMeters(-180)) * drawingInfo.scale, 
+                    tileInfo.height
+                  )
+
+
 
                   drawingInfo.mapCanvas = tileCanvas
 
@@ -3330,6 +3405,20 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   drawingInfo.context.endGroup()
 
                   drawingInfo.mapCanvas.inUse = false
+
+
+
+
+
+
+                  /*
+                  tileCanvas.context.restore()
+                  */
+
+                  tileCanvas.context.endGroup('clipRect')
+
+
+
 
                   resolve()
                 })
