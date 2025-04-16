@@ -416,76 +416,76 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     })
   },
   getMapCanvas: async function (mapInfo) {
-    if (mapInfo &&
+    if (!(mapInfo &&
       typeof mapInfo.width === 'number' && typeof mapInfo.height === 'number' &&
       (
         (typeof mapInfo.x === 'number' && typeof mapInfo.y === 'number' && typeof mapInfo.z === 'number') ||
         (typeof mapInfo.latitudeMin === 'number' && typeof mapInfo.longitudeMin === 'number' && typeof mapInfo.latitudeMax === 'number' && typeof mapInfo.longitudeMax === 'number')
       )
-    ) {
-      /*
-       * Start of billing related code block. Do not change or skip it, neither block its function.
-       * It must be executed when this function is being called.
-       * Refer to the license for more information.
-       */
-      if (this.options.accessKey) {
-        const meta = {
-          function: this.getMapCanvas.name,
-          mapInfo
-        }
-
-        const metaJson = JSON.stringify(meta)
-
-        fetch('https://vms2.locr.com/api/vms2/ping', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ key: this.options.accessKey, meta: metaJson })
-        })
-      }
-      /*
-       * End of billing related code block. Do not change or skip it, neither block its function.
-       * It must be executed when this function is being called.
-       * Refer to the license for more information.
-       */
-
-      const mapCanvas = document.createElement('canvas')
-
-      mapCanvas.width = mapInfo.width
-      mapCanvas.height = mapInfo.height
-
-      mapCanvas.inUse = true
-      mapCanvas.hasBeenRemoved = false
-
-      if (typeof mapInfo.latitudeMin === 'number' && typeof mapInfo.longitudeMin === 'number' && typeof mapInfo.latitudeMax === 'number' && typeof mapInfo.longitudeMax === 'number') {
-        let longitudeMin = (mapInfo.longitudeMin + 180) % 360
-
-        if (longitudeMin < 0) {
-          longitudeMin += 360
-        }
-
-        longitudeMin -= 180
-
-        let longitudeMax = longitudeMin + mapInfo.longitudeMax - mapInfo.longitudeMin
-
-        while (longitudeMax > -180) {
-          mapInfo.longitudeMin = longitudeMin
-          mapInfo.longitudeMax = longitudeMax
-
-          await this._drawTile(mapCanvas, mapInfo)
-
-          longitudeMin -= 360
-          longitudeMax -= 360
-        }
-      } else {
-        await this._drawTile(mapCanvas, mapInfo)
-      }
-
-      return mapCanvas
-    } else {
+    )) {
       throw (new Error('Missing essential parameters!'))
     }
+    
+    /*
+      * Start of billing related code block. Do not change or skip it, neither block its function.
+      * It must be executed when this function is being called.
+      * Refer to the license for more information.
+      */
+    if (this.options.accessKey) {
+      const meta = {
+        function: this.getMapCanvas.name,
+        mapInfo
+      }
+
+      const metaJson = JSON.stringify(meta)
+
+      fetch('https://vms2.locr.com/api/vms2/ping', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ key: this.options.accessKey, meta: metaJson })
+      })
+    }
+    /*
+      * End of billing related code block. Do not change or skip it, neither block its function.
+      * It must be executed when this function is being called.
+      * Refer to the license for more information.
+      */
+
+    const mapCanvas = document.createElement('canvas')
+
+    mapCanvas.width = mapInfo.width
+    mapCanvas.height = mapInfo.height
+
+    mapCanvas.inUse = true
+    mapCanvas.hasBeenRemoved = false
+
+    if (typeof mapInfo.latitudeMin === 'number' && typeof mapInfo.longitudeMin === 'number' && typeof mapInfo.latitudeMax === 'number' && typeof mapInfo.longitudeMax === 'number') {
+      let longitudeMin = (mapInfo.longitudeMin + 180) % 360
+
+      if (longitudeMin < 0) {
+        longitudeMin += 360
+      }
+
+      longitudeMin -= 180
+
+      let longitudeMax = longitudeMin + mapInfo.longitudeMax - mapInfo.longitudeMin
+
+      while (longitudeMax > -180) {
+        mapInfo.longitudeMin = longitudeMin
+        mapInfo.longitudeMax = longitudeMax
+
+        await this._drawTile(mapCanvas, mapInfo)
+
+        longitudeMin -= 360
+        longitudeMax -= 360
+      }
+    } else {
+      await this._drawTile(mapCanvas, mapInfo)
+    }
+
+    return mapCanvas
   },
   getMapObjects: function (tileInfo, doneFunction) {
     const tileCanvas = {}
