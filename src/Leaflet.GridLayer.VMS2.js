@@ -3040,36 +3040,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                     saveDataIds: {},
                     saveDataPixels: null
                   }
-                  /*
-                  tileCanvas.context.clearRect(
-                    (this._longitudeToMeters(-180) - mapArea.left) * drawingInfo.scale, 
-                    0, 
-                    (this._longitudeToMeters(180) - this._longitudeToMeters(-180)) * drawingInfo.scale, 
-                    tileInfo.height
-                  )
-                  */
-
-
-
-
-
-
-
-                  /*
-                  tileCanvas.context.save()
-
-                  tileCanvas.context.beginPath()
-
-                  tileCanvas.context.rect(
-                    (this._longitudeToMeters(-180.01) - mapArea.left) * drawingInfo.scale, 
-                    0, 
-                    (this._longitudeToMeters(180.01) - this._longitudeToMeters(-180)) * drawingInfo.scale, 
-                    tileInfo.height
-                  )
-
-                  tileCanvas.context.clip()
-                  */
-
 
                   tileCanvas.context.beginGroup('clipRect')
 
@@ -3079,8 +3049,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                     (this._longitudeToMeters(180.01) - this._longitudeToMeters(-180)) * drawingInfo.scale, 
                     tileInfo.height
                   )
-
-
 
                   drawingInfo.mapCanvas = tileCanvas
 
@@ -3406,19 +3374,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                   drawingInfo.mapCanvas.inUse = false
 
-
-
-
-
-
-                  /*
-                  tileCanvas.context.restore()
-                  */
-
                   tileCanvas.context.endGroup('clipRect')
-
-
-
 
                   resolve()
                 })
