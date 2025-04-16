@@ -1,5 +1,6 @@
-/* global DOMMatrix, DOMParser, FileReader, FontFace, Image, L, Worker, XMLSerializer */
 /* eslint-disable no-new-func */
+/* global DOMMatrix, DOMParser, FileReader, FontFace, Image, L, Worker, XMLSerializer */
+ 
 
 import unicodeDataTable from './unicode.js'
 import MapOverlay from './MapOverlay.js'
@@ -234,7 +235,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     return tileCanvas
   },
-  setPrintFormat (printFormat) {
+  setPrintFormat: function (printFormat) {
     if (!(printFormat instanceof PrintFormat)) {
       throw new TypeError('printFormat is not an instance of PrintFormat')
     }
@@ -247,7 +248,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       this._map.fire('resize')
     }
   },
-  setMapOverlay (mapOverlay) {
+  setMapOverlay: function (mapOverlay) {
     if (!(mapOverlay instanceof MapOverlay)) {
       throw new TypeError('mapOverlay is not an instance of MapOverlay')
     }
@@ -457,18 +458,18 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       mapCanvas.inUse = true
       mapCanvas.hasBeenRemoved = false
 
-      if(typeof mapInfo.latitudeMin === 'number' && typeof mapInfo.longitudeMin === 'number' && typeof mapInfo.latitudeMax === 'number' && typeof mapInfo.longitudeMax === 'number') {
+      if (typeof mapInfo.latitudeMin === 'number' && typeof mapInfo.longitudeMin === 'number' && typeof mapInfo.latitudeMax === 'number' && typeof mapInfo.longitudeMax === 'number') {
         let longitudeMin = (mapInfo.longitudeMin + 180) % 360
 
-        if(longitudeMin < 0) {
+        if (longitudeMin < 0) {
           longitudeMin += 360
         }
 
         longitudeMin -= 180
 
         let longitudeMax = longitudeMin + mapInfo.longitudeMax - mapInfo.longitudeMin
-        
-        while(longitudeMax > -180) {
+
+        while (longitudeMax > -180) {
           mapInfo.longitudeMin = longitudeMin
           mapInfo.longitudeMax = longitudeMax
 
@@ -934,84 +935,84 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     const wkbType = geometry.getUint32(dataOffset, true)
 
     switch (wkbType) {
-      case 1: // WKBPoint.
-        dataOffset = this._drawPoint(drawingInfo, geometry, dataOffset)
-        break
+    case 1: // WKBPoint.
+      dataOffset = this._drawPoint(drawingInfo, geometry, dataOffset)
+      break
 
-      case 2: // WKBLineString.
-        dataOffset = this._drawLineString(drawingInfo, geometry, dataOffset)
-        break
+    case 2: // WKBLineString.
+      dataOffset = this._drawLineString(drawingInfo, geometry, dataOffset)
+      break
 
-      case 3: // WKBPolygon.
-        if (drawingInfo.isIcon || drawingInfo.isText) {
-          this._drawIcon(drawingInfo, drawingInfo.objectData.Center.x, drawingInfo.objectData.Center.y)
-          dataOffset = this._skipPolygon(geometry, dataOffset)
-        } else {
-          const polygons = []
-          dataOffset = this._preparePolygon(drawingInfo, geometry, dataOffset, polygons)
-          this._drawPolygons(drawingInfo, polygons)
-        }
-        break
+    case 3: // WKBPolygon.
+      if (drawingInfo.isIcon || drawingInfo.isText) {
+        this._drawIcon(drawingInfo, drawingInfo.objectData.Center.x, drawingInfo.objectData.Center.y)
+        dataOffset = this._skipPolygon(geometry, dataOffset)
+      } else {
+        const polygons = []
+        dataOffset = this._preparePolygon(drawingInfo, geometry, dataOffset, polygons)
+        this._drawPolygons(drawingInfo, polygons)
+      }
+      break
 
-      case 4: // WKBMultiPoint.
-        // console.log('Unhandled WKB type found: ' + wkbType + ' => MultiPoint')
-        break
+    case 4: // WKBMultiPoint.
+      // console.log('Unhandled WKB type found: ' + wkbType + ' => MultiPoint')
+      break
 
-      case 5: // WKBMultiLineString.
-        {
-          dataOffset += 4
-
-          const numberOfLineStrings = geometry.getUint32(dataOffset, true)
-          dataOffset += 4
-
-          for (let lineStringIndex = 0; lineStringIndex < numberOfLineStrings; lineStringIndex++) {
-            dataOffset = this._drawLineString(drawingInfo, geometry, dataOffset)
-          }
-        }
-        break
-
-      case 6: // WKBMultiPolygon.
+    case 5: // WKBMultiLineString.
+      {
         dataOffset += 4
 
-        if (drawingInfo.isIcon || drawingInfo.isText) {
-          this._drawIcon(drawingInfo, drawingInfo.objectData.Center.x, drawingInfo.objectData.Center.y)
+        const numberOfLineStrings = geometry.getUint32(dataOffset, true)
+        dataOffset += 4
 
-          const numberOfPolygons = geometry.getUint32(dataOffset, true)
-          dataOffset += 4
-
-          for (let polygonIndex = 0; polygonIndex < numberOfPolygons; polygonIndex++) {
-            dataOffset = this._skipPolygon(geometry, dataOffset)
-          }
-        } else {
-          const polygons = []
-
-          const numberOfPolygons = geometry.getUint32(dataOffset, true)
-          dataOffset += 4
-
-          for (let polygonIndex = 0; polygonIndex < numberOfPolygons; polygonIndex++) {
-            dataOffset = this._preparePolygon(drawingInfo, geometry, dataOffset, polygons)
-          }
-
-          this._drawPolygons(drawingInfo, polygons)
+        for (let lineStringIndex = 0; lineStringIndex < numberOfLineStrings; lineStringIndex++) {
+          dataOffset = this._drawLineString(drawingInfo, geometry, dataOffset)
         }
-        break
+      }
+      break
 
-      case 7: // WKBGeometryCollection.
-        {
-          dataOffset += 4
+    case 6: // WKBMultiPolygon.
+      dataOffset += 4
 
-          const numberOfGeometries = geometry.getUint32(dataOffset, true)
-          dataOffset += 4
+      if (drawingInfo.isIcon || drawingInfo.isText) {
+        this._drawIcon(drawingInfo, drawingInfo.objectData.Center.x, drawingInfo.objectData.Center.y)
 
-          for (let geometryIndex = 0; geometryIndex < numberOfGeometries; geometryIndex++) {
-            dataOffset = this._drawGeometry(drawingInfo, geometry, dataOffset)
-          }
+        const numberOfPolygons = geometry.getUint32(dataOffset, true)
+        dataOffset += 4
+
+        for (let polygonIndex = 0; polygonIndex < numberOfPolygons; polygonIndex++) {
+          dataOffset = this._skipPolygon(geometry, dataOffset)
         }
-        break
+      } else {
+        const polygons = []
 
-      default:
-        // console.log('Unhandled WKB type found: ' + wkbType_)
-        break
+        const numberOfPolygons = geometry.getUint32(dataOffset, true)
+        dataOffset += 4
+
+        for (let polygonIndex = 0; polygonIndex < numberOfPolygons; polygonIndex++) {
+          dataOffset = this._preparePolygon(drawingInfo, geometry, dataOffset, polygons)
+        }
+
+        this._drawPolygons(drawingInfo, polygons)
+      }
+      break
+
+    case 7: // WKBGeometryCollection.
+      {
+        dataOffset += 4
+
+        const numberOfGeometries = geometry.getUint32(dataOffset, true)
+        dataOffset += 4
+
+        for (let geometryIndex = 0; geometryIndex < numberOfGeometries; geometryIndex++) {
+          dataOffset = this._drawGeometry(drawingInfo, geometry, dataOffset)
+        }
+      }
+      break
+
+    default:
+      // console.log('Unhandled WKB type found: ' + wkbType_)
+      break
     }
 
     return dataOffset
@@ -1114,109 +1115,109 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             const gapY = drawingInfo.iconHeight * drawingInfo.iconTextPlacement[placementCode]
 
             switch (placementCode) {
-              case 't':
-                textDisplacementBoxes.push({
-                  x: drawingInfo.iconImageOffsetX,
-                  y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
-                  left: x + drawingInfo.iconImageOffsetX - textBoxWidth / 2 - spacingX,
-                  right: x + drawingInfo.iconImageOffsetX + textBoxWidth / 2 + spacingX,
-                  top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
-                  bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
-                  align: 'center',
-                  baseline: 'top'
-                })
-                break
+            case 't':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX,
+                y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
+                left: x + drawingInfo.iconImageOffsetX - textBoxWidth / 2 - spacingX,
+                right: x + drawingInfo.iconImageOffsetX + textBoxWidth / 2 + spacingX,
+                top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
+                bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
+                align: 'center',
+                baseline: 'top'
+              })
+              break
 
-              case 'b':
-                textDisplacementBoxes.push({
-                  x: drawingInfo.iconImageOffsetX,
-                  y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
-                  left: x + drawingInfo.iconImageOffsetX - textBoxWidth / 2 - spacingX,
-                  right: x + drawingInfo.iconImageOffsetX + textBoxWidth / 2 + spacingX,
-                  top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
-                  bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
-                  align: 'center',
-                  baseline: 'top'
-                })
-                break
+            case 'b':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX,
+                y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
+                left: x + drawingInfo.iconImageOffsetX - textBoxWidth / 2 - spacingX,
+                right: x + drawingInfo.iconImageOffsetX + textBoxWidth / 2 + spacingX,
+                top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
+                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
+                align: 'center',
+                baseline: 'top'
+              })
+              break
 
-              case 'l':
-                textDisplacementBoxes.push({
-                  x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
-                  y: drawingInfo.iconImageOffsetY - textBoxHeight / 2,
-                  left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
-                  right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
-                  top: y - drawingInfo.iconImageOffsetY + textBoxHeight / 2 + spacingY,
-                  bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight / 2 - spacingY,
-                  align: 'right',
-                  baseline: 'top'
-                })
-                break
+            case 'l':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
+                y: drawingInfo.iconImageOffsetY - textBoxHeight / 2,
+                left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
+                right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
+                top: y - drawingInfo.iconImageOffsetY + textBoxHeight / 2 + spacingY,
+                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight / 2 - spacingY,
+                align: 'right',
+                baseline: 'top'
+              })
+              break
 
-              case 'r':
-                textDisplacementBoxes.push({
-                  x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
-                  y: drawingInfo.iconImageOffsetY - textBoxHeight / 2,
-                  left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 - spacingX + gapX,
-                  right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 + spacingX + gapX,
-                  top: y - drawingInfo.iconImageOffsetY + textBoxHeight / 2 + spacingY,
-                  bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight / 2 - spacingY,
-                  align: 'left',
-                  baseline: 'top'
-                })
-                break
+            case 'r':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
+                y: drawingInfo.iconImageOffsetY - textBoxHeight / 2,
+                left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 - spacingX + gapX,
+                right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 + spacingX + gapX,
+                top: y - drawingInfo.iconImageOffsetY + textBoxHeight / 2 + spacingY,
+                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight / 2 - spacingY,
+                align: 'left',
+                baseline: 'top'
+              })
+              break
 
-              case 'tl':
-                textDisplacementBoxes.push({
-                  x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
-                  y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
-                  left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
-                  right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
-                  top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
-                  bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
-                  align: 'right',
-                  baseline: 'top'
-                })
-                break
+            case 'tl':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
+                y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
+                left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
+                right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
+                top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
+                bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
+                align: 'right',
+                baseline: 'top'
+              })
+              break
 
-              case 'tr':
-                textDisplacementBoxes.push({
-                  x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
-                  y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
-                  left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + spacingX + gapX,
-                  right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 - spacingX + gapX,
-                  top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
-                  bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
-                  align: 'left',
-                  baseline: 'top'
-                })
-                break
+            case 'tr':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
+                y: drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - gapY,
+                left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + spacingX + gapX,
+                right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 - spacingX + gapX,
+                top: y - drawingInfo.iconImageOffsetY + textBoxHeight + drawingInfo.iconHeight / 2 + spacingY + gapY,
+                bottom: y - drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 - spacingY + gapY,
+                align: 'left',
+                baseline: 'top'
+              })
+              break
 
-              case 'bl':
-                textDisplacementBoxes.push({
-                  x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
-                  y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
-                  left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
-                  right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
-                  top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
-                  bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
-                  align: 'right',
-                  baseline: 'top'
-                })
-                break
+            case 'bl':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 - gapX,
+                y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
+                left: x + drawingInfo.iconImageOffsetX - textBoxWidth - drawingInfo.iconWidth / 2 - spacingX - gapX,
+                right: x + drawingInfo.iconImageOffsetX - drawingInfo.iconWidth / 2 + spacingX - gapX,
+                top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
+                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
+                align: 'right',
+                baseline: 'top'
+              })
+              break
 
-              case 'br':
-                textDisplacementBoxes.push({
-                  x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
-                  y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
-                  left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 - spacingX + gapX,
-                  right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 + spacingX + gapX,
-                  top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
-                  bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
-                  align: 'left',
-                  baseline: 'top'
-                })
-                break
+            case 'br':
+              textDisplacementBoxes.push({
+                x: drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 + gapX,
+                y: drawingInfo.iconImageOffsetY + drawingInfo.iconHeight / 2 + gapY,
+                left: x + drawingInfo.iconImageOffsetX + drawingInfo.iconWidth / 2 - spacingX + gapX,
+                right: x + drawingInfo.iconImageOffsetX + textBoxWidth + drawingInfo.iconWidth / 2 + spacingX + gapX,
+                top: y - drawingInfo.iconImageOffsetY - drawingInfo.iconHeight / 2 + spacingY - gapY,
+                bottom: y - drawingInfo.iconImageOffsetY - textBoxHeight - drawingInfo.iconHeight / 2 - spacingY - gapY,
+                align: 'left',
+                baseline: 'top'
+              })
+              break
             }
           }
         } else {
@@ -1322,59 +1323,57 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           break
         }
       }
-    } else {
-      if (drawingInfo.isIcon && drawingInfo.iconImage) {
+    } else if (drawingInfo.isIcon && drawingInfo.iconImage) {
+      if (
+        (iconDisplacementBox && this._checkAndSetDisplacement(drawingInfo.displacementLayers, drawingInfo.displacementLayerNames, [iconDisplacementBox])) ||
+        !iconDisplacementBox
+      ) {
+        const iconX = drawingInfo.iconImageOffsetX - drawingInfo.iconWidth * drawingInfo.iconMirrorX / 2
+        const iconY = drawingInfo.iconImageOffsetY - drawingInfo.iconHeight * drawingInfo.iconMirrorY / 2
+
+        let iconLeft = x + iconX
+        let iconRight = iconLeft + drawingInfo.iconWidth * drawingInfo.iconMirrorX
+        let iconBottom = y + iconY
+        let iconTop = iconBottom + drawingInfo.iconHeight * drawingInfo.iconMirrorY
+
+        if (iconLeft > iconRight) {
+          const temp = iconLeft
+
+          iconLeft = iconRight
+          iconRight = temp
+        }
+
+        if (iconBottom > iconTop) {
+          const temp = iconBottom
+
+          iconBottom = iconTop
+          iconTop = temp
+        }
+
         if (
-          (iconDisplacementBox && this._checkAndSetDisplacement(drawingInfo.displacementLayers, drawingInfo.displacementLayerNames, [iconDisplacementBox])) ||
-          !iconDisplacementBox
-        ) {
-          const iconX = drawingInfo.iconImageOffsetX - drawingInfo.iconWidth * drawingInfo.iconMirrorX / 2
-          const iconY = drawingInfo.iconImageOffsetY - drawingInfo.iconHeight * drawingInfo.iconMirrorY / 2
-
-          let iconLeft = x + iconX
-          let iconRight = iconLeft + drawingInfo.iconWidth * drawingInfo.iconMirrorX
-          let iconBottom = y + iconY
-          let iconTop = iconBottom + drawingInfo.iconHeight * drawingInfo.iconMirrorY
-
-          if (iconLeft > iconRight) {
-            const temp = iconLeft
-
-            iconLeft = iconRight
-            iconRight = temp
-          }
-
-          if (iconBottom > iconTop) {
-            const temp = iconBottom
-
-            iconBottom = iconTop
-            iconTop = temp
-          }
-
-          if (
-            !(
-              iconLeft > drawingInfo.boundingArea.right ||
-              iconRight < drawingInfo.boundingArea.left ||
-              iconTop < drawingInfo.boundingArea.bottom ||
-              iconBottom > drawingInfo.boundingArea.top
-            ) ||
-            drawingInfo.isGrid
-          ) { // Note: Top > Bottom! Allow every location if there is a grid!
-            if (drawingInfo.iconAngle !== 0) {
-              drawingInfo.context.setTransform(new DOMMatrix().translate((x - drawingInfo.drawingArea.left) * drawingInfo.scale, (drawingInfo.drawingArea.top - y) * drawingInfo.scale).rotate(drawingInfo.iconAngle * 180 / Math.PI))
-              drawingInfo.context.drawImage(
-                drawingInfo.iconImage,
-                iconX * drawingInfo.scale, iconY * drawingInfo.scale,
-                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.scale,
-                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.scale)
-            } else {
-              drawingInfo.context.drawImage(
-                drawingInfo.iconImage,
-                (x - drawingInfo.drawingArea.left + iconX) * drawingInfo.scale,
-                (drawingInfo.drawingArea.top - y + iconY) * drawingInfo.scale,
-                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.scale,
-                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.scale
-              )
-            }
+          !(
+            iconLeft > drawingInfo.boundingArea.right ||
+            iconRight < drawingInfo.boundingArea.left ||
+            iconTop < drawingInfo.boundingArea.bottom ||
+            iconBottom > drawingInfo.boundingArea.top
+          ) ||
+          drawingInfo.isGrid
+        ) { // Note: Top > Bottom! Allow every location if there is a grid!
+          if (drawingInfo.iconAngle !== 0) {
+            drawingInfo.context.setTransform(new DOMMatrix().translate((x - drawingInfo.drawingArea.left) * drawingInfo.scale, (drawingInfo.drawingArea.top - y) * drawingInfo.scale).rotate(drawingInfo.iconAngle * 180 / Math.PI))
+            drawingInfo.context.drawImage(
+              drawingInfo.iconImage,
+              iconX * drawingInfo.scale, iconY * drawingInfo.scale,
+              drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.scale,
+              drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.scale)
+          } else {
+            drawingInfo.context.drawImage(
+              drawingInfo.iconImage,
+              (x - drawingInfo.drawingArea.left + iconX) * drawingInfo.scale,
+              (drawingInfo.drawingArea.top - y + iconY) * drawingInfo.scale,
+              drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.scale,
+              drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.scale
+            )
           }
         }
       }
@@ -1764,95 +1763,165 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
   },
   _convertGeojsonToTileLayer: function (geojsonData, tileLayer, properties) {
     switch (geojsonData.type) {
-      case 'FeatureCollection':
-        for (const feature of geojsonData.features) {
-          this._convertGeojsonToTileLayer(feature, tileLayer)
+    case 'FeatureCollection':
+      for (const feature of geojsonData.features) {
+        this._convertGeojsonToTileLayer(feature, tileLayer)
+      }
+
+      break
+
+    case 'Feature':
+      this._convertGeojsonToTileLayer(geojsonData.geometry, tileLayer, geojsonData.properties)
+
+      break
+
+    case 'Point':
+      {
+        const objectData = {
+          info: {
+            Envelope: {},
+            Center: {}
+          }
         }
 
-        break
+        if (properties) {
+          objectData.info.tags = properties
+        }
 
-      case 'Feature':
-        this._convertGeojsonToTileLayer(geojsonData.geometry, tileLayer, geojsonData.properties)
+        objectData.geometry = null
 
-        break
+        const x = this._longitudeToMeters(geojsonData.coordinates[0])
+        const y = this._latitudeToMeters(geojsonData.coordinates[1])
 
-      case 'Point':
-        {
-          const objectData = {
-            info: {
-              Envelope: {},
-              Center: {}
+        objectData.info.Envelope.left = x
+        objectData.info.Envelope.right = x
+        objectData.info.Envelope.top = y
+        objectData.info.Envelope.bottom = y
+
+        objectData.info.Center.x = x
+        objectData.info.Center.y = y
+
+        tileLayer.push(objectData)
+      }
+
+      break
+
+    case 'LineString':
+      {
+        const objectData = {
+          info: {
+            Envelope: {},
+            Center: {}
+          }
+        }
+
+        if (properties) {
+          objectData.info.tags = properties
+        }
+
+        objectData.geometry = new DataView(new Uint8Array(4 + 4 + geojsonData.coordinates.length * 4 * 2).buffer)
+
+        let geometryDataOffset = 0
+
+        objectData.geometry.setUint32(geometryDataOffset, 2, true) // wkbType = 2 (WKBLineString)
+        geometryDataOffset += 4
+
+        objectData.geometry.setUint32(geometryDataOffset, geojsonData.coordinates.length, true)
+        geometryDataOffset += 4
+
+        let previousX = 0
+        let previousY = 0
+        let length = -1
+
+        for (const coordinate of geojsonData.coordinates) {
+          const x = this._longitudeToMeters(coordinate[0])
+          const y = this._latitudeToMeters(coordinate[1])
+
+          if (length < 0) {
+            length = 0
+          } else {
+            const deltaX = (x - previousX)
+            const deltaY = (y - previousY)
+
+            length += Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+          }
+
+          objectData.info.length = length
+
+          previousX = x
+          previousY = y
+
+          if (geometryDataOffset === 4 + 4) {
+            objectData.info.Envelope.left = x
+            objectData.info.Envelope.right = x
+            objectData.info.Envelope.top = y
+            objectData.info.Envelope.bottom = y
+          } else {
+            if (x < objectData.info.Envelope.left) {
+              objectData.info.Envelope.left = x
+            } else if (x > objectData.info.Envelope.right) {
+              objectData.info.Envelope.right = x
+            }
+
+            if (y < objectData.info.Envelope.bottom) {
+              objectData.info.Envelope.bottom = y
+            } else if (y > objectData.info.Envelope.top) {
+              objectData.info.Envelope.top = y
             }
           }
 
-          if (properties) {
-            objectData.info.tags = properties
-          }
+          objectData.geometry.setFloat32(geometryDataOffset, x, true)
+          geometryDataOffset += 4
 
-          objectData.geometry = null
-
-          const x = this._longitudeToMeters(geojsonData.coordinates[0])
-          const y = this._latitudeToMeters(geojsonData.coordinates[1])
-
-          objectData.info.Envelope.left = x
-          objectData.info.Envelope.right = x
-          objectData.info.Envelope.top = y
-          objectData.info.Envelope.bottom = y
-
-          objectData.info.Center.x = x
-          objectData.info.Center.y = y
-
-          tileLayer.push(objectData)
+          objectData.geometry.setFloat32(geometryDataOffset, y, true)
+          geometryDataOffset += 4
         }
 
-        break
+        objectData.info.Center.x = (objectData.info.Envelope.left + objectData.info.Envelope.right) / 2
+        objectData.info.Center.y = (objectData.info.Envelope.top + objectData.info.Envelope.bottom) / 2
 
-      case 'LineString':
-        {
-          const objectData = {
-            info: {
-              Envelope: {},
-              Center: {}
-            }
+        tileLayer.push(objectData)
+      }
+      break
+
+    case 'Polygon':
+      {
+        const objectData = {
+          info: {
+            Envelope: {},
+            Center: {}
           }
+        }
 
-          if (properties) {
-            objectData.info.tags = properties
-          }
+        if (properties) {
+          objectData.info.tags = properties
+        }
 
-          objectData.geometry = new DataView(new Uint8Array(4 + 4 + geojsonData.coordinates.length * 4 * 2).buffer)
+        let arraySize = 4 + 4 + 4
 
-          let geometryDataOffset = 0
+        for (const ring of geojsonData.coordinates) {
+          arraySize += ring.length * 4 * 2
+        }
 
-          objectData.geometry.setUint32(geometryDataOffset, 2, true) // wkbType = 2 (WKBLineString)
+        objectData.geometry = new DataView(new Uint8Array(arraySize).buffer)
+
+        let geometryDataOffset = 0
+
+        objectData.geometry.setUint32(geometryDataOffset, 3, true) // wkbType = 3 (WKBPolygon)
+        geometryDataOffset += 4
+
+        objectData.geometry.setUint32(geometryDataOffset, geojsonData.coordinates.length, true)
+        geometryDataOffset += 4
+
+        for (const ring of geojsonData.coordinates) {
+          objectData.geometry.setUint32(geometryDataOffset, ring.length, true)
           geometryDataOffset += 4
 
-          objectData.geometry.setUint32(geometryDataOffset, geojsonData.coordinates.length, true)
-          geometryDataOffset += 4
-
-          let previousX = 0
-          let previousY = 0
-          let length = -1
-
-          for (const coordinate of geojsonData.coordinates) {
+          for (const coordinate of ring) {
             const x = this._longitudeToMeters(coordinate[0])
             const y = this._latitudeToMeters(coordinate[1])
 
-            if (length < 0) {
-              length = 0
-            } else {
-              const deltaX = (x - previousX)
-              const deltaY = (y - previousY)
-
-              length += Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-            }
-
-            objectData.info.length = length
-
-            previousX = x
-            previousY = y
-
-            if (geometryDataOffset === 4 + 4) {
+            if (geometryDataOffset === 4 + 4 + 4) {
               objectData.info.Envelope.left = x
               objectData.info.Envelope.right = x
               objectData.info.Envelope.top = y
@@ -1877,84 +1946,14 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             objectData.geometry.setFloat32(geometryDataOffset, y, true)
             geometryDataOffset += 4
           }
-
-          objectData.info.Center.x = (objectData.info.Envelope.left + objectData.info.Envelope.right) / 2
-          objectData.info.Center.y = (objectData.info.Envelope.top + objectData.info.Envelope.bottom) / 2
-
-          tileLayer.push(objectData)
         }
-        break
 
-      case 'Polygon':
-        {
-          const objectData = {
-            info: {
-              Envelope: {},
-              Center: {}
-            }
-          }
+        objectData.info.Center.x = (objectData.info.Envelope.left + objectData.info.Envelope.right) / 2
+        objectData.info.Center.y = (objectData.info.Envelope.top + objectData.info.Envelope.bottom) / 2
 
-          if (properties) {
-            objectData.info.tags = properties
-          }
-
-          let arraySize = 4 + 4 + 4
-
-          for (const ring of geojsonData.coordinates) {
-            arraySize += ring.length * 4 * 2
-          }
-
-          objectData.geometry = new DataView(new Uint8Array(arraySize).buffer)
-
-          let geometryDataOffset = 0
-
-          objectData.geometry.setUint32(geometryDataOffset, 3, true) // wkbType = 3 (WKBPolygon)
-          geometryDataOffset += 4
-
-          objectData.geometry.setUint32(geometryDataOffset, geojsonData.coordinates.length, true)
-          geometryDataOffset += 4
-
-          for (const ring of geojsonData.coordinates) {
-            objectData.geometry.setUint32(geometryDataOffset, ring.length, true)
-            geometryDataOffset += 4
-
-            for (const coordinate of ring) {
-              const x = this._longitudeToMeters(coordinate[0])
-              const y = this._latitudeToMeters(coordinate[1])
-
-              if (geometryDataOffset === 4 + 4 + 4) {
-                objectData.info.Envelope.left = x
-                objectData.info.Envelope.right = x
-                objectData.info.Envelope.top = y
-                objectData.info.Envelope.bottom = y
-              } else {
-                if (x < objectData.info.Envelope.left) {
-                  objectData.info.Envelope.left = x
-                } else if (x > objectData.info.Envelope.right) {
-                  objectData.info.Envelope.right = x
-                }
-
-                if (y < objectData.info.Envelope.bottom) {
-                  objectData.info.Envelope.bottom = y
-                } else if (y > objectData.info.Envelope.top) {
-                  objectData.info.Envelope.top = y
-                }
-              }
-
-              objectData.geometry.setFloat32(geometryDataOffset, x, true)
-              geometryDataOffset += 4
-
-              objectData.geometry.setFloat32(geometryDataOffset, y, true)
-              geometryDataOffset += 4
-            }
-          }
-
-          objectData.info.Center.x = (objectData.info.Envelope.left + objectData.info.Envelope.right) / 2
-          objectData.info.Center.y = (objectData.info.Envelope.top + objectData.info.Envelope.bottom) / 2
-
-          tileLayer.push(objectData)
-        }
-        break
+        tileLayer.push(objectData)
+      }
+      break
     }
   },
   _getTileLayers: function (tileCanvas, tileInfo, mapStyle) {
@@ -2850,13 +2849,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
               if (this.options.styleOverride) {
                 for (const key in style) {
-                  if (Object.prototype.hasOwnProperty.call(style, key)) {
+                  if (Object.hasOwn(style, key)) {
                     mapStyle[key] = style[key]
                   }
                 }
 
                 for (const key in this.options.styleOverride) {
-                  if (Object.prototype.hasOwnProperty.call(this.options.styleOverride, key)) {
+                  if (Object.hasOwn(this.options.styleOverride, key)) {
                     mapStyle[key] = this.options.styleOverride[key]
                   }
                 }
@@ -2962,13 +2961,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                     tileCanvas.context.patterns = {}
 
                     tileCanvas.context.beginGroup = function (id) {
-                      if(id == 'clipRect') {
+                      if (id == 'clipRect') {
                         tileCanvas.context.save()
                       }
                     }
 
                     tileCanvas.context.endGroup = function (id) {
-                      if(id == 'clipRect') {
+                      if (id == 'clipRect') {
                         tileCanvas.context.restore()
                       }
                     }
@@ -2977,7 +2976,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                       tileCanvas.context.beginPath()
 
                       tileCanvas.context.rect(x, y, width, height)
-    
+
                       tileCanvas.context.clip()
                     }
                   }
@@ -3044,9 +3043,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   tileCanvas.context.beginGroup('clipRect')
 
                   tileCanvas.context.clipRect(
-                    (this._longitudeToMeters(-180.01) - mapArea.left) * drawingInfo.scale, 
-                    0, 
-                    (this._longitudeToMeters(180.01) - this._longitudeToMeters(-180)) * drawingInfo.scale, 
+                    (this._longitudeToMeters(-180.01) - mapArea.left) * drawingInfo.scale,
+                    0,
+                    (this._longitudeToMeters(180.01) - this._longitudeToMeters(-180)) * drawingInfo.scale,
                     tileInfo.height
                   )
 
@@ -3386,16 +3385,16 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     let detailZooms = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14]
 
     switch (layerId) {
-      case 'terrain':
-      case 'depth':
-        detailZooms = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 12]
-        break
+    case 'terrain':
+    case 'depth':
+      detailZooms = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 12]
+      break
 
-      case 'bathymetry':
-      case 'blue_marble':
-      case 'elevation':
-        detailZooms = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 10, 10, 10]
-        break
+    case 'bathymetry':
+    case 'blue_marble':
+    case 'elevation':
+      detailZooms = [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 10, 10, 10]
+      break
     }
 
     let detailZoom = detailZooms[Math.max(Math.min(z, 14), 0)]
