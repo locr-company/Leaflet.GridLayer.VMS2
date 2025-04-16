@@ -1,5 +1,5 @@
-/* global DOMMatrix, DOMParser, FileReader, FontFace, Image, L, Worker, XMLSerializer */
 /* eslint-disable no-new-func */
+/* global DOMMatrix, DOMParser, FileReader, FontFace, Image, L, Worker, XMLSerializer */
 
 import unicodeDataTable from './unicode.js'
 import MapOverlay from './MapOverlay.js'
@@ -234,7 +234,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     return tileCanvas
   },
-  setPrintFormat (printFormat) {
+  setPrintFormat: function (printFormat) {
     if (!(printFormat instanceof PrintFormat)) {
       throw new TypeError('printFormat is not an instance of PrintFormat')
     }
@@ -247,7 +247,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       this._map.fire('resize')
     }
   },
-  setMapOverlay (mapOverlay) {
+  setMapOverlay: function (mapOverlay) {
     if (!(mapOverlay instanceof MapOverlay)) {
       throw new TypeError('mapOverlay is not an instance of MapOverlay')
     }
@@ -415,54 +415,76 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     })
   },
   getMapCanvas: async function (mapInfo) {
-    if (mapInfo &&
+    if (!(mapInfo &&
       typeof mapInfo.width === 'number' && typeof mapInfo.height === 'number' &&
       (
         (typeof mapInfo.x === 'number' && typeof mapInfo.y === 'number' && typeof mapInfo.z === 'number') ||
         (typeof mapInfo.latitudeMin === 'number' && typeof mapInfo.longitudeMin === 'number' && typeof mapInfo.latitudeMax === 'number' && typeof mapInfo.longitudeMax === 'number')
       )
-    ) {
-      /*
-       * Start of billing related code block. Do not change or skip it, neither block its function.
-       * It must be executed when this function is being called.
-       * Refer to the license for more information.
-       */
-      if (this.options.accessKey) {
-        const meta = {
-          function: this.getMapCanvas.name,
-          mapInfo
-        }
-
-        const metaJson = JSON.stringify(meta)
-
-        fetch('https://vms2.locr.com/api/vms2/ping', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ key: this.options.accessKey, meta: metaJson })
-        })
-      }
-      /*
-       * End of billing related code block. Do not change or skip it, neither block its function.
-       * It must be executed when this function is being called.
-       * Refer to the license for more information.
-       */
-
-      const mapCanvas = document.createElement('canvas')
-
-      mapCanvas.width = mapInfo.width
-      mapCanvas.height = mapInfo.height
-
-      mapCanvas.inUse = true
-      mapCanvas.hasBeenRemoved = false
-
-      await this._drawTile(mapCanvas, mapInfo)
-
-      return mapCanvas
-    } else {
+    )) {
       throw (new Error('Missing essential parameters!'))
     }
+
+    /*
+      * Start of billing related code block. Do not change or skip it, neither block its function.
+      * It must be executed when this function is being called.
+      * Refer to the license for more information.
+      */
+    if (this.options.accessKey) {
+      const meta = {
+        function: this.getMapCanvas.name,
+        mapInfo
+      }
+
+      const metaJson = JSON.stringify(meta)
+
+      fetch('https://vms2.locr.com/api/vms2/ping', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ key: this.options.accessKey, meta: metaJson })
+      })
+    }
+    /*
+      * End of billing related code block. Do not change or skip it, neither block its function.
+      * It must be executed when this function is being called.
+      * Refer to the license for more information.
+      */
+
+    const mapCanvas = document.createElement('canvas')
+
+    mapCanvas.width = mapInfo.width
+    mapCanvas.height = mapInfo.height
+
+    mapCanvas.inUse = true
+    mapCanvas.hasBeenRemoved = false
+
+    if (typeof mapInfo.latitudeMin === 'number' && typeof mapInfo.longitudeMin === 'number' && typeof mapInfo.latitudeMax === 'number' && typeof mapInfo.longitudeMax === 'number') {
+      let longitudeMin = (mapInfo.longitudeMin + 180) % 360
+
+      if (longitudeMin < 0) {
+        longitudeMin += 360
+      }
+
+      longitudeMin -= 180
+
+      let longitudeMax = longitudeMin + mapInfo.longitudeMax - mapInfo.longitudeMin
+
+      while (longitudeMax > -180) {
+        mapInfo.longitudeMin = longitudeMin
+        mapInfo.longitudeMax = longitudeMax
+
+        await this._drawTile(mapCanvas, mapInfo)
+
+        longitudeMin -= 360
+        longitudeMax -= 360
+      }
+    } else {
+      await this._drawTile(mapCanvas, mapInfo)
+    }
+
+    return mapCanvas
   },
   getMapObjects: function (tileInfo, doneFunction) {
     const tileCanvas = {}
@@ -932,7 +954,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         break
 
       case 4: // WKBMultiPoint.
-        // console.log('Unhandled WKB type found: ' + wkbType + ' => MultiPoint')
+      // console.log('Unhandled WKB type found: ' + wkbType + ' => MultiPoint')
         break
 
       case 5: // WKBMultiLineString.
@@ -988,7 +1010,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         break
 
       default:
-        // console.log('Unhandled WKB type found: ' + wkbType_)
+      // console.log('Unhandled WKB type found: ' + wkbType_)
         break
     }
 
@@ -1300,59 +1322,57 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           break
         }
       }
-    } else {
-      if (drawingInfo.isIcon && drawingInfo.iconImage) {
+    } else if (drawingInfo.isIcon && drawingInfo.iconImage) {
+      if (
+        (iconDisplacementBox && this._checkAndSetDisplacement(drawingInfo.displacementLayers, drawingInfo.displacementLayerNames, [iconDisplacementBox])) ||
+        !iconDisplacementBox
+      ) {
+        const iconX = drawingInfo.iconImageOffsetX - drawingInfo.iconWidth * drawingInfo.iconMirrorX / 2
+        const iconY = drawingInfo.iconImageOffsetY - drawingInfo.iconHeight * drawingInfo.iconMirrorY / 2
+
+        let iconLeft = x + iconX
+        let iconRight = iconLeft + drawingInfo.iconWidth * drawingInfo.iconMirrorX
+        let iconBottom = y + iconY
+        let iconTop = iconBottom + drawingInfo.iconHeight * drawingInfo.iconMirrorY
+
+        if (iconLeft > iconRight) {
+          const temp = iconLeft
+
+          iconLeft = iconRight
+          iconRight = temp
+        }
+
+        if (iconBottom > iconTop) {
+          const temp = iconBottom
+
+          iconBottom = iconTop
+          iconTop = temp
+        }
+
         if (
-          (iconDisplacementBox && this._checkAndSetDisplacement(drawingInfo.displacementLayers, drawingInfo.displacementLayerNames, [iconDisplacementBox])) ||
-          !iconDisplacementBox
-        ) {
-          const iconX = drawingInfo.iconImageOffsetX - drawingInfo.iconWidth * drawingInfo.iconMirrorX / 2
-          const iconY = drawingInfo.iconImageOffsetY - drawingInfo.iconHeight * drawingInfo.iconMirrorY / 2
-
-          let iconLeft = x + iconX
-          let iconRight = iconLeft + drawingInfo.iconWidth * drawingInfo.iconMirrorX
-          let iconBottom = y + iconY
-          let iconTop = iconBottom + drawingInfo.iconHeight * drawingInfo.iconMirrorY
-
-          if (iconLeft > iconRight) {
-            const temp = iconLeft
-
-            iconLeft = iconRight
-            iconRight = temp
-          }
-
-          if (iconBottom > iconTop) {
-            const temp = iconBottom
-
-            iconBottom = iconTop
-            iconTop = temp
-          }
-
-          if (
-            !(
-              iconLeft > drawingInfo.boundingArea.right ||
-              iconRight < drawingInfo.boundingArea.left ||
-              iconTop < drawingInfo.boundingArea.bottom ||
-              iconBottom > drawingInfo.boundingArea.top
-            ) ||
-            drawingInfo.isGrid
-          ) { // Note: Top > Bottom! Allow every location if there is a grid!
-            if (drawingInfo.iconAngle !== 0) {
-              drawingInfo.context.setTransform(new DOMMatrix().translate((x - drawingInfo.drawingArea.left) * drawingInfo.scale, (drawingInfo.drawingArea.top - y) * drawingInfo.scale).rotate(drawingInfo.iconAngle * 180 / Math.PI))
-              drawingInfo.context.drawImage(
-                drawingInfo.iconImage,
-                iconX * drawingInfo.scale, iconY * drawingInfo.scale,
-                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.scale,
-                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.scale)
-            } else {
-              drawingInfo.context.drawImage(
-                drawingInfo.iconImage,
-                (x - drawingInfo.drawingArea.left + iconX) * drawingInfo.scale,
-                (drawingInfo.drawingArea.top - y + iconY) * drawingInfo.scale,
-                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.scale,
-                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.scale
-              )
-            }
+          !(
+            iconLeft > drawingInfo.boundingArea.right ||
+            iconRight < drawingInfo.boundingArea.left ||
+            iconTop < drawingInfo.boundingArea.bottom ||
+            iconBottom > drawingInfo.boundingArea.top
+          ) ||
+          drawingInfo.isGrid
+        ) { // Note: Top > Bottom! Allow every location if there is a grid!
+          if (drawingInfo.iconAngle !== 0) {
+            drawingInfo.context.setTransform(new DOMMatrix().translate((x - drawingInfo.drawingArea.left) * drawingInfo.scale, (drawingInfo.drawingArea.top - y) * drawingInfo.scale).rotate(drawingInfo.iconAngle * 180 / Math.PI))
+            drawingInfo.context.drawImage(
+              drawingInfo.iconImage,
+              iconX * drawingInfo.scale, iconY * drawingInfo.scale,
+              drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.scale,
+              drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.scale)
+          } else {
+            drawingInfo.context.drawImage(
+              drawingInfo.iconImage,
+              (x - drawingInfo.drawingArea.left + iconX) * drawingInfo.scale,
+              (drawingInfo.drawingArea.top - y + iconY) * drawingInfo.scale,
+              drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.scale,
+              drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.scale
+            )
           }
         }
       }
@@ -2828,13 +2848,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
               if (this.options.styleOverride) {
                 for (const key in style) {
-                  if (Object.prototype.hasOwnProperty.call(style, key)) {
+                  if (Object.hasOwn(style, key)) {
                     mapStyle[key] = style[key]
                   }
                 }
 
                 for (const key in this.options.styleOverride) {
-                  if (Object.prototype.hasOwnProperty.call(this.options.styleOverride, key)) {
+                  if (Object.hasOwn(this.options.styleOverride, key)) {
                     mapStyle[key] = this.options.styleOverride[key]
                   }
                 }
@@ -2939,14 +2959,26 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                     tileCanvas.context.patterns = {}
 
-                    tileCanvas.context.beginGroup = function (name) {
+                    tileCanvas.context.beginGroup = function (id) {
+                      if (id === 'clipRect') {
+                        tileCanvas.context.save()
+                      }
                     }
 
-                    tileCanvas.context.endGroup = function () {
+                    tileCanvas.context.endGroup = function (id) {
+                      if (id === 'clipRect') {
+                        tileCanvas.context.restore()
+                      }
+                    }
+
+                    tileCanvas.context.clipRect = function (x, y, width, height) {
+                      tileCanvas.context.beginPath()
+
+                      tileCanvas.context.rect(x, y, width, height)
+
+                      tileCanvas.context.clip()
                     }
                   }
-
-                  tileCanvas.context.clearRect(0, 0, tileCanvas.width, tileCanvas.height)
 
                   const mapArea = {
                     left: this._longitudeToMeters(tileInfo.mapBounds.longitudeMin),
@@ -3006,6 +3038,15 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                     saveDataIds: {},
                     saveDataPixels: null
                   }
+
+                  tileCanvas.context.beginGroup('clipRect')
+
+                  tileCanvas.context.clipRect(
+                    (this._longitudeToMeters(-180.01) - mapArea.left) * drawingInfo.scale,
+                    0,
+                    (this._longitudeToMeters(180.01) - this._longitudeToMeters(-180)) * drawingInfo.scale,
+                    tileInfo.height
+                  )
 
                   drawingInfo.mapCanvas = tileCanvas
 
@@ -3330,6 +3371,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                   drawingInfo.context.endGroup()
 
                   drawingInfo.mapCanvas.inUse = false
+
+                  tileCanvas.context.endGroup('clipRect')
 
                   resolve()
                 })
