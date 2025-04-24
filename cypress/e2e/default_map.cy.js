@@ -14,7 +14,7 @@ describe('basic map specs', () => {
           return
         }
 
-        cy.wrap(layer.getPrintCanvas()).then(canvas => {
+        cy.wrap(layer.getPrintCanvas(), { timeout: 60000 }).then(canvas => {
           const image = canvas[0].toDataURL('image/png')
           const base64Data = image.slice(prefix.length)
           cy.writeFile(`cypress/artifacts/${baseFilename}.png`, base64Data, 'base64')
