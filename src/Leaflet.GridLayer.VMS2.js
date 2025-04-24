@@ -2819,10 +2819,12 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             body: formBody.join('&')
           }
 
+          const beforeFetchTime = performance.now()
           fetch(url.origin + url.pathname, options)
             .then(response => response.json())
             .then(style => {
               this.options.style = style
+              this.fire('style-loaded', { data: { style, fetchUrl: url.origin + url.pathname, fetchOptions: options, fetchTimeMS: performance.now() - beforeFetchTime } })
 
               for (const styleRequestResolve of globalThis.vms2Context.styleRequestQueues[styleId]) {
                 styleRequestResolve(this.options.style)
