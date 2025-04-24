@@ -2823,6 +2823,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
             .then(response => response.json())
             .then(style => {
               this.options.style = style
+              this.fire('style-loaded', { data: { style, fetchUrl: url.origin + url.pathname, fetchOptions: options } })
 
               for (const styleRequestResolve of globalThis.vms2Context.styleRequestQueues[styleId]) {
                 styleRequestResolve(this.options.style)
