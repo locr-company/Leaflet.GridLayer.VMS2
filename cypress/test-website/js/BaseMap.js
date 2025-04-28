@@ -58,6 +58,11 @@ export default class BaseMap {
       vms2Options.disableDecode = true
     }
 
+    const tileUrlParam = searchParams.get('tile_url')
+    if (typeof tileUrlParam === 'string' && tileUrlParam !== '') {
+      vms2Options.tileUrl = tileUrlParam
+    }
+
     this.#vms2Layer = L.gridLayer.vms2(vms2Options)
 
     this.#vms2Layer.addTo(this.#map)
