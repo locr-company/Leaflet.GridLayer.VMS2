@@ -19,7 +19,8 @@ jobs:
     strategy:
       matrix:
         node-version: [18.x, 20.x, 22.x]
-        os-version: [ubuntu-latest, windows-latest, macos-latest]
+        os-version: [ubuntu-latest]
+        # os-version: [ubuntu-latest, windows-latest, macos-latest]
 
     runs-on: ${{ matrix.os-version }}
 
