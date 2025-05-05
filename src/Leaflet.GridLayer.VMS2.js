@@ -98,7 +98,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     objectScale: 1,
     detailOffset: 0,
     zoomRangeOffset: 0,
-    styleOverride: {}
+    styleOverride: {},
+
+    zoomOffset: 0
   },
 
   initialize: function (options) {
@@ -228,6 +230,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
     tileCanvas.inUse = true
     tileCanvas.hasBeenRemoved = false
+
+    tileInfo = { ...tileInfo }
+
+    tileInfo.z += this.options.zoomOffset
 
     this._drawTile(tileCanvas, tileInfo)
       .then(() => doneFunction(null, tileCanvas))
@@ -2874,7 +2880,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               tileInfo.width = tileCanvas.width
               tileInfo.height = tileCanvas.height
 
-              const userMapScale = tileInfo.mapScale ?? this.printMapScale ?? this.options.mapScale
+              const userMapScale = (tileInfo.mapScale ?? this.printMapScale ?? this.options.mapScale) * Math.pow(2, this.options.zoomOffset)
 
               tileInfo.mapBounds = {}
 
@@ -3010,7 +3016,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                     mapHeight: tileInfo.height,
 
                     userMapScale,
-                    objectScale: this.options.objectScale * userMapScale,
+                    objectScale: this.options.objectScale * userMapScale * Math.pow(2, -this.options.zoomOffset),
 
                     drawingArea: mapArea,
                     boundingArea: mapArea,
@@ -3479,7 +3485,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       tileLayerData.resolve = resolve
       tileLayerData.reject = reject
 
-      const fetchTileZ = tileLayerData.tileInfo.vms2TileZ + Math.max(-tileLayerData.tileInfo.vms2TileZ, (tileLayerData.layerStyle.Detail || 0) + this.options.detailOffset)
+      const fetchTileZ = 
+        tileLayerData.tileInfo.vms2TileZ + 
+        Math.max(-tileLayerData.tileInfo.vms2TileZ, (tileLayerData.layerStyle.Detail || 0) + 
+        this.options.detailOffset)
 
       let fetchTileStartX = Math.floor(this._longitudeToTile(tileLayerData.tileInfo.mapBounds.longitudeMin, fetchTileZ))
       let fetchTileEndX = Math.floor(this._longitudeToTile(tileLayerData.tileInfo.mapBounds.longitudeMax, fetchTileZ))
