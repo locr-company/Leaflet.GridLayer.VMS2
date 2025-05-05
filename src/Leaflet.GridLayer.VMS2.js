@@ -3485,9 +3485,9 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
       tileLayerData.resolve = resolve
       tileLayerData.reject = reject
 
-      const fetchTileZ = 
-        tileLayerData.tileInfo.vms2TileZ + 
-        Math.max(-tileLayerData.tileInfo.vms2TileZ, (tileLayerData.layerStyle.Detail || 0) + 
+      const fetchTileZ =
+        tileLayerData.tileInfo.vms2TileZ +
+        Math.max(-tileLayerData.tileInfo.vms2TileZ, (tileLayerData.layerStyle.Detail || 0) +
         this.options.detailOffset)
 
       let fetchTileStartX = Math.floor(this._longitudeToTile(tileLayerData.tileInfo.mapBounds.longitudeMin, fetchTileZ))
