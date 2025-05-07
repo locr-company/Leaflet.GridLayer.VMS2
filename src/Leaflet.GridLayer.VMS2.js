@@ -2194,7 +2194,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         if (patternName) {
           const pattern = await this._getPattern(drawingInfo.context, patternName)
 
-          pattern.transformMatrix = new DOMMatrix().translate(drawingInfo.mapArea.left * drawingInfo.scale, drawingInfo.mapArea.top * drawingInfo.scale).scale(drawingInfo.patternScale)
+          pattern.transformMatrix = new DOMMatrix().scale(drawingInfo.patternScale).translate(-drawingInfo.mapArea.left * drawingInfo.scale / drawingInfo.patternScale, -drawingInfo.mapArea.top * drawingInfo.scale / drawingInfo.patternScale)
 
           pattern.setTransform(pattern.transformMatrix)
 
@@ -2428,7 +2428,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           if (patternName) {
             const pattern = await this._getPattern(drawingInfo.context, patternName)
 
-            pattern.transformMatrix = new DOMMatrix().translate(drawingInfo.mapArea.left * drawingInfo.scale, drawingInfo.mapArea.top * drawingInfo.scale).scale(drawingInfo.patternScale)
+            pattern.transformMatrix = new DOMMatrix().scale(drawingInfo.patternScale).translate(-drawingInfo.mapArea.left * drawingInfo.scale / drawingInfo.patternScale, -drawingInfo.mapArea.top * drawingInfo.scale / drawingInfo.patternScale)
 
             pattern.setTransform(pattern.transformMatrix)
 
@@ -2749,7 +2749,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           if (patternName) {
             const pattern = await this._getPattern(drawingInfo.context, patternName)
 
-            pattern.transformMatrix = new DOMMatrix().translate(drawingInfo.mapArea.left * drawingInfo.scale, drawingInfo.mapArea.top * drawingInfo.scale).scale(drawingInfo.patternScale)
+            pattern.transformMatrix = new DOMMatrix().scale(drawingInfo.patternScale).translate(-drawingInfo.mapArea.left * drawingInfo.scale / drawingInfo.patternScale, -drawingInfo.mapArea.top * drawingInfo.scale / drawingInfo.patternScale)
 
             pattern.setTransform(pattern.transformMatrix)
 
@@ -3358,8 +3358,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                       if (patternName) {
                         const pattern = await this._getPattern(drawingInfo.context, patternName)
 
-                        pattern.transformMatrix = new DOMMatrix().translate(-drawingInfo.mapArea.left * drawingInfo.scale * drawingInfo.patternScale, -drawingInfo.mapArea.top * drawingInfo.scale * drawingInfo.patternScale).scale(drawingInfo.patternScale)
-                        // pattern_.transformMatrix = new DOMMatrix().scale(drawingInfo.patternScale)
+                        pattern.transformMatrix = new DOMMatrix().scale(drawingInfo.patternScale).translate(-drawingInfo.mapArea.left * drawingInfo.scale / drawingInfo.patternScale, -drawingInfo.mapArea.top * drawingInfo.scale / drawingInfo.patternScale)
 
                         pattern.setTransform(pattern.transformMatrix)
 
