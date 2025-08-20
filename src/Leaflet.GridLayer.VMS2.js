@@ -2779,11 +2779,11 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     }
   },
   _getLayerStyleType: function (layer) {
-    if(!layer.Grid && layer.Style) {
+    if (!layer.Grid && layer.Style) {
       if (layer.Style.IconFunction || layer.Style.TextFunction) {
         return 'text'
-      } 
-      
+      }
+
       if (layer.Filters) {
         for (const filter of layer.Filters) {
           if (filter.Style && (filter.Style.IconFunction || filter.Style.TextFunction)) {
