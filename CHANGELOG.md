@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-08-20
+
+### Fixed
+
+- Improved robustness for icon rendering when `isGrid` property is missing or undefined.
+- Minor code consistency improvements in `_drawIcon` function.
+- Documentation and code comments updated for better maintainability.
+
 ## [1.1.0] - 2025-02-10
 
 ### Added
