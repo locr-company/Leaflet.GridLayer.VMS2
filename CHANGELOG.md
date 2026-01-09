@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0-beta.0] - 2026-01-09
+
+### Added
+
+- Added ZStd support for tile decoding alongside LZMA.
+
 ## [1.1.1] - 2025-08-20
 
 ### Fixed
@@ -33,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - first official release
 
-[unreleased]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v1.1.0...HEAD
+[unreleased]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v1.2.0-beta.0...HEAD
+[1.2.0-beta.0]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v1.1.1...v1.2.0-beta.0
+[1.1.1]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/releases/tag/v1.0.0
