@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0-beta.1] - 2026-01-12
+
+### Changed
+
+- GitHub Actions publishes prerelease GitHub Releases to npm using dist-tag `beta`.
+- Documented CDN usage (`@latest` vs `@beta`).
+
 ## [1.1.1] - 2025-08-20
 
 ### Fixed
