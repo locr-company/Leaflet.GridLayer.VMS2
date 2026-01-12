@@ -21,6 +21,20 @@ Take a look at the [examples](https://github.com/locr-company/Leaflet.GridLayer.
 npm install @locr-company/leaflet-gridlayer-vms2
 ```
 
+# CDN (Browser)
+
+This project ships as ESM modules. If you want to load it directly in the browser, load Leaflet first (to provide the global `L`), then import the module from a CDN:
+
+```html
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module">
+  import 'https://cdn.jsdelivr.net/npm/@locr-company/leaflet-gridlayer-vms2@latest/src/Leaflet.GridLayer.VMS2.js'
+</script>
+```
+
+Use `@beta` instead of `@latest` to load the latest prerelease from npm.
+
 # For Maintainers
 
 [Publishing a new version](PUBLISHING.md)
