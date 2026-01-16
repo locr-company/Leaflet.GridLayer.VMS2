@@ -57,7 +57,7 @@
     "eslint": "^9.24.0",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
-    "jsdom": "^26.0.0",
+    "jsdom": "^27.4.0",
     "jsdom-global": "^3.0.2",
     "mocha": "^11.2.0",
     "pixelmatch": "^7.1.0",
