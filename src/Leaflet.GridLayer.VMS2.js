@@ -2928,6 +2928,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
                 tileInfo.z = Math.log(360 * tileInfo.width / tileSize / (tileInfo.mapBounds.longitudeMax - tileInfo.mapBounds.longitudeMin)) / Math.log(this.options.zoomPowerBase)
               }
 
+              if (tileInfo.drawingContext) {
+                tileInfo.drawingContext.dpi = tileInfo.dpi
+              }
+
               const tileAreaDrawingExtension = TILE_AREA_DRAWING_EXTENSION * userMapScale
 
               tileInfo.drawingMapBounds = {
