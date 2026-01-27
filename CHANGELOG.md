@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0-beta.2] - 2026-01-27
+
+### Fixed
+
+- Stabilized Node.js test dependencies by pinning `jsdom` and overriding `html-encoding-sniffer` to avoid `ERR_REQUIRE_ESM` during `npm test`.
+
 ## [1.2.0-beta.1] - 2026-01-12
 
 ### Changed
