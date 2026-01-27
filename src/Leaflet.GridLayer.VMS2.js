@@ -1480,7 +1480,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle] = {}
         }
 
-        if (!globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][character]) {
+        if (globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][character] === undefined) {
           globalThis.vms2Context.fontCharacterContext.font = drawingInfo.fontStyle + ' 100px \'' + drawingInfo.fontFamily + '\''
           globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][character] = globalThis.vms2Context.fontCharacterContext.measureText(character).width
         }
@@ -1575,7 +1575,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           if (this._checkAndSetDisplacement(drawingInfo.displacementLayers, drawingInfo.displacementLayerNames, textBoxes)) {
             if (textIsVisible) {
               let maximumRotationAngleDelta = 0
-              let lastRotationAngle = 0
               let startRotationAngle = 0
 
               if (characterInfos[0].point.y > characterInfos[1].point.y) {
@@ -1583,6 +1582,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               } else {
                 startRotationAngle = -Math.PI / 2
               }
+
+              let lastRotationAngle = null
 
               for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
                 const angleStartPoint = characterIndex > 0 ? characterInfos[characterIndex - 1].point : characterInfos[0].point
@@ -1597,15 +1598,16 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                 characterInfos[characterIndex].rotationAngle = characterRotationAngle
 
-                if (characterIndex === 0) {
-                  lastRotationAngle = characterRotationAngle
+                if (lastRotationAngle !== null) {
+                  const absDelta = Math.abs(lastRotationAngle - characterRotationAngle)
+                  const wrappedDelta = Math.min(absDelta, (Math.PI * 2) - absDelta)
+
+                  if (wrappedDelta > maximumRotationAngleDelta) {
+                    maximumRotationAngleDelta = wrappedDelta
+                  }
                 }
 
-                const rotationAngleDelta = Math.abs(lastRotationAngle - characterRotationAngle)
-
-                if (rotationAngleDelta > maximumRotationAngleDelta) {
-                  maximumRotationAngleDelta = rotationAngleDelta
-                }
+                lastRotationAngle = characterRotationAngle
               }
 
               if (maximumRotationAngleDelta < Math.PI * 2 / 4) {
