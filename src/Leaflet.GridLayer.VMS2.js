@@ -1480,7 +1480,7 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle] = {}
         }
 
-        if (!globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][character]) {
+        if (globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][character] === undefined) {
           globalThis.vms2Context.fontCharacterContext.font = drawingInfo.fontStyle + ' 100px \'' + drawingInfo.fontFamily + '\''
           globalThis.vms2Context.fontCharacterWidths[drawingInfo.fontFamily][drawingInfo.fontStyle][character] = globalThis.vms2Context.fontCharacterContext.measureText(character).width
         }
@@ -1575,7 +1575,6 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
           if (this._checkAndSetDisplacement(drawingInfo.displacementLayers, drawingInfo.displacementLayerNames, textBoxes)) {
             if (textIsVisible) {
               let maximumRotationAngleDelta = 0
-              let lastRotationAngle = 0
               let startRotationAngle = 0
 
               if (characterInfos[0].point.y > characterInfos[1].point.y) {
@@ -1583,6 +1582,8 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               } else {
                 startRotationAngle = -Math.PI / 2
               }
+
+              let lastRotationAngle = null
 
               for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
                 const angleStartPoint = characterIndex > 0 ? characterInfos[characterIndex - 1].point : characterInfos[0].point
@@ -1597,15 +1598,16 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
 
                 characterInfos[characterIndex].rotationAngle = characterRotationAngle
 
-                if (characterIndex === 0) {
-                  lastRotationAngle = characterRotationAngle
+                if (lastRotationAngle !== null) {
+                  const absDelta = Math.abs(lastRotationAngle - characterRotationAngle)
+                  const wrappedDelta = Math.min(absDelta, (Math.PI * 2) - absDelta)
+
+                  if (wrappedDelta > maximumRotationAngleDelta) {
+                    maximumRotationAngleDelta = wrappedDelta
+                  }
                 }
 
-                const rotationAngleDelta = Math.abs(lastRotationAngle - characterRotationAngle)
-
-                if (rotationAngleDelta > maximumRotationAngleDelta) {
-                  maximumRotationAngleDelta = rotationAngleDelta
-                }
+                lastRotationAngle = characterRotationAngle
               }
 
               if (maximumRotationAngleDelta < Math.PI * 2 / 4) {
@@ -1679,37 +1681,44 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     }
   },
   _drawPolygonsStroked: function (drawingInfo, polygons) {
+    const drawingAreaLeft = drawingInfo.drawingArea.left
+    const drawingAreaTop = drawingInfo.drawingArea.top
+    const drawingScale = drawingInfo.scale
+    const tileBoundingBox = drawingInfo.tileBoundingBox
+    const edgeThresholdPx = tileBoundingBox ? Math.max(1, Math.ceil(drawingInfo.context.lineWidth / 2), Math.ceil(drawingScale / 2)) : 0
+
     for (const polygonRings of polygons) {
       for (const polygonPoints of polygonRings) {
         const numberOfPoints = polygonPoints.length
 
         let pointsDrawn = 0
 
-        let lastX = 0
-        let lastY = 0
+        let lastPx = 0
+        let lastPy = 0
 
-        let lastDeltaLeft = 0
-        let lastDeltaRight = 0
-        let lastDeltaTop = 0
-        let lastDeltaBottom = 0
-
-        const deltaScale = Math.min(1, drawingInfo.scale)
+        let lastOnLeft = false
+        let lastOnRight = false
+        let lastOnTop = false
+        let lastOnBottom = false
 
         for (let pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
           const x = polygonPoints[pointIndex].x
           const y = polygonPoints[pointIndex].y
 
-          const deltaLeft = drawingInfo.tileBoundingBox ? Math.round((x - drawingInfo.tileBoundingBox.left) * deltaScale) : 1
-          const deltaRight = drawingInfo.tileBoundingBox ? Math.round((x - drawingInfo.tileBoundingBox.right) * deltaScale) : 1
-          const deltaTop = drawingInfo.tileBoundingBox ? Math.round((drawingInfo.tileBoundingBox.top - y) * deltaScale) : 1
-          const deltaBottom = drawingInfo.tileBoundingBox ? Math.round((drawingInfo.tileBoundingBox.bottom - y) * deltaScale) : 1
+          const px = Math.round((x - drawingAreaLeft) * drawingScale)
+          const py = Math.round((drawingAreaTop - y) * drawingScale)
+
+          const onLeft = tileBoundingBox ? Math.abs((x - tileBoundingBox.left) * drawingScale) <= edgeThresholdPx : false
+          const onRight = tileBoundingBox ? Math.abs((x - tileBoundingBox.right) * drawingScale) <= edgeThresholdPx : false
+          const onTop = tileBoundingBox ? Math.abs((tileBoundingBox.top - y) * drawingScale) <= edgeThresholdPx : false
+          const onBottom = tileBoundingBox ? Math.abs((tileBoundingBox.bottom - y) * drawingScale) <= edgeThresholdPx : false
 
           if (pointIndex > 0) {
             if (
-              (deltaLeft === 0 && lastDeltaLeft === 0) ||
-              (deltaRight === 0 && lastDeltaRight === 0) ||
-              (deltaTop === 0 && lastDeltaTop === 0) ||
-              (deltaBottom === 0 && lastDeltaBottom === 0)
+              (onLeft && lastOnLeft) ||
+              (onRight && lastOnRight) ||
+              (onTop && lastOnTop) ||
+              (onBottom && lastOnBottom)
             ) {
               if (pointsDrawn > 0) {
                 drawingInfo.context.stroke()
@@ -1720,22 +1729,22 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
               if (pointsDrawn === 0) {
                 drawingInfo.context.beginPath()
 
-                drawingInfo.context.moveTo(Math.round((lastX - drawingInfo.drawingArea.left) * drawingInfo.scale), Math.round((drawingInfo.drawingArea.top - lastY) * drawingInfo.scale))
+                drawingInfo.context.moveTo(lastPx, lastPy)
               }
 
-              drawingInfo.context.lineTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.scale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.scale))
+              drawingInfo.context.lineTo(px, py)
 
               pointsDrawn++
             }
           }
 
-          lastX = x
-          lastY = y
+          lastPx = px
+          lastPy = py
 
-          lastDeltaLeft = deltaLeft
-          lastDeltaRight = deltaRight
-          lastDeltaTop = deltaTop
-          lastDeltaBottom = deltaBottom
+          lastOnLeft = onLeft
+          lastOnRight = onRight
+          lastOnTop = onTop
+          lastOnBottom = onBottom
         }
 
         if (pointsDrawn > 0) {
@@ -1745,6 +1754,10 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
     }
   },
   _drawPolygonsFilled: function (drawingInfo, polygons_) {
+    const drawingAreaLeft = drawingInfo.drawingArea.left
+    const drawingAreaTop = drawingInfo.drawingArea.top
+    const drawingScale = drawingInfo.scale
+
     drawingInfo.context.beginPath()
 
     for (const polygonRings of polygons_) {
@@ -1754,11 +1767,13 @@ L.GridLayer.VMS2 = L.GridLayer.extend({
         for (let pointIndex = 0; pointIndex < numberOfPoints; pointIndex++) {
           const x = polygonPoints[pointIndex].x
           const y = polygonPoints[pointIndex].y
+          const px = Math.round((x - drawingAreaLeft) * drawingScale)
+          const py = Math.round((drawingAreaTop - y) * drawingScale)
 
           if (pointIndex === 0) {
-            drawingInfo.context.moveTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.scale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.scale))
+            drawingInfo.context.moveTo(px, py)
           } else {
-            drawingInfo.context.lineTo(Math.round((x - drawingInfo.drawingArea.left) * drawingInfo.scale), Math.round((drawingInfo.drawingArea.top - y) * drawingInfo.scale))
+            drawingInfo.context.lineTo(px, py)
           }
         }
       }
