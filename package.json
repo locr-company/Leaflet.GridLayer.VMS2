@@ -66,6 +66,6 @@
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
     "serve-index": "^1.9.1",
-    "start-server-and-test": "2.0.12"
+    "start-server-and-test": "2.1.3"
   }
 }
