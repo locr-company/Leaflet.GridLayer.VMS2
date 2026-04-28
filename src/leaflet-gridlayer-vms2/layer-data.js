@@ -1,3 +1,8 @@
+import {
+  isTileLayerDataStale,
+  resolveTileLayerData
+} from './tile-requests.js'
+
 const DETAIL_ZOOMS_BY_LAYER = {
   terrain: [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 12],
   depth: [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 12],
@@ -79,6 +84,7 @@ const layerDataMethods = {
             const tileLayerData = {
               tileCanvas,
               tileInfo,
+              requestId: tileCanvas.requestId,
               dataLayerId: layerLayoutId,
               layerStyle: layer,
               tileIds: [],
@@ -88,7 +94,9 @@ const layerDataMethods = {
 
             this._getTileLayer(tileLayerData)
               .then(() => {
-                tileLayers[layerName] = tileLayers[layerName].concat(tileLayerData.objects)
+                if (!isTileLayerDataStale(tileLayerData)) {
+                  tileLayers[layerName] = tileLayers[layerName].concat(tileLayerData.objects)
+                }
 
                 layerLayoutIdCount--
 
@@ -113,6 +121,10 @@ const layerDataMethods = {
   },
 
   _getCachedTile: function (layerId, x, y, z, tileLayer) {
+    if (isTileLayerDataStale(tileLayer)) {
+      return false
+    }
+
     const detailZooms = DETAIL_ZOOMS_BY_LAYER[layerId] || [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14]
 
     const ids = layerId.split('|')
@@ -173,7 +185,7 @@ const layerDataMethods = {
       const tileInfo = tileLayerRequestInfo.tileInfos.shift()
       const tileLayerData = tileInfo.tileLayerData
 
-      if (!tileLayerData.tileCanvas.hasBeenRemoved) {
+      if (!isTileLayerDataStale(tileLayerData)) {
         await this._requestTile(
           tileLayerData.dataLayerId,
           tileInfo.x,
@@ -183,11 +195,9 @@ const layerDataMethods = {
         )
       }
 
-      tileLayerData.tileCount--
+      tileLayerData.tileCount = Math.max(tileLayerData.tileCount - 1, 0)
 
-      if (tileLayerData.tileCount === 0) {
-        tileLayerData.resolve()
-      }
+      resolveTileLayerData(tileLayerData)
     }
 
     tileLayerRequestInfo.requestInProcess = false
@@ -243,7 +253,11 @@ const layerDataMethods = {
         }
       }
 
-      this._processTileLayerRequests(tileLayerRequestInfo)
+      if (tileLayerData.tileCount === 0) {
+        resolveTileLayerData(tileLayerData)
+      } else {
+        this._processTileLayerRequests(tileLayerRequestInfo)
+      }
     })
   }
 }

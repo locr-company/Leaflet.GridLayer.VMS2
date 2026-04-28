@@ -6,6 +6,7 @@ import RandomGenerator from './random-generator.js'
 
 function initializeLayerState (layer) {
   layer.numberOfRequestedTiles = 0
+  layer.tileRequestId = 0
   layer.tileSize = 0
   layer.randomGenerator = new RandomGenerator()
 
@@ -79,12 +80,17 @@ const setupMethods = {
 
     tileCanvas.inUse = true
     tileCanvas.hasBeenRemoved = false
+    tileCanvas.requestId = ++this.tileRequestId
 
-    tileInfo = { ...tileInfo }
+    tileInfo = { ...tileInfo, requestId: tileCanvas.requestId }
     tileInfo.z += this.options.zoomOffset
 
     this._drawTile(tileCanvas, tileInfo)
       .then(() => doneFunction(null, tileCanvas))
+      .catch(error => {
+        tileCanvas.inUse = false
+        doneFunction(error, tileCanvas)
+      })
 
     return tileCanvas
   },

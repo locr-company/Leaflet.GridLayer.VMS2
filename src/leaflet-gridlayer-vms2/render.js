@@ -7,6 +7,11 @@ import {
   TILE_AREA_SAVE_EXTENSION
 } from './constants.js'
 import { getLayerStyleType, shouldProcessLayer } from './layer-data.js'
+import {
+  hasTileRequestChanged,
+  isTileCanvasStale,
+  trimSaveDataCanvasPool
+} from './tile-requests.js'
 
 const IDENTITY = new DOMMatrix()
 
@@ -263,281 +268,315 @@ function appendGridPoints (layer, drawingInfo, tileInfo, styleLayer, mapObjects)
 
 const renderMethods = {
   _drawTile: async function (tileCanvas, tileInfo) {
-    await this._requestTileDbInfos()
+    let drawingInfo = null
+    let clipRectStarted = false
 
-    const style = await this._requestStyle()
-    const mapStyle = buildMergedMapStyle(style, this.options.styleOverride)
+    try {
+      await this._requestTileDbInfos()
 
-    if (tileInfo.drawingContext) {
-      tileInfo.drawingContext.width = tileCanvas.width
-      tileInfo.drawingContext.height = tileCanvas.height
+      const style = await this._requestStyle()
+      const mapStyle = buildMergedMapStyle(style, this.options.styleOverride)
 
-      tileCanvas.context = tileInfo.drawingContext
-    }
+      if (tileInfo.drawingContext) {
+        tileInfo.drawingContext.width = tileCanvas.width
+        tileInfo.drawingContext.height = tileCanvas.height
 
-    tileInfo.width = tileCanvas.width
-    tileInfo.height = tileCanvas.height
+        tileCanvas.context = tileInfo.drawingContext
+      }
 
-    const userMapScale = (tileInfo.mapScale ?? this.printMapScale ?? this.options.mapScale) * Math.pow(2, this.options.zoomOffset)
+      tileInfo.width = tileCanvas.width
+      tileInfo.height = tileCanvas.height
 
-    tileInfo.mapBounds = {}
+      const userMapScale = (tileInfo.mapScale ?? this.printMapScale ?? this.options.mapScale) * Math.pow(2, this.options.zoomOffset)
 
-    if (typeof tileInfo.x === 'number' && typeof tileInfo.y === 'number' && typeof tileInfo.z === 'number') {
-      tileInfo.mapBounds.longitudeMin = this._tileToLongitude(tileInfo.x, tileInfo.z, this.options.zoomPowerBase)
-      tileInfo.mapBounds.longitudeMax = this._tileToLongitude(tileInfo.x + 1, tileInfo.z, this.options.zoomPowerBase)
-      tileInfo.mapBounds.latitudeMin = this._tileToLatitude(tileInfo.y + 1, tileInfo.z, this.options.zoomPowerBase)
-      tileInfo.mapBounds.latitudeMax = this._tileToLatitude(tileInfo.y, tileInfo.z, this.options.zoomPowerBase)
+      tileInfo.mapBounds = {}
 
-      tileInfo.dpi = (this.options.dpi ?? DEFAULT_PRINT_DPI) * tileInfo.width / this.tileSize
-    } else {
-      tileInfo.mapBounds.longitudeMin = tileInfo.longitudeMin
-      tileInfo.mapBounds.longitudeMax = tileInfo.longitudeMax
-      tileInfo.mapBounds.latitudeMin = tileInfo.latitudeMin
-      tileInfo.mapBounds.latitudeMax = tileInfo.latitudeMax
+      if (typeof tileInfo.x === 'number' && typeof tileInfo.y === 'number' && typeof tileInfo.z === 'number') {
+        tileInfo.mapBounds.longitudeMin = this._tileToLongitude(tileInfo.x, tileInfo.z, this.options.zoomPowerBase)
+        tileInfo.mapBounds.longitudeMax = this._tileToLongitude(tileInfo.x + 1, tileInfo.z, this.options.zoomPowerBase)
+        tileInfo.mapBounds.latitudeMin = this._tileToLatitude(tileInfo.y + 1, tileInfo.z, this.options.zoomPowerBase)
+        tileInfo.mapBounds.latitudeMax = this._tileToLatitude(tileInfo.y, tileInfo.z, this.options.zoomPowerBase)
 
-      const degreesWidth = tileInfo.mapBounds.longitudeMax - tileInfo.mapBounds.longitudeMin
-
-      const normalizedWidth = degreesWidth / 360
-      const normalizedHeight = this._latitudeToNormalized(tileInfo.mapBounds.latitudeMin) - this._latitudeToNormalized(tileInfo.mapBounds.latitudeMax)
-
-      const normalizedRatio = normalizedWidth / normalizedHeight
-      const mapRatio = tileInfo.width / tileInfo.height
-
-      if (mapRatio >= normalizedRatio) {
-        tileInfo.mapBounds.longitudeMin -= (degreesWidth * mapRatio / normalizedRatio - degreesWidth) / 2
-        tileInfo.mapBounds.longitudeMax += (degreesWidth * mapRatio / normalizedRatio - degreesWidth) / 2
+        tileInfo.dpi = (this.options.dpi ?? DEFAULT_PRINT_DPI) * tileInfo.width / this.tileSize
       } else {
-        let normalizedMin = this._latitudeToNormalized(tileInfo.mapBounds.latitudeMin)
-        let normalizedMax = this._latitudeToNormalized(tileInfo.mapBounds.latitudeMax)
+        tileInfo.mapBounds.longitudeMin = tileInfo.longitudeMin
+        tileInfo.mapBounds.longitudeMax = tileInfo.longitudeMax
+        tileInfo.mapBounds.latitudeMin = tileInfo.latitudeMin
+        tileInfo.mapBounds.latitudeMax = tileInfo.latitudeMax
 
-        normalizedMin += (normalizedWidth / mapRatio - normalizedHeight) / 2
-        normalizedMax -= (normalizedWidth / mapRatio - normalizedHeight) / 2
+        const degreesWidth = tileInfo.mapBounds.longitudeMax - tileInfo.mapBounds.longitudeMin
 
-        tileInfo.mapBounds.latitudeMin = this._normalizedToLatitude(normalizedMin)
-        tileInfo.mapBounds.latitudeMax = this._normalizedToLatitude(normalizedMax)
-      }
+        const normalizedWidth = degreesWidth / 360
+        const normalizedHeight = this._latitudeToNormalized(tileInfo.mapBounds.latitudeMin) - this._latitudeToNormalized(tileInfo.mapBounds.latitudeMax)
 
-      tileInfo.dpi ??= DEFAULT_PRINT_DPI
+        const normalizedRatio = normalizedWidth / normalizedHeight
+        const mapRatio = tileInfo.width / tileInfo.height
 
-      const tileSize = this.tileSize * tileInfo.dpi / DEFAULT_PRINT_DPI
-
-      tileInfo.z = Math.log(360 * tileInfo.width / tileSize / (tileInfo.mapBounds.longitudeMax - tileInfo.mapBounds.longitudeMin)) / Math.log(this.options.zoomPowerBase)
-    }
-
-    if (tileInfo.drawingContext) {
-      tileInfo.drawingContext.dpi = tileInfo.dpi
-    }
-
-    const tileAreaDrawingExtension = TILE_AREA_DRAWING_EXTENSION * userMapScale
-
-    tileInfo.drawingMapBounds = {
-      latitudeMin: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMin, tileInfo.z, this.options.zoomPowerBase) + tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase),
-      latitudeMax: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMax, tileInfo.z, this.options.zoomPowerBase) - tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase),
-      longitudeMin: this._tileToLongitude(this._longitudeToTile(tileInfo.mapBounds.longitudeMin, tileInfo.z, this.options.zoomPowerBase) - tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase),
-      longitudeMax: this._tileToLongitude(this._longitudeToTile(tileInfo.mapBounds.longitudeMax, tileInfo.z, this.options.zoomPowerBase) + tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase)
-    }
-
-    const tileAreaSaveExtension = TILE_AREA_SAVE_EXTENSION * userMapScale
-
-    tileInfo.saveMapBounds = {
-      latitudeMin: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMin, tileInfo.z, this.options.zoomPowerBase) + tileAreaSaveExtension, tileInfo.z, this.options.zoomPowerBase),
-      latitudeMax: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMax, tileInfo.z, this.options.zoomPowerBase) - tileAreaSaveExtension, tileInfo.z, this.options.zoomPowerBase),
-      longitudeMin: this._tileToLongitude(this._longitudeToTile(tileInfo.mapBounds.longitudeMin, tileInfo.z, this.options.zoomPowerBase) - tileAreaSaveExtension, tileInfo.z, this.options.zoomPowerBase),
-      longitudeMax: this._tileToLongitude(this._longitudeToTile(tileInfo.mapBounds.longitudeMax, tileInfo.z, this.options.zoomPowerBase) + tileAreaSaveExtension, tileInfo.z, this.options.zoomPowerBase)
-    }
-
-    tileInfo.vms2TileZ = Math.round(Math.log2(Math.pow(this.options.zoomPowerBase, tileInfo.z) / userMapScale))
-
-    const tileLayers = await this._getTileLayers(tileCanvas, tileInfo, mapStyle)
-
-    if (tileCanvas.isDummy) {
-      return tileLayers
-    }
-
-    if (tileCanvas.hasBeenRemoved) {
-      return
-    }
-
-    if (tileCanvas.hasBeenCreated) {
-      this.tileCanvases.push(tileCanvas)
-      tileCanvas.hasBeenCreated = false
-    }
-
-    ensureCanvasContext(tileCanvas)
-
-    const drawingInfo = createDrawingInfo(this, tileCanvas, tileInfo, userMapScale)
-
-    tileCanvas.context.beginGroup('clipRect')
-
-    tileCanvas.context.clipRect(
-      (this._longitudeToMeters(-180.01) - drawingInfo.mapArea.left) * drawingInfo.scale,
-      0,
-      (this._longitudeToMeters(180.01) - this._longitudeToMeters(-180)) * drawingInfo.scale,
-      tileInfo.height
-    )
-
-    if (this.options.allowedMapArea) {
-      if (this.options.allowedMapArea === true) {
-        drawingInfo.displacementLayers[''].allowedMapArea = drawingInfo.mapArea
-      } else {
-        drawingInfo.displacementLayers[''].allowedMapArea = {
-          left: this._longitudeToMeters(this.options.allowedMapArea.longitudeMin),
-          right: this._longitudeToMeters(this.options.allowedMapArea.longitudeMax),
-          top: this._latitudeToMeters(this.options.allowedMapArea.latitudeMax),
-          bottom: this._latitudeToMeters(this.options.allowedMapArea.latitudeMin)
-        }
-      }
-    }
-
-    addDisplacementIcons(this, drawingInfo, tileInfo)
-
-    for (const layerName of mapStyle.Order) {
-      if (drawingInfo.mapCanvas.hasBeenRemoved) {
-        continue
-      }
-
-      const layer = mapStyle.Layers[layerName]
-      let styleType = getLayerStyleType(layer)
-
-      if (!shouldProcessLayer(layer, tileInfo, this.options, styleType)) {
-        continue
-      }
-
-      const mapObjects = tileLayers[layerName] || []
-
-      if (layer.Grid) {
-        drawingInfo.isGrid = true
-        appendGridPoints(this, drawingInfo, tileInfo, layer, mapObjects)
-        styleType = 'text'
-      } else {
-        drawingInfo.isGrid = false
-      }
-
-      if (layer.SortFunction) {
-        if (typeof layer._compiledSortFunction !== 'function') {
-          layer._compiledSortFunction = new Function('a', 'b', 'return (' + layer.SortFunction + ')')
-        }
-
-        mapObjects.sort((a, b) => {
-          if (a && b) {
-            return layer._compiledSortFunction(a.info, b.info)
-          }
-
-          return 0
-        })
-      }
-
-      const layerCanvasNames = ['']
-
-      if (layer.Save) {
-        layerCanvasNames.push('save')
-      }
-
-      for (const layerCanvasName of layerCanvasNames) {
-        if (layerCanvasName === 'save') {
-          getOrCreateSaveDataCanvas(this, drawingInfo)
-
-          drawingInfo.context = drawingInfo.saveDataCanvas.context
-          drawingInfo.drawingArea = drawingInfo.saveDataArea
+        if (mapRatio >= normalizedRatio) {
+          tileInfo.mapBounds.longitudeMin -= (degreesWidth * mapRatio / normalizedRatio - degreesWidth) / 2
+          tileInfo.mapBounds.longitudeMax += (degreesWidth * mapRatio / normalizedRatio - degreesWidth) / 2
         } else {
-          drawingInfo.context = drawingInfo.mapCanvas.context
-          drawingInfo.drawingArea = drawingInfo.mapArea
+          let normalizedMin = this._latitudeToNormalized(tileInfo.mapBounds.latitudeMin)
+          let normalizedMax = this._latitudeToNormalized(tileInfo.mapBounds.latitudeMax)
+
+          normalizedMin += (normalizedWidth / mapRatio - normalizedHeight) / 2
+          normalizedMax -= (normalizedWidth / mapRatio - normalizedHeight) / 2
+
+          tileInfo.mapBounds.latitudeMin = this._normalizedToLatitude(normalizedMin)
+          tileInfo.mapBounds.latitudeMax = this._normalizedToLatitude(normalizedMax)
         }
 
-        if (layerCanvasName !== 'save' && !layer.Style && !layer.Filters) {
+        tileInfo.dpi ??= DEFAULT_PRINT_DPI
+
+        const tileSize = this.tileSize * tileInfo.dpi / DEFAULT_PRINT_DPI
+
+        tileInfo.z = Math.log(360 * tileInfo.width / tileSize / (tileInfo.mapBounds.longitudeMax - tileInfo.mapBounds.longitudeMin)) / Math.log(this.options.zoomPowerBase)
+      }
+
+      if (tileInfo.drawingContext) {
+        tileInfo.drawingContext.dpi = tileInfo.dpi
+      }
+
+      const tileAreaDrawingExtension = TILE_AREA_DRAWING_EXTENSION * userMapScale
+
+      tileInfo.drawingMapBounds = {
+        latitudeMin: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMin, tileInfo.z, this.options.zoomPowerBase) + tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase),
+        latitudeMax: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMax, tileInfo.z, this.options.zoomPowerBase) - tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase),
+        longitudeMin: this._tileToLongitude(this._longitudeToTile(tileInfo.mapBounds.longitudeMin, tileInfo.z, this.options.zoomPowerBase) - tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase),
+        longitudeMax: this._tileToLongitude(this._longitudeToTile(tileInfo.mapBounds.longitudeMax, tileInfo.z, this.options.zoomPowerBase) + tileAreaDrawingExtension, tileInfo.z, this.options.zoomPowerBase)
+      }
+
+      const tileAreaSaveExtension = TILE_AREA_SAVE_EXTENSION * userMapScale
+
+      tileInfo.saveMapBounds = {
+        latitudeMin: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMin, tileInfo.z, this.options.zoomPowerBase) + tileAreaSaveExtension, tileInfo.z, this.options.zoomPowerBase),
+        latitudeMax: this._tileToLatitude(this._latitudeToTile(tileInfo.mapBounds.latitudeMax, tileInfo.z, this.options.zoomPowerBase) - tileAreaSaveExtension, tileInfo.z, this.options.zoomPowerBase),
+        longitudeMin: this._tileToLongitude(this._longitudeToTile(tileInfo.mapBounds.longitudeMin, tileInfo.z, this.options.zoomPowerBase) - tileAreaSaveExtension, tileInfo.z, this.options.zoomPowerBase),
+        longitudeMax: this._tileToLongitude(this._longitudeToTile(tileInfo.mapBounds.longitudeMax, tileInfo.z, this.options.zoomPowerBase) + tileAreaSaveExtension, tileInfo.z, this.options.zoomPowerBase)
+      }
+
+      tileInfo.vms2TileZ = Math.round(Math.log2(Math.pow(this.options.zoomPowerBase, tileInfo.z) / userMapScale))
+
+      const tileLayers = await this._getTileLayers(tileCanvas, tileInfo, mapStyle)
+
+      if (tileCanvas.isDummy) {
+        return tileLayers
+      }
+
+      if (isTileCanvasStale(tileCanvas, tileInfo.requestId)) {
+        return
+      }
+
+      if (tileCanvas.hasBeenCreated) {
+        this.tileCanvases.push(tileCanvas)
+        tileCanvas.hasBeenCreated = false
+      }
+
+      ensureCanvasContext(tileCanvas)
+
+      drawingInfo = createDrawingInfo(this, tileCanvas, tileInfo, userMapScale)
+
+      tileCanvas.context.beginGroup('clipRect')
+      clipRectStarted = true
+
+      tileCanvas.context.clipRect(
+        (this._longitudeToMeters(-180.01) - drawingInfo.mapArea.left) * drawingInfo.scale,
+        0,
+        (this._longitudeToMeters(180.01) - this._longitudeToMeters(-180)) * drawingInfo.scale,
+        tileInfo.height
+      )
+
+      if (this.options.allowedMapArea) {
+        if (this.options.allowedMapArea === true) {
+          drawingInfo.displacementLayers[''].allowedMapArea = drawingInfo.mapArea
+        } else {
+          drawingInfo.displacementLayers[''].allowedMapArea = {
+            left: this._longitudeToMeters(this.options.allowedMapArea.longitudeMin),
+            right: this._longitudeToMeters(this.options.allowedMapArea.longitudeMax),
+            top: this._latitudeToMeters(this.options.allowedMapArea.latitudeMax),
+            bottom: this._latitudeToMeters(this.options.allowedMapArea.latitudeMin)
+          }
+        }
+      }
+
+      addDisplacementIcons(this, drawingInfo, tileInfo)
+
+      for (const layerName of mapStyle.Order) {
+        if (isTileCanvasStale(drawingInfo.mapCanvas, tileInfo.requestId)) {
+          break
+        }
+
+        const layer = mapStyle.Layers[layerName]
+        let styleType = getLayerStyleType(layer)
+
+        if (!shouldProcessLayer(layer, tileInfo, this.options, styleType)) {
           continue
         }
 
-        drawingInfo.boundingArea = layer.needsAreaExtension ? drawingInfo.extendedMapArea : drawingInfo.mapArea
+        const mapObjects = tileLayers[layerName] || []
 
-        drawingInfo.context.beginGroup(layerName)
-        drawingInfo.context.setTransform(IDENTITY)
-        drawingInfo.context.globalCompositeOperation = layer.CompositeOperation || 'source-over'
-        drawingInfo.context.filter = layer.CanvasFilter || 'none'
-        drawingInfo.context.textAlign = 'center'
-        drawingInfo.context.textBaseline = 'middle'
-        drawingInfo.tileBoundingBox = null
-
-        if (layerCanvasName === 'save') {
-          layer.layerName = layerName
-
-          await this._drawSaveLayer(drawingInfo, mapObjects, tileInfo, layer)
-
-          drawingInfo.saveDataPixels = null
-        } else if (styleType === 'text') {
-          await this._drawObjectsLayer(drawingInfo, mapObjects, tileInfo, layer)
+        if (layer.Grid) {
+          drawingInfo.isGrid = true
+          appendGridPoints(this, drawingInfo, tileInfo, layer, mapObjects)
+          styleType = 'text'
         } else {
-          await this._drawBaseLayer(drawingInfo, mapObjects, tileInfo, layer)
+          drawingInfo.isGrid = false
         }
 
-        if (drawingInfo.isGrid) {
-          drawingInfo.displacementLayers[''].regions = {}
+        if (layer.SortFunction) {
+          if (typeof layer._compiledSortFunction !== 'function') {
+            layer._compiledSortFunction = new Function('a', 'b', 'return (' + layer.SortFunction + ')')
+          }
+
+          mapObjects.sort((a, b) => {
+            if (a && b) {
+              return layer._compiledSortFunction(a.info, b.info)
+            }
+
+            return 0
+          })
         }
 
-        drawingInfo.context.endGroup()
+        const layerCanvasNames = ['']
+
+        if (layer.Save) {
+          layerCanvasNames.push('save')
+        }
+
+        for (const layerCanvasName of layerCanvasNames) {
+          if (layerCanvasName === 'save') {
+            getOrCreateSaveDataCanvas(this, drawingInfo)
+
+            drawingInfo.context = drawingInfo.saveDataCanvas.context
+            drawingInfo.drawingArea = drawingInfo.saveDataArea
+          } else {
+            drawingInfo.context = drawingInfo.mapCanvas.context
+            drawingInfo.drawingArea = drawingInfo.mapArea
+          }
+
+          if (layerCanvasName !== 'save' && !layer.Style && !layer.Filters) {
+            continue
+          }
+
+          drawingInfo.boundingArea = layer.needsAreaExtension ? drawingInfo.extendedMapArea : drawingInfo.mapArea
+
+          drawingInfo.context.beginGroup(layerName)
+          drawingInfo.context.setTransform(IDENTITY)
+          drawingInfo.context.globalCompositeOperation = layer.CompositeOperation || 'source-over'
+          drawingInfo.context.filter = layer.CanvasFilter || 'none'
+          drawingInfo.context.textAlign = 'center'
+          drawingInfo.context.textBaseline = 'middle'
+          drawingInfo.tileBoundingBox = null
+
+          if (layerCanvasName === 'save') {
+            layer.layerName = layerName
+
+            await this._drawSaveLayer(drawingInfo, mapObjects, tileInfo, layer)
+
+            drawingInfo.saveDataPixels = null
+          } else if (styleType === 'text') {
+            await this._drawObjectsLayer(drawingInfo, mapObjects, tileInfo, layer)
+          } else {
+            await this._drawBaseLayer(drawingInfo, mapObjects, tileInfo, layer)
+          }
+
+          if (drawingInfo.isGrid) {
+            drawingInfo.displacementLayers[''].regions = {}
+          }
+
+          drawingInfo.context.endGroup()
+
+          if (isTileCanvasStale(drawingInfo.mapCanvas, tileInfo.requestId)) {
+            break
+          }
+        }
       }
-    }
 
-    if (drawingInfo.saveDataCanvas) {
-      drawingInfo.saveDataCanvas.inUse = false
-    }
+      if (drawingInfo.saveDataCanvas) {
+        drawingInfo.saveDataCanvas.inUse = false
+      }
 
-    drawingInfo.context = drawingInfo.mapCanvas.context
+      drawingInfo.context = drawingInfo.mapCanvas.context
 
-    drawingInfo.context.beginGroup('background')
-    drawingInfo.context.setTransform(IDENTITY)
-    drawingInfo.context.globalCompositeOperation = 'destination-over'
+      drawingInfo.context.beginGroup('background')
+      drawingInfo.context.setTransform(IDENTITY)
+      drawingInfo.context.globalCompositeOperation = 'destination-over'
 
-    if (this.options.type !== 'text') {
-      if (mapStyle.BackgroundPatternFunction) {
-        if (typeof mapStyle.BackgroundPatternFunction === 'string') {
-          mapStyle.BackgroundPatternFunction = new Function(
-            'ObjectData',
-            'MapZoom',
-            'RandomGenerator',
-            'return ' + mapStyle.BackgroundPatternFunction
-              .replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']')
-              .replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
-          )
-        }
-
-        const patternName = mapStyle.BackgroundPatternFunction(null, tileInfo.vms2TileZ, this.randomGenerator)
-
-        if (patternName) {
-          const pattern = await this._getPattern(drawingInfo.context, patternName)
-
-          pattern.transformMatrix = new DOMMatrix()
-            .scale(drawingInfo.patternScale)
-            .translate(
-              -drawingInfo.mapArea.left * drawingInfo.scale / drawingInfo.patternScale,
-              -drawingInfo.mapArea.top * drawingInfo.scale / drawingInfo.patternScale
+      if (this.options.type !== 'text') {
+        if (mapStyle.BackgroundPatternFunction) {
+          if (typeof mapStyle.BackgroundPatternFunction === 'string') {
+            mapStyle.BackgroundPatternFunction = new Function(
+              'ObjectData',
+              'MapZoom',
+              'RandomGenerator',
+              'return ' + mapStyle.BackgroundPatternFunction
+                .replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']')
+                .replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
             )
+          }
 
-          pattern.setTransform(pattern.transformMatrix)
+          const patternName = mapStyle.BackgroundPatternFunction(null, tileInfo.vms2TileZ, this.randomGenerator)
 
-          drawingInfo.context.fillStyle = pattern
+          if (patternName) {
+            const pattern = await this._getPattern(drawingInfo.context, patternName)
+
+            pattern.transformMatrix = new DOMMatrix()
+              .scale(drawingInfo.patternScale)
+              .translate(
+                -drawingInfo.mapArea.left * drawingInfo.scale / drawingInfo.patternScale,
+                -drawingInfo.mapArea.top * drawingInfo.scale / drawingInfo.patternScale
+              )
+
+            pattern.setTransform(pattern.transformMatrix)
+
+            drawingInfo.context.fillStyle = pattern
+            drawingInfo.context.fillRect(0, 0, tileInfo.width, tileInfo.height)
+          }
+        } else {
+          if (typeof mapStyle.BackgroundAlpha !== 'number') {
+            mapStyle.BackgroundAlpha = 1
+          }
+
+          drawingInfo.context.fillStyle = '#' + this._hexify32([
+            mapStyle.BackgroundColor[0],
+            mapStyle.BackgroundColor[1],
+            mapStyle.BackgroundColor[2],
+            Math.round(mapStyle.BackgroundAlpha * 255)
+          ])
           drawingInfo.context.fillRect(0, 0, tileInfo.width, tileInfo.height)
         }
-      } else {
-        if (typeof mapStyle.BackgroundAlpha !== 'number') {
-          mapStyle.BackgroundAlpha = 1
-        }
+      }
 
-        drawingInfo.context.fillStyle = '#' + this._hexify32([
-          mapStyle.BackgroundColor[0],
-          mapStyle.BackgroundColor[1],
-          mapStyle.BackgroundColor[2],
-          Math.round(mapStyle.BackgroundAlpha * 255)
-        ])
-        drawingInfo.context.fillRect(0, 0, tileInfo.width, tileInfo.height)
+      drawingInfo.context.endGroup()
+
+      if (!hasTileRequestChanged(drawingInfo.mapCanvas, tileInfo.requestId)) {
+        drawingInfo.mapCanvas.inUse = false
+      }
+
+      tileCanvas.context.endGroup('clipRect')
+      clipRectStarted = false
+    } finally {
+      if (drawingInfo && drawingInfo.saveDataCanvas) {
+        drawingInfo.saveDataCanvas.inUse = false
+        drawingInfo.saveDataPixels = null
+      }
+
+      if (!hasTileRequestChanged(tileCanvas, tileInfo.requestId)) {
+        tileCanvas.inUse = false
+      }
+
+      if (this.saveDataCanvases) {
+        trimSaveDataCanvasPool(this)
+      }
+
+      if (clipRectStarted && tileCanvas.context) {
+        try {
+          tileCanvas.context.endGroup('clipRect')
+        } catch (error) {
+          console.warn('Failed to close tile clip group', error)
+        }
       }
     }
-
-    drawingInfo.context.endGroup()
-
-    drawingInfo.mapCanvas.inUse = false
-
-    tileCanvas.context.endGroup('clipRect')
   },
 
   _remapPixels: function (pixels, saveDataIds, width) {

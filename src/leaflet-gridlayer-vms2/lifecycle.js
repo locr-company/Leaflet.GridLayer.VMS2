@@ -2,6 +2,11 @@
 /* global L */
 
 import { DEFAULT_ZOOM_POWER_BASE } from './constants.js'
+import {
+  abortTileRequests,
+  cancelQueuedTileRequestsForCanvas,
+  trimTileCanvasPool
+} from './tile-requests.js'
 
 const lifecycleMethods = {
   _pruneTilesOld: function () {
@@ -130,13 +135,10 @@ const lifecycleMethods = {
 
     const tileElement = tile.el
 
-    if (tileElement.abortController && !tileElement.abortController.signal.aborted) {
-      tileElement.abortController.abort()
-    }
-
-    delete tileElement.abortController
-
     tileElement.hasBeenRemoved = true
+
+    abortTileRequests(tileElement)
+    cancelQueuedTileRequestsForCanvas(globalThis.vms2Context, tileElement)
 
     if (tileElement.parentNode) {
       tileElement.parentNode.removeChild(tileElement)
@@ -148,6 +150,8 @@ const lifecycleMethods = {
       tile: tileElement,
       coords: this._keyToTileCoords(key)
     })
+
+    trimTileCanvasPool(this)
   },
 
   onAdd: function () {

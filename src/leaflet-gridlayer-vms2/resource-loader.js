@@ -1,6 +1,12 @@
 /* eslint-disable no-underscore-dangle */
 /* global FontFace, Image */
 
+import {
+  addTileAbortController,
+  isTileLayerDataStale,
+  removeTileAbortController
+} from './tile-requests.js'
+
 function flushQueuedResolvers (entries, handler) {
   while (entries.length > 0) {
     const entry = entries.shift()
@@ -11,18 +17,25 @@ function flushQueuedResolvers (entries, handler) {
   }
 }
 
-function compileTileWorkerQueue (layer, resolve) {
+function compileTileWorkerQueue (layer) {
   return function decodeFunction () {
     for (const decodeWorker of globalThis.vms2Context.decodeWorkers) {
       if (!decodeWorker.resolveFunction) {
-        const decodeEntry = globalThis.vms2Context.decodeQueue.shift()
+        let decodeEntry = globalThis.vms2Context.decodeQueue.shift()
 
-        if (decodeEntry.tileLayerData.tileCanvas.hasBeenRemoved) {
+        while (decodeEntry && isTileLayerDataStale(decodeEntry.tileLayerData)) {
           decodeEntry.resolve()
-        } else {
-          decodeWorker.postMessage(decodeEntry.decodeData)
+          decodeEntry = globalThis.vms2Context.decodeQueue.shift()
+        }
 
-          decodeWorker.resolveFunction = () => {
+        if (!decodeEntry) {
+          return
+        }
+
+        decodeWorker.postMessage(decodeEntry.decodeData)
+
+        decodeWorker.resolveFunction = () => {
+          if (!isTileLayerDataStale(decodeEntry.tileLayerData)) {
             layer._getCachedTile(
               decodeEntry.dataLayerId,
               decodeEntry.x,
@@ -30,20 +43,18 @@ function compileTileWorkerQueue (layer, resolve) {
               decodeEntry.z,
               decodeEntry.tileLayerData
             )
-
-            globalThis.vms2Context.decodeWorkersRunning--
-
-            decodeEntry.resolve()
-
-            if (globalThis.vms2Context.decodeQueue.length > 0) {
-              decodeFunction()
-            }
           }
 
-          globalThis.vms2Context.decodeWorkersRunning++
+          globalThis.vms2Context.decodeWorkersRunning--
+
+          decodeEntry.resolve()
+
+          if (globalThis.vms2Context.decodeQueue.length > 0) {
+            decodeFunction()
+          }
         }
 
-        return
+        globalThis.vms2Context.decodeWorkersRunning++
       }
     }
   }
@@ -58,6 +69,14 @@ function createPatternDescriptor (patternImage, repetition) {
       this.transformMatrix = matrix
     }
   }
+}
+
+function resolveTileDbInfosWithFallback (layer, queue, error) {
+  console.warn('Tile DB info request failed', error)
+
+  layer.tileDbInfos = []
+
+  flushQueuedResolvers(queue, entry => entry.resolve(layer.tileDbInfos))
 }
 
 const resourceLoaderMethods = {
@@ -258,34 +277,56 @@ const resourceLoaderMethods = {
 
   _requestTileDbInfos: function () {
     return new Promise(resolve => {
-      this.tileDbInfos = []
-
       if (this.tileDbInfos) {
         resolve(this.tileDbInfos)
-      } else {
-        const resolves = this.tileDbInfosResolves
-
-        resolves.push(resolve)
-
-        if (resolves.length === 1) {
-          const tileDbInfosUrlParts = this.options.tileUrl.split('?')
-
-          fetch(new URL(tileDbInfosUrlParts[0], window.location.origin))
-            .then(response => response.json())
-            .then(tileDbInfos => {
-              this.tileDbInfos = tileDbInfos
-
-              while (resolves.length > 0) {
-                resolves.shift()()
-              }
-            })
-        }
+        return
       }
+
+      const queue = this.tileDbInfosResolves
+
+      queue.push({ resolve })
+
+      if (queue.length > 1) {
+        return
+      }
+
+      const tileDbInfosUrlParts = this.options.tileUrl.split('?')
+      let tileDbInfosUrl
+
+      try {
+        tileDbInfosUrl = new URL(tileDbInfosUrlParts[0], window.location.origin)
+      } catch (error) {
+        resolveTileDbInfosWithFallback(this, queue, error)
+        return
+      }
+
+      Promise.resolve()
+        .then(() => fetch(tileDbInfosUrl))
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Tile DB info request failed with status ${response.status}`)
+          }
+
+          return response.json()
+        })
+        .then(tileDbInfos => {
+          this.tileDbInfos = Array.isArray(tileDbInfos) ? tileDbInfos : []
+
+          flushQueuedResolvers(queue, entry => entry.resolve(this.tileDbInfos))
+        })
+        .catch(error => {
+          resolveTileDbInfosWithFallback(this, queue, error)
+        })
     })
   },
 
   _requestTile: function (dataLayerId, x, y, z, tileLayerData) {
     return new Promise(resolve => {
+      if (isTileLayerDataStale(tileLayerData)) {
+        resolve()
+        return
+      }
+
       x &= ((1 << z) - 1)
       y &= ((1 << z) - 1)
 
@@ -342,10 +383,10 @@ const resourceLoaderMethods = {
 
       tileUrl = tileUrl.replace('{key}', '').replace('{value}', '').replace('{type}', '')
 
-      const decodeFunction = compileTileWorkerQueue(this, resolve)
+      const decodeFunction = compileTileWorkerQueue(this)
 
       const processRawData = rawData => {
-        if (tileLayerData.tileCanvas.hasBeenRemoved) {
+        if (isTileLayerDataStale(tileLayerData)) {
           resolve()
           return
         }
@@ -406,12 +447,21 @@ const resourceLoaderMethods = {
         decodeFunction()
       }
 
-      tileLayerData.tileCanvas.abortController = new AbortController()
-
       if (this.options.disableDecode === true) {
         processRawData(new ArrayBuffer(4))
       } else {
-        fetch(new URL(tileUrl, window.location.origin), { signal: tileLayerData.tileCanvas.abortController.signal })
+        if (isTileLayerDataStale(tileLayerData)) {
+          resolve()
+          return
+        }
+
+        const abortController = new AbortController()
+        const tileCanvas = tileLayerData.tileCanvas
+
+        addTileAbortController(tileCanvas, abortController)
+
+        Promise.resolve()
+          .then(() => fetch(new URL(tileUrl, window.location.origin), { signal: abortController.signal }))
           .then(response => {
             if (!response.ok) {
               console.warn('Tile request failed', response.status, response.statusText, tileUrl)
@@ -436,6 +486,9 @@ const resourceLoaderMethods = {
               console.warn('Tile request error', error, tileUrl)
               resolve()
             }
+          })
+          .finally(() => {
+            removeTileAbortController(tileCanvas, abortController)
           })
       }
     })
