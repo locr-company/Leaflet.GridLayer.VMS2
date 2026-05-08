@@ -87,7 +87,7 @@ const layerDataMethods = {
               requestId: tileCanvas.requestId,
               dataLayerId: layerLayoutId,
               layerStyle: layer,
-              tileIds: [],
+              tileIds: new Set(),
               objects: [],
               tileCount: 0
             }
@@ -95,7 +95,9 @@ const layerDataMethods = {
             this._getTileLayer(tileLayerData)
               .then(() => {
                 if (!isTileLayerDataStale(tileLayerData)) {
-                  tileLayers[layerName] = tileLayers[layerName].concat(tileLayerData.objects)
+                  for (const obj of tileLayerData.objects) {
+                    tileLayers[layerName].push(obj)
+                  }
                 }
 
                 layerLayoutIdCount--
@@ -157,9 +159,11 @@ const layerDataMethods = {
         }
 
         if (tileCoordinateMatch) {
-          if (!tileLayer.tileIds.includes(keyValuePair[0])) {
-            tileLayer.objects = tileLayer.objects.concat(keyValuePair[1].objects)
-            tileLayer.tileIds.push(keyValuePair[0])
+          if (!tileLayer.tileIds.has(keyValuePair[0])) {
+            for (const obj of keyValuePair[1].objects) {
+              tileLayer.objects.push(obj)
+            }
+            tileLayer.tileIds.add(keyValuePair[0])
           }
 
           matchingTilesWeight += Math.pow(4, 16 - keyValuePair[1].z)

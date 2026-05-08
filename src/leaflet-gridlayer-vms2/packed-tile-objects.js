@@ -90,19 +90,20 @@ export function unpackPackedTileObjects (packedTileObjects) {
   const tileObjects = [{ info: packedTileObjects.bounds }]
 
   for (let objectIndex = 0; objectIndex < packedTileObjects.objectCount; objectIndex++) {
-    tileObjects.push(
-      buildObjectInfo(
-        packedTileObjects,
-        objectIndex,
-        rawData,
-        centers,
-        envelopes,
-        infoOffsets,
-        infoSizes,
-        geometryOffsets,
-        geometrySizes
-      )
+    const tileObject = buildObjectInfo(
+      packedTileObjects,
+      objectIndex,
+      rawData,
+      centers,
+      envelopes,
+      infoOffsets,
+      infoSizes,
+      geometryOffsets,
+      geometrySizes
     )
+
+    tileObject.tileBounds = packedTileObjects.bounds
+    tileObjects.push(tileObject)
   }
 
   return tileObjects

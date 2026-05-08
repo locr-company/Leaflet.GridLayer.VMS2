@@ -1,5 +1,3 @@
-/* global L */
-
 import { DEFAULT_PRINT_DPI, DEVICE_PIXEL_RATIO } from './constants.js'
 import { ensureVms2Context } from './context.js'
 import RandomGenerator from './random-generator.js'
@@ -28,7 +26,7 @@ const setupMethods = {
 
     ensureVms2Context(this._getWorkerURL(new URL('../decoder.js', import.meta.url)))
 
-    L.GridLayer.prototype.initialize.call(this, options)
+    globalThis.L.GridLayer.prototype.initialize.call(this, options)
 
     this.tileSize = this.getTileSize().x
 

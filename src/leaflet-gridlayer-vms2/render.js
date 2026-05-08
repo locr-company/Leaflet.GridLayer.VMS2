@@ -83,7 +83,7 @@ function createDrawingInfo (layer, tileCanvas, tileInfo, userMapScale) {
   return {
     mapArea,
     extendedMapArea,
-    mapWidth_: tileInfo.width,
+    mapWidth: tileInfo.width,
     mapHeight: tileInfo.height,
 
     userMapScale,
@@ -429,7 +429,7 @@ const renderMethods = {
           }
 
           mapObjects.sort((a, b) => {
-            if (a && b) {
+            if (a && b && a.geometry !== undefined && b.geometry !== undefined) {
               return layer._compiledSortFunction(a.info, b.info)
             }
 
@@ -587,7 +587,7 @@ const renderMethods = {
     let lastValidColorDistance = 0
 
     for (let index = 0; index < pixels.length; index += 4) {
-      const alpha = pixels[index + 2]
+      const alpha = pixels[index + 3]
 
       if (alpha > 0) {
         let red = pixels[index]

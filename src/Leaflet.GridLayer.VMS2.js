@@ -25,6 +25,30 @@ const METHOD_GROUPS = [
   mathMethods
 ]
 
+function cloneMutableOptionValue (value) {
+  if (!value || typeof value !== 'object') {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(cloneMutableOptionValue)
+  }
+
+  const prototype = Object.getPrototypeOf(value)
+
+  if (prototype !== Object.prototype && prototype !== null) {
+    return value
+  }
+
+  const clone = {}
+
+  for (const key of Object.keys(value)) {
+    clone[key] = cloneMutableOptionValue(value[key])
+  }
+
+  return clone
+}
+
 function assertLeafletGridLayerAvailable (leaflet) {
   if (!leaflet || !leaflet.GridLayer || typeof leaflet.GridLayer.extend !== 'function' || !leaflet.gridLayer) {
     throw new Error('Leaflet must be loaded before Leaflet.GridLayer.VMS2')
@@ -36,7 +60,7 @@ function createDefaultOptions () {
 
   for (const optionName of MUTABLE_OPTION_NAMES) {
     if (options[optionName] && typeof options[optionName] === 'object') {
-      options[optionName] = { ...options[optionName] }
+      options[optionName] = cloneMutableOptionValue(options[optionName])
     }
   }
 
@@ -70,7 +94,7 @@ function cloneMutableOptions (layer) {
     const optionValue = layer.options[optionName]
 
     if (optionValue && typeof optionValue === 'object') {
-      layer.options[optionName] = { ...optionValue }
+      layer.options[optionName] = cloneMutableOptionValue(optionValue)
     }
   }
 }

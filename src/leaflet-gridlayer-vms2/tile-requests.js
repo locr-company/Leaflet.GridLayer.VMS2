@@ -137,17 +137,25 @@ function trimCanvasPool (canvases, maxPoolSize, isReusable) {
     }
   }
 
-  for (let index = 0; reusableCount > maxPoolSize && index < canvases.length;) {
-    const canvas = canvases[index]
+  if (reusableCount <= maxPoolSize) {
+    return
+  }
 
-    if (isReusable(canvas)) {
+  let toRelease = reusableCount - maxPoolSize
+  let writeIndex = 0
+
+  for (let readIndex = 0; readIndex < canvases.length; readIndex++) {
+    const canvas = canvases[readIndex]
+
+    if (toRelease > 0 && isReusable(canvas)) {
       releaseCanvas(canvas)
-      canvases.splice(index, 1)
-      reusableCount--
+      toRelease--
     } else {
-      index++
+      canvases[writeIndex++] = canvas
     }
   }
+
+  canvases.length = writeIndex
 }
 
 export function trimTileCanvasPool (layer) {

@@ -914,7 +914,9 @@ const geometryMethods = {
     const drawingAreaTop = drawingInfo.drawingArea.top
     const drawingScale = drawingInfo.scale
     const tileBoundingBox = drawingInfo.tileBoundingBox
-    const edgeThresholdPx = tileBoundingBox ? Math.max(1, Math.ceil(drawingInfo.context.lineWidth / 2), Math.ceil(drawingScale / 2)) : 0
+    // We use a threshold of 2 map units (drawingScale * 2) instead of 0.5 (drawingScale / 2) 
+    // to account for Float32 precision loss at large coordinates (where step size can be up to 2 meters).
+    const edgeThresholdPx = tileBoundingBox ? Math.max(1, Math.ceil(drawingScale * 2)) : 0
 
     for (const polygonRings of polygons) {
       for (const polygonPoints of polygonRings) {

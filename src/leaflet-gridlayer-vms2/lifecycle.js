@@ -1,5 +1,4 @@
 /* eslint-disable no-underscore-dangle */
-/* global L */
 
 import { DEFAULT_ZOOM_POWER_BASE } from './constants.js'
 import {
@@ -171,7 +170,7 @@ const lifecycleMethods = {
     this._map.off('resize', this._onResize, this)
 
     this._removeAllTiles()
-    L.DomUtil.remove(this._container)
+    globalThis.L.DomUtil.remove(this._container)
     map._removeZoomLimit(this)
     this._container = null
     this._tileZoom = undefined

@@ -3,6 +3,14 @@
 import { expect } from 'chai'
 import 'jsdom-global/register.js'
 
+let importCounter = 0
+
+function importEntryPoint () {
+  importCounter += 1
+
+  return import(`../src/Leaflet.GridLayer.VMS2.js?test=${Date.now()}-${importCounter}`)
+}
+
 function createLeafletStub () {
   function extend (props) {
     const Parent = this
@@ -63,7 +71,7 @@ describe('Leaflet.GridLayer.VMS2 entry point', () => {
     globalThis.vms2Context = {}
 
     try {
-      await import(`../src/Leaflet.GridLayer.VMS2.js?test=${Date.now()}`)
+      await importEntryPoint()
 
       const firstLayer = globalThis.L.gridLayer.vms2()
       const secondLayer = globalThis.L.gridLayer.vms2()
@@ -95,6 +103,77 @@ describe('Leaflet.GridLayer.VMS2 entry point', () => {
         delete globalThis.URL.createObjectURL
       } else {
         globalThis.URL.createObjectURL = previousCreateObjectURL
+      }
+    }
+  })
+
+  it('clones nested style overrides without requiring structuredClone', async () => {
+    const previousDomMatrix = globalThis.DOMMatrix
+    const previousL = globalThis.L
+    const previousVms2Context = globalThis.vms2Context
+    const previousCreateObjectURL = globalThis.URL.createObjectURL
+    const previousStructuredClone = globalThis.structuredClone
+
+    globalThis.DOMMatrix = class DOMMatrix {}
+    globalThis.L = createLeafletStub()
+    globalThis.URL.createObjectURL = function () {
+      return 'blob:vms2-test'
+    }
+    globalThis.vms2Context = {}
+    delete globalThis.structuredClone
+
+    try {
+      await importEntryPoint()
+
+      const colorResolver = function () {
+        return '#fff'
+      }
+      const styleOverride = {
+        customLayer: {
+          colorStops: ['#000'],
+          colorResolver
+        }
+      }
+
+      const layer = globalThis.L.gridLayer.vms2({ styleOverride })
+
+      expect(layer.options.styleOverride).not.to.equal(styleOverride)
+      expect(layer.options.styleOverride.customLayer).not.to.equal(styleOverride.customLayer)
+      expect(layer.options.styleOverride.customLayer.colorStops).not.to.equal(styleOverride.customLayer.colorStops)
+      expect(layer.options.styleOverride.customLayer.colorResolver).to.equal(colorResolver)
+
+      layer.options.styleOverride.customLayer.colorStops.push('#fff')
+
+      expect(styleOverride.customLayer.colorStops).to.deep.equal(['#000'])
+    } finally {
+      if (typeof previousDomMatrix === 'undefined') {
+        delete globalThis.DOMMatrix
+      } else {
+        globalThis.DOMMatrix = previousDomMatrix
+      }
+
+      if (typeof previousL === 'undefined') {
+        delete globalThis.L
+      } else {
+        globalThis.L = previousL
+      }
+
+      if (typeof previousVms2Context === 'undefined') {
+        delete globalThis.vms2Context
+      } else {
+        globalThis.vms2Context = previousVms2Context
+      }
+
+      if (typeof previousCreateObjectURL === 'undefined') {
+        delete globalThis.URL.createObjectURL
+      } else {
+        globalThis.URL.createObjectURL = previousCreateObjectURL
+      }
+
+      if (typeof previousStructuredClone === 'undefined') {
+        delete globalThis.structuredClone
+      } else {
+        globalThis.structuredClone = previousStructuredClone
       }
     }
   })

@@ -279,6 +279,10 @@ const styleRenderingMethods = {
         continue
       }
 
+      if (mapObject.tileBounds !== undefined) {
+        drawingInfo.tileBoundingBox = mapObject.tileBounds
+      }
+
       if (!isMapObjectVisible(mapObject, drawingInfo.boundingArea)) {
         continue
       }
@@ -340,6 +344,10 @@ const styleRenderingMethods = {
           continue
         }
 
+        if (mapObject.tileBounds !== undefined) {
+          drawingInfo.tileBoundingBox = mapObject.tileBounds
+        }
+
         if (!isMapObjectVisible(mapObject, drawingInfo.boundingArea)) {
           continue
         }
@@ -368,6 +376,10 @@ const styleRenderingMethods = {
       if (mapObject.geometry === undefined) {
         drawingInfo.tileBoundingBox = mapObject.info
         continue
+      }
+
+      if (mapObject.tileBounds !== undefined) {
+        drawingInfo.tileBoundingBox = mapObject.tileBounds
       }
 
       if (!isMapObjectVisible(mapObject, drawingInfo.boundingArea)) {
@@ -427,6 +439,10 @@ const styleRenderingMethods = {
       if (mapObject.geometry === undefined) {
         drawingInfo.tileBoundingBox = mapObject.info
         continue
+      }
+
+      if (mapObject.tileBounds !== undefined) {
+        drawingInfo.tileBoundingBox = mapObject.tileBounds
       }
 
       if (!isMapObjectVisible(mapObject, drawingInfo.boundingArea)) {

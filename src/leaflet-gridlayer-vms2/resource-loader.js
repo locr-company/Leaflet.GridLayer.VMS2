@@ -188,6 +188,8 @@ const resourceLoaderMethods = {
               resolveFunction()
             }
           }
+
+          globalThis.vms2Context.fontFaceCache[fontName].resolveFunctions = []
         })
         .catch(() => {
           for (const resolveFunction of globalThis.vms2Context.fontFaceCache[fontName].resolveFunctions) {
@@ -195,6 +197,8 @@ const resourceLoaderMethods = {
               resolveFunction()
             }
           }
+
+          globalThis.vms2Context.fontFaceCache[fontName].resolveFunctions = []
         })
     })
   },
@@ -236,6 +240,9 @@ const resourceLoaderMethods = {
             rejectFunction(error)
           }
         }
+
+        imageCache[imageUrlString].resolveFunctions = []
+        imageCache[imageUrlString].rejectFunctions = []
       }
 
       const imageUrl = new URL(imageUrlString, window.location.origin)
@@ -252,6 +259,9 @@ const resourceLoaderMethods = {
                   resolveFunction(image)
                 }
               }
+
+              imageCache[imageUrlString].resolveFunctions = []
+              imageCache[imageUrlString].rejectFunctions = []
             }
 
             svgImage = svgImage.replace('fill:#FFFFFF;', 'fill:#FF00FF;')
@@ -268,6 +278,9 @@ const resourceLoaderMethods = {
               resolveFunction(image)
             }
           }
+
+          imageCache[imageUrlString].resolveFunctions = []
+          imageCache[imageUrlString].rejectFunctions = []
         }
 
         image.src = imageUrlString
