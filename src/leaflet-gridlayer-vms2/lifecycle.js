@@ -1,4 +1,5 @@
 /* eslint-disable no-underscore-dangle */
+/* global L */
 
 import { DEFAULT_ZOOM_POWER_BASE } from './constants.js'
 import {
