@@ -1,10 +1,40 @@
 /* global describe, it */
 
 import { expect } from 'chai'
+import { existsSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
 import { join } from 'node:path'
 import 'jsdom-global/register.js'
+
+const REQUIRED_VMS2_GL_FILES = [
+  'vms2.gl/modules/main/map_style.js',
+  'vms2.gl/modules/tiles.js',
+  'get_tile.js',
+  'tiles',
+  'styles/locr-0099-300-svg.json'
+]
+
+function findVms2GlFixtureRoot() {
+  const candidates = [
+    join(process.cwd(), '..'),
+    process.cwd()
+  ]
+
+  return candidates.find(candidate => {
+    return REQUIRED_VMS2_GL_FILES.every(filePath => existsSync(join(candidate, filePath)))
+  })
+}
+
+function getBrowserGlobalsScript() {
+  return `
+      globalThis.window = globalThis
+      Object.defineProperty(globalThis, 'navigator', {
+        value: { userAgent: 'node', hardwareConcurrency: 8 },
+        configurable: true
+      })
+  `
+}
 
 function runChildScript(childScript, repoRoot) {
   return spawnSync(
@@ -17,15 +47,18 @@ function runChildScript(childScript, repoRoot) {
   )
 }
 
-describe('vms2.gl tile loading', () => {
+const vms2GlFixtureRoot = findVms2GlFixtureRoot()
+const runVms2GlIntegrationTests = process.env.RUN_VMS2_GL_TESTS === '1'
+const describeVms2Gl = runVms2GlIntegrationTests && vms2GlFixtureRoot ? describe : describe.skip
+
+describeVms2Gl('vms2.gl tile loading', () => {
   it('starts more than one fetch when the viewport spans multiple tiles', () => {
-    const repoRoot = join(process.cwd(), '..')
+    const repoRoot = vms2GlFixtureRoot
     const mapStyleUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/main/map_style.js')).href
     const tilesUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/tiles.js')).href
 
     const childScript = `
-      globalThis.window = globalThis
-      globalThis.navigator = { userAgent: 'node', hardwareConcurrency: 8 }
+      ${getBrowserGlobalsScript()}
       globalThis.Worker = class {
         constructor () {
           this.onmessage = null
@@ -85,13 +118,12 @@ describe('vms2.gl tile loading', () => {
   })
 
   it('invalidates cached tiles when the tile URL changes without moving the view', () => {
-    const repoRoot = join(process.cwd(), '..')
+    const repoRoot = vms2GlFixtureRoot
     const mapStyleUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/main/map_style.js')).href
     const tilesUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/tiles.js')).href
 
     const childScript = `
-      globalThis.window = globalThis
-      globalThis.navigator = { userAgent: 'node', hardwareConcurrency: 8 }
+      ${getBrowserGlobalsScript()}
       globalThis.Worker = class {
         constructor () {
           this.onmessage = null
@@ -156,13 +188,12 @@ describe('vms2.gl tile loading', () => {
   })
 
   it('retries a transient tile fetch failure instead of marking the tile fetched', () => {
-    const repoRoot = join(process.cwd(), '..')
+    const repoRoot = vms2GlFixtureRoot
     const mapStyleUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/main/map_style.js')).href
     const tilesUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/tiles.js')).href
 
     const childScript = `
-      globalThis.window = globalThis
-      globalThis.navigator = { userAgent: 'node', hardwareConcurrency: 8 }
+      ${getBrowserGlobalsScript()}
       globalThis.Worker = class {
         constructor () {
           this.onmessage = null
@@ -231,13 +262,12 @@ describe('vms2.gl tile loading', () => {
   })
 
   it('uses database tile size only as a same-retrieval-time eviction tie-breaker', () => {
-    const repoRoot = join(process.cwd(), '..')
+    const repoRoot = vms2GlFixtureRoot
     const mapStyleUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/main/map_style.js')).href
     const tilesUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/tiles.js')).href
 
     const childScript = `
-      globalThis.window = globalThis
-      globalThis.navigator = { userAgent: 'node', hardwareConcurrency: 8 }
+      ${getBrowserGlobalsScript()}
       globalThis.Worker = class {
         constructor () {
           this.onmessage = null
@@ -331,7 +361,7 @@ describe('vms2.gl tile loading', () => {
   })
 
   it('keeps shared layout tiles alive across a zoom transition', () => {
-    const repoRoot = join(process.cwd(), '..')
+    const repoRoot = vms2GlFixtureRoot
     const mapStyleUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/main/map_style.js')).href
     const tilesUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/tiles.js')).href
 
@@ -339,10 +369,9 @@ describe('vms2.gl tile loading', () => {
       import { createRequire } from 'node:module'
 
       const require = createRequire(import.meta.url)
-      const { buildTileResponseBuffer } = require('./get_tile.js')
+      const { buildTileResponseBuffer } = require(${JSON.stringify(join(repoRoot, 'get_tile.js'))})
 
-      globalThis.window = globalThis
-      globalThis.navigator = { userAgent: 'node', hardwareConcurrency: 8 }
+      ${getBrowserGlobalsScript()}
 
       const decodeModule = await import('./vms2.gl/modules/tile_decode.js?probe=' + Date.now())
       const convertModule = await import('./vms2.gl/modules/tile_geometry.js?probe=' + Date.now())
@@ -392,7 +421,7 @@ describe('vms2.gl tile loading', () => {
 
       const { processMapStyle } = await import(${JSON.stringify(mapStyleUrl)})
       const { updateMap } = await import(${JSON.stringify(tilesUrl)} + '?test=' + Date.now())
-      const styleJson = require('./styles/locr-0099-300-svg.json')
+      const styleJson = require(${JSON.stringify(join(repoRoot, 'styles/locr-0099-300-svg.json'))})
 
       const style = processMapStyle({
         Order: ['building', 'buildingCasing'],
@@ -451,13 +480,12 @@ describe('vms2.gl tile loading', () => {
   })
 
   it('keeps the previous lower-detail cache visible when the next detail bucket is empty', () => {
-    const repoRoot = join(process.cwd(), '..')
+    const repoRoot = vms2GlFixtureRoot
     const mapStyleUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/main/map_style.js')).href
     const tilesUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/tiles.js')).href
 
     const childScript = `
-      globalThis.window = globalThis
-      globalThis.navigator = { userAgent: 'node', hardwareConcurrency: 8 }
+      ${getBrowserGlobalsScript()}
 
       class FakeWorker {
         constructor () {
