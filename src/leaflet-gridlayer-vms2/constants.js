@@ -14,6 +14,7 @@ export const DEFAULT_TILE_URL = 'https://vms2.locr.com/api/tile/{z}/{y}/{x}?k={k
 export const DEFAULT_ASSETS_URL = 'https://vms2.locr.com/api/styles/assets'
 
 export const DEFAULT_MIN_NUMBER_OF_WORKERS = 6
+export const DEFAULT_TILE_CACHE_SIZE = 1000
 export const DEFAULT_TILE_CANVAS_POOL_SIZE = 64
 export const DEFAULT_SAVE_DATA_CANVAS_POOL_SIZE = 8
 

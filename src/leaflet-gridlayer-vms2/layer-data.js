@@ -2,6 +2,7 @@ import {
   isTileLayerDataStale,
   resolveTileLayerData
 } from './tile-requests.js'
+import { touchCachedTile } from './context.js'
 
 const DETAIL_ZOOMS_BY_LAYER = {
   terrain: [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 12],
@@ -140,7 +141,8 @@ const layerDataMethods = {
     const tileWeight = Math.pow(4, 16 - z)
     let matchingTilesWeight = 0
 
-    const layerMap = globalThis.vms2Context.tileCacheLayerMaps[layerId]
+    const context = globalThis.vms2Context
+    const layerMap = context?.tileCacheLayerMaps?.[layerId]
 
     if (layerMap) {
       for (const keyValuePair of layerMap) {
@@ -159,6 +161,8 @@ const layerDataMethods = {
         }
 
         if (tileCoordinateMatch) {
+          touchCachedTile(context, layerId, keyValuePair[0])
+
           if (!tileLayer.tileIds.has(keyValuePair[0])) {
             for (const obj of keyValuePair[1].objects) {
               tileLayer.objects.push(obj)

@@ -5,10 +5,85 @@ import 'jsdom-global/register.js'
 
 import setupMethods from '../src/leaflet-gridlayer-vms2/setup.js'
 import lifecycleMethods from '../src/leaflet-gridlayer-vms2/lifecycle.js'
+import layerDataMethods from '../src/leaflet-gridlayer-vms2/layer-data.js'
 import resourceLoaderMethods from '../src/leaflet-gridlayer-vms2/resource-loader.js'
 import mathMethods from '../src/leaflet-gridlayer-vms2/math.js'
+import { cacheDecodedTile } from '../src/leaflet-gridlayer-vms2/context.js'
+
+function createTileCacheContext (tileCacheSize) {
+  return {
+    tileCache: new Map(),
+    tileCacheSize,
+    tileCacheLayerMaps: {}
+  }
+}
+
+function createDecodedTile (x, y, z, detailZoom, objects) {
+  return {
+    x,
+    y,
+    z,
+    dZ: detailZoom,
+    tOs: objects
+  }
+}
+
+function getCachedTileKeys (context, layerId) {
+  return Array.from(context.tileCacheLayerMaps[layerId]?.keys() || []).sort()
+}
 
 describe('tile handling', () => {
+  it('keeps recently read cached tiles when the tile cache is trimmed', () => {
+    const previousVms2Context = globalThis.vms2Context
+    const context = createTileCacheContext(2)
+
+    globalThis.vms2Context = context
+
+    try {
+      cacheDecodedTile(context, 'roads', createDecodedTile(0, 0, 2, 2, ['first']))
+      cacheDecodedTile(context, 'roads', createDecodedTile(1, 0, 2, 2, ['second']))
+
+      const tileLayer = {
+        tileCanvas: { hasBeenRemoved: false },
+        tileIds: new Set(),
+        objects: []
+      }
+
+      expect(layerDataMethods._getCachedTile('roads', 0, 0, 2, tileLayer)).to.equal(true)
+      expect(tileLayer.objects).to.deep.equal(['first'])
+
+      cacheDecodedTile(context, 'roads', createDecodedTile(2, 0, 2, 2, ['third']))
+
+      expect(getCachedTileKeys(context, 'roads')).to.deep.equal([
+        '0|0|2|2',
+        '2|0|2|2'
+      ])
+    } finally {
+      if (typeof previousVms2Context === 'undefined') {
+        delete globalThis.vms2Context
+      } else {
+        globalThis.vms2Context = previousVms2Context
+      }
+    }
+  })
+
+  it('refreshes existing cached tiles without leaving duplicate eviction records', () => {
+    const context = createTileCacheContext(3)
+
+    cacheDecodedTile(context, 'roads', createDecodedTile(0, 0, 2, 2, ['first']))
+    cacheDecodedTile(context, 'roads', createDecodedTile(1, 0, 2, 2, ['second']))
+    cacheDecodedTile(context, 'roads', createDecodedTile(0, 0, 2, 2, ['first updated']))
+    cacheDecodedTile(context, 'roads', createDecodedTile(2, 0, 2, 2, ['third']))
+    cacheDecodedTile(context, 'roads', createDecodedTile(3, 0, 2, 2, ['fourth']))
+
+    expect(getCachedTileKeys(context, 'roads')).to.deep.equal([
+      '0|0|2|2',
+      '2|0|2|2',
+      '3|0|2|2'
+    ])
+    expect(context.tileCacheLayerMaps.roads.get('0|0|2|2').objects).to.deep.equal(['first updated'])
+  })
+
   it('loads tile DB infos once and resolves queued callers with the fetched data', async () => {
     const previousFetch = globalThis.fetch
     const previousWindow = globalThis.window

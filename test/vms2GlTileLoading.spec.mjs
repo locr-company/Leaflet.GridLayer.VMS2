@@ -84,6 +84,252 @@ describe('vms2.gl tile loading', () => {
     expect(Number(result.stdout.trim())).to.be.greaterThan(1)
   })
 
+  it('invalidates cached tiles when the tile URL changes without moving the view', () => {
+    const repoRoot = join(process.cwd(), '..')
+    const mapStyleUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/main/map_style.js')).href
+    const tilesUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/tiles.js')).href
+
+    const childScript = `
+      globalThis.window = globalThis
+      globalThis.navigator = { userAgent: 'node', hardwareConcurrency: 8 }
+      globalThis.Worker = class {
+        constructor () {
+          this.onmessage = null
+          this.onerror = null
+        }
+
+        postMessage () {}
+
+        terminate () {}
+      }
+
+      const urls = []
+      globalThis.fetch = async (url) => {
+        urls.push(String(url))
+
+        return {
+          ok: true,
+          arrayBuffer: async () => new ArrayBuffer(0)
+        }
+      }
+
+      const { processMapStyle } = await import(${JSON.stringify(mapStyleUrl)})
+      const { updateMap } = await import(${JSON.stringify(tilesUrl)} + '?test=' + Date.now())
+
+      const style = processMapStyle({
+        Order: ['roads'],
+        Layers: {
+          roads: {
+            LayoutLayers: ['roads'],
+            ZoomRange: [0, 100]
+          }
+        }
+      })
+
+      const base = {
+        latitude: 0,
+        longitude: 0,
+        zoom: 2,
+        width: 256,
+        height: 256,
+        tileSizePower: 9,
+        style,
+        userMapScale: 1,
+        objectScale: 1,
+        detailOffset: 0,
+        zoomRangeOffset: 0
+      }
+
+      updateMap({ ...base, tileUrl: 'https://first.example/tiles?x={x}&y={y}&z={z}' }, () => {})
+      updateMap({ ...base, tileUrl: 'https://second.example/tiles?x={x}&y={y}&z={z}' }, () => {})
+
+      console.log(JSON.stringify(urls))
+    `
+
+    const result = runChildScript(childScript, repoRoot)
+
+    expect(result.status, result.stderr).to.equal(0)
+
+    const urls = JSON.parse(result.stdout.trim())
+    expect(urls.some(url => url.startsWith('https://first.example/'))).to.equal(true)
+    expect(urls.some(url => url.startsWith('https://second.example/'))).to.equal(true)
+  })
+
+  it('retries a transient tile fetch failure instead of marking the tile fetched', () => {
+    const repoRoot = join(process.cwd(), '..')
+    const mapStyleUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/main/map_style.js')).href
+    const tilesUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/tiles.js')).href
+
+    const childScript = `
+      globalThis.window = globalThis
+      globalThis.navigator = { userAgent: 'node', hardwareConcurrency: 8 }
+      globalThis.Worker = class {
+        constructor () {
+          this.onmessage = null
+          this.onerror = null
+        }
+
+        postMessage () {}
+
+        terminate () {}
+      }
+
+      let fetchCount = 0
+      globalThis.fetch = async () => {
+        fetchCount++
+        if (fetchCount === 1) {
+          return {
+            ok: false,
+            status: 503,
+            statusText: 'Service Unavailable'
+          }
+        }
+
+        return {
+          ok: true,
+          arrayBuffer: async () => new ArrayBuffer(0)
+        }
+      }
+
+      const { processMapStyle } = await import(${JSON.stringify(mapStyleUrl)})
+      const { updateMap } = await import(${JSON.stringify(tilesUrl)} + '?test=' + Date.now())
+
+      const style = processMapStyle({
+        Order: ['roads'],
+        Layers: {
+          roads: {
+            LayoutLayers: ['roads'],
+            ZoomRange: [0, 100]
+          }
+        }
+      })
+
+      updateMap({
+        latitude: 0,
+        longitude: 0,
+        zoom: 2,
+        width: 256,
+        height: 256,
+        tileSizePower: 9,
+        style,
+        userMapScale: 1,
+        objectScale: 1,
+        detailOffset: 0,
+        zoomRangeOffset: 0,
+        tileUrl: 'https://example.com/tiles?x={x}&y={y}&z={z}'
+      }, () => {})
+
+      await new Promise(resolve => setTimeout(resolve, 1200))
+
+      console.log(String(fetchCount))
+    `
+
+    const result = runChildScript(childScript, repoRoot)
+
+    expect(result.status, result.stderr).to.equal(0)
+    expect(Number(result.stdout.trim())).to.be.greaterThan(1)
+  })
+
+  it('uses database tile size only as a same-retrieval-time eviction tie-breaker', () => {
+    const repoRoot = join(process.cwd(), '..')
+    const mapStyleUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/main/map_style.js')).href
+    const tilesUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/tiles.js')).href
+
+    const childScript = `
+      globalThis.window = globalThis
+      globalThis.navigator = { userAgent: 'node', hardwareConcurrency: 8 }
+      globalThis.Worker = class {
+        constructor () {
+          this.onmessage = null
+          this.onerror = null
+        }
+
+        postMessage () {}
+
+        terminate () {}
+      }
+
+      function makeTileBuffer (entries) {
+        const totalLength = 4 + entries.reduce((sum, entry) => sum + 20 + entry.data.length, 0)
+        const buffer = new ArrayBuffer(totalLength)
+        const view = new DataView(buffer)
+        let offset = 0
+
+        view.setUint32(offset, entries.length, true)
+        offset += 4
+
+        for (const entry of entries) {
+          view.setUint32(offset, entry.x, true)
+          offset += 4
+          view.setUint32(offset, entry.y, true)
+          offset += 4
+          view.setUint32(offset, entry.z, true)
+          offset += 4
+          view.setUint32(offset, entry.detailZoom, true)
+          offset += 4
+          view.setUint32(offset, entry.data.length, true)
+          offset += 4
+          new Uint8Array(buffer, offset, entry.data.length).set(entry.data)
+          offset += entry.data.length
+        }
+
+        return buffer
+      }
+
+      globalThis.fetch = async (url) => {
+        const parsed = new URL(url)
+        const [x, y, z] = parsed.searchParams.get('xyzkvt').split(',').slice(0, 3).map(Number)
+
+        return {
+          ok: true,
+          arrayBuffer: async () => makeTileBuffer([
+            { x: Math.floor(x / 2), y: Math.floor(y / 2), z: z - 1, detailZoom: 2, data: new Uint8Array([1]) },
+            { x, y, z, detailZoom: 2, data: new Uint8Array([2]) },
+            { x: x * 2, y: y * 2, z: z + 1, detailZoom: 2, data: new Uint8Array([3]) }
+          ])
+        }
+      }
+
+      const { processMapStyle } = await import(${JSON.stringify(mapStyleUrl)})
+      const { dataTilesCache, updateMap } = await import(${JSON.stringify(tilesUrl)} + '?test=' + Date.now())
+      dataTilesCache.maxSize = 2
+
+      const style = processMapStyle({
+        Order: ['roads'],
+        Layers: {
+          roads: {
+            LayoutLayers: ['roads'],
+            ZoomRange: [0, 100]
+          }
+        }
+      })
+
+      updateMap({
+        latitude: 0,
+        longitude: 0,
+        zoom: 2,
+        width: 1,
+        height: 1,
+        tileSizePower: 9,
+        style,
+        userMapScale: 1,
+        objectScale: 1,
+        detailOffset: 0,
+        zoomRangeOffset: 0,
+        tileUrl: 'https://example.com/tiles?xyzkvt={x},{y},{z},{key},{value},{type}'
+      }, () => {})
+
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      console.log(JSON.stringify(Array.from(dataTilesCache.values()).map(tile => tile.z).sort((a, b) => a - b)))
+    `
+
+    const result = runChildScript(childScript, repoRoot)
+
+    expect(result.status, result.stderr).to.equal(0)
+    expect(JSON.parse(result.stdout.trim())).to.deep.equal([1, 2])
+  })
+
   it('keeps shared layout tiles alive across a zoom transition', () => {
     const repoRoot = join(process.cwd(), '..')
     const mapStyleUrl = pathToFileURL(join(repoRoot, 'vms2.gl/modules/main/map_style.js')).href
