@@ -32,6 +32,36 @@ function getCachedTileKeys (context, layerId) {
   return Array.from(context.tileCacheLayerMaps[layerId]?.keys() || []).sort()
 }
 
+function createPruneLayer (zoomPowerBase, zoom, tiles) {
+  const removedTiles = []
+  const layer = {
+    _map: {
+      getZoom: () => zoom
+    },
+    _tiles: tiles,
+    options: {
+      zoomPowerBase,
+      zoomStep: Math.log2(zoomPowerBase),
+      minZoom: -Infinity,
+      maxZoom: Infinity
+    },
+    _removeAllTiles: function () {
+      for (const key of Object.keys(this._tiles)) {
+        this._removeTile(key)
+      }
+    },
+    _removeTile: function (key) {
+      removedTiles.push(key)
+      delete this._tiles[key]
+    }
+  }
+
+  return {
+    layer,
+    removedTiles
+  }
+}
+
 describe('tile handling', () => {
   it('keeps recently read cached tiles when the tile cache is trimmed', () => {
     const previousVms2Context = globalThis.vms2Context
@@ -255,6 +285,58 @@ describe('tile handling', () => {
     expect(layer.tileCanvases[0]).to.equal(tileCanvas)
     expect(reusableCanvas1.width).to.equal(0)
     expect(reusableCanvas2.width).to.equal(0)
+  })
+
+  it('keeps a custom zoom-base fallback tile while an overlapping current neighbor is inactive', () => {
+    const { layer, removedTiles } = createPruneLayer(4, 1, {
+      fallback: {
+        coords: { x: 0, y: 0, z: 0 },
+        current: false,
+        active: true,
+        loaded: true
+      },
+      currentActive: {
+        coords: { x: 0, y: 0, z: 1 },
+        current: true,
+        active: true
+      },
+      currentLoadingNeighbor: {
+        coords: { x: 1, y: 0, z: 1 },
+        current: true,
+        active: false
+      }
+    })
+
+    lifecycleMethods._pruneTiles.call(layer)
+
+    expect(removedTiles).to.deep.equal([])
+    expect(layer._tiles.fallback.retain).to.equal(true)
+  })
+
+  it('prunes a custom zoom-base fallback tile after overlapping current neighbors are active', () => {
+    const { layer, removedTiles } = createPruneLayer(4, 1, {
+      fallback: {
+        coords: { x: 0, y: 0, z: 0 },
+        current: false,
+        active: true,
+        loaded: true
+      },
+      currentActive: {
+        coords: { x: 0, y: 0, z: 1 },
+        current: true,
+        active: true
+      },
+      currentActiveNeighbor: {
+        coords: { x: 1, y: 0, z: 1 },
+        current: true,
+        active: true
+      }
+    })
+
+    lifecycleMethods._pruneTiles.call(layer)
+
+    expect(removedTiles).to.deep.equal(['fallback'])
+    expect(layer._tiles).not.to.have.property('fallback')
   })
 
   it('releases a tile canvas when drawing exits after tile removal', async () => {

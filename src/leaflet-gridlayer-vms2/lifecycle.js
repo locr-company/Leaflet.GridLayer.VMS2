@@ -1,5 +1,4 @@
 /* eslint-disable no-underscore-dangle */
-/* global L */
 
 import { DEFAULT_ZOOM_POWER_BASE } from './constants.js'
 import {
@@ -7,6 +6,26 @@ import {
   cancelQueuedTileRequestsForCanvas,
   trimTileCanvasPool
 } from './tile-requests.js'
+
+function getNormalizedTileBounds (coords, zoomPowerBase) {
+  const scale = Math.pow(zoomPowerBase, coords.z)
+
+  return {
+    minX: coords.x / scale,
+    maxX: (coords.x + 1) / scale,
+    minY: coords.y / scale,
+    maxY: (coords.y + 1) / scale
+  }
+}
+
+function normalizedBoundsOverlap (bounds1, bounds2) {
+  return (
+    bounds1.minX < bounds2.maxX &&
+    bounds1.maxX > bounds2.minX &&
+    bounds1.minY < bounds2.maxY &&
+    bounds1.maxY > bounds2.minY
+  )
+}
 
 const lifecycleMethods = {
   _pruneTilesOld: function () {
@@ -61,60 +80,40 @@ const lifecycleMethods = {
       return
     }
 
-    const mapBounds = this._map.getBounds()
+    const maxRetainedZoomDistance = 2 / this.options.zoomStep
+    const currentTileInfos = []
+    const fallbackTileInfos = []
 
     for (const key in this._tiles) {
       const tile = this._tiles[key]
       const coords = tile.coords
 
-      tile.retain = true
+      tile.retain = tile.current
 
-      if (!tile.current) {
-        if (coords.z - zoom > 2 / this.options.zoomStep || zoom - coords.z > 2 / this.options.zoomStep) {
-          tile.retain = false
-        } else {
-          const latitudeMin = this._tileToLatitude(coords.y + 1, coords.z, this.options.zoomPowerBase)
-          const longitudeMin = this._tileToLongitude(coords.x, coords.z, this.options.zoomPowerBase)
-          const latitudeMax = this._tileToLatitude(coords.y, coords.z, this.options.zoomPowerBase)
-          const longitudeMax = this._tileToLongitude(coords.x + 1, coords.z, this.options.zoomPowerBase)
+      const tileInfo = {
+        tile,
+        bounds: getNormalizedTileBounds(coords, this.options.zoomPowerBase)
+      }
 
-          tile.bounds = L.latLngBounds([latitudeMin, longitudeMin], [latitudeMax, longitudeMax])
-
-          if (!(
-            tile.bounds._southWest.lat < mapBounds._northEast.lat &&
-            tile.bounds._northEast.lat > mapBounds._southWest.lat &&
-            tile.bounds._southWest.lng < mapBounds._northEast.lng &&
-            tile.bounds._northEast.lng > mapBounds._southWest.lng
-          )) {
-            tile.retain = false
-          }
-        }
+      if (tile.current) {
+        currentTileInfos.push(tileInfo)
+      } else if (
+        (tile.active || tile.loaded) &&
+        Math.abs(coords.z - zoom) <= maxRetainedZoomDistance
+      ) {
+        fallbackTileInfos.push(tileInfo)
       }
     }
 
-    for (const key1 in this._tiles) {
-      const tile1 = this._tiles[key1]
-
-      if (!tile1.current || !tile1.retain) {
-        continue
-      }
-
-      for (const key2 in this._tiles) {
-        if (key2 === key1) {
-          continue
-        }
-
-        const tile2 = this._tiles[key2]
-
+    for (const fallbackTileInfo of fallbackTileInfos) {
+      for (const currentTileInfo of currentTileInfos) {
         if (
-          !tile2.current &&
-          tile2.retain &&
-          tile2.bounds._northEast.lat < tile1.bounds._northEast.lat &&
-          tile2.bounds._southWest.lat > tile1.bounds._southWest.lat &&
-          tile2.bounds._northEast.lng < tile1.bounds._northEast.lng &&
-          tile2.bounds._southWest.lng > tile1.bounds._southWest.lng
+          !currentTileInfo.tile.active &&
+          normalizedBoundsOverlap(fallbackTileInfo.bounds, currentTileInfo.bounds)
         ) {
-          tile2.retain = false
+          fallbackTileInfo.tile.retain = true
+
+          break
         }
       }
     }
