@@ -157,6 +157,8 @@ const resourceLoaderMethods = {
         }
       }
 
+      const fontUrl = this.options.assetsUrl + '/fonts/' + fontName
+
       if (globalThis.vms2Context.fontFaceCache[fontName]) {
         if (globalThis.vms2Context.fontFaceCache[fontName].isLoading) {
           globalThis.vms2Context.fontFaceCache[fontName].resolveFunctions.push(resolve)
@@ -169,13 +171,18 @@ const resourceLoaderMethods = {
 
       const font = new FontFace(
         style.FontFamily,
-        'url(\'' + this.options.assetsUrl + '/fonts/' + fontName + '\')',
+        'url(\'' + fontUrl + '\')',
         { style: fontStyle, weight: fontWeight }
       )
 
       globalThis.vms2Context.fontFaceCache[fontName] = {
         isLoading: true,
-        resolveFunctions: [resolve]
+        resolveFunctions: [resolve],
+        family: style.FontFamily,
+        fontName,
+        url: fontUrl,
+        style: fontStyle,
+        weight: fontWeight
       }
 
       font.load()
@@ -192,6 +199,8 @@ const resourceLoaderMethods = {
           globalThis.vms2Context.fontFaceCache[fontName].resolveFunctions = []
         })
         .catch(() => {
+          globalThis.vms2Context.fontFaceCache[fontName].isLoading = false
+
           for (const resolveFunction of globalThis.vms2Context.fontFaceCache[fontName].resolveFunctions) {
             if (resolveFunction) {
               resolveFunction()
