@@ -71,18 +71,22 @@ export function cancelQueuedTileRequestsForCanvas (context, tileCanvas) {
   }
 
   if (Array.isArray(context.decodeQueue)) {
-    let writeIndex = 0
+    const nextDecodeQueue = []
 
     for (const decodeEntry of context.decodeQueue) {
+      if (!decodeEntry) {
+        continue
+      }
+
       if (decodeEntry.tileLayerData.tileCanvas === tileCanvas) {
         decodeEntry.resolve()
       } else {
-        context.decodeQueue[writeIndex] = decodeEntry
-        writeIndex++
+        nextDecodeQueue.push(decodeEntry)
       }
     }
 
-    context.decodeQueue.length = writeIndex
+    context.decodeQueue = nextDecodeQueue
+    context.decodeQueueCursor = 0
   }
 
   if (!context.tileLayerRequestInfos) {
@@ -91,21 +95,25 @@ export function cancelQueuedTileRequestsForCanvas (context, tileCanvas) {
 
   for (const requestKey in context.tileLayerRequestInfos) {
     const tileLayerRequestInfo = context.tileLayerRequestInfos[requestKey]
-    let writeIndex = 0
+    const nextTileInfos = []
 
     for (const tileInfo of tileLayerRequestInfo.tileInfos) {
+      if (!tileInfo) {
+        continue
+      }
+
       const tileLayerData = tileInfo.tileLayerData
 
       if (tileLayerData.tileCanvas === tileCanvas) {
         tileLayerData.tileCount = Math.max(tileLayerData.tileCount - 1, 0)
         resolveTileLayerData(tileLayerData)
       } else {
-        tileLayerRequestInfo.tileInfos[writeIndex] = tileInfo
-        writeIndex++
+        nextTileInfos.push(tileInfo)
       }
     }
 
-    tileLayerRequestInfo.tileInfos.length = writeIndex
+    tileLayerRequestInfo.tileInfos = nextTileInfos
+    tileLayerRequestInfo.tileInfoCursor = 0
   }
 }
 

@@ -48,6 +48,37 @@ function ensureTileCacheLayerMap (context, layerId) {
   return layerMap
 }
 
+export function dequeueDecodeQueueEntry (context) {
+  if (!context || !Array.isArray(context.decodeQueue) || context.decodeQueue.length === 0) {
+    return null
+  }
+
+  let cursor = context.decodeQueueCursor ?? 0
+
+  while (cursor < context.decodeQueue.length) {
+    const decodeEntry = context.decodeQueue[cursor]
+
+    context.decodeQueue[cursor] = null
+    cursor++
+
+    if (decodeEntry) {
+      context.decodeQueueCursor = cursor
+
+      if (context.decodeQueueCursor > 32 && context.decodeQueueCursor * 2 >= context.decodeQueue.length) {
+        context.decodeQueue = context.decodeQueue.slice(context.decodeQueueCursor).filter(Boolean)
+        context.decodeQueueCursor = 0
+      }
+
+      return decodeEntry
+    }
+  }
+
+  context.decodeQueue.length = 0
+  context.decodeQueueCursor = 0
+
+  return null
+}
+
 function trimTileCache (context) {
   const tileCache = ensureTileCache(context)
   const tileCacheSize = normalizeTileCacheSize(context.tileCacheSize)
@@ -124,6 +155,7 @@ function createVms2Context () {
     decodeWorkers: [],
     decodeWorkersRunning: 0,
     decodeQueue: [],
+    decodeQueueCursor: 0,
 
     styleRequestQueues: {},
 
@@ -143,18 +175,33 @@ function createVms2Context () {
 }
 
 function handleDecodeWorkerMessage (event) {
-  const context = globalThis.vms2Context
+  const decodeWorker = event.target
+  const payload = event.data
 
-  for (const tileData of event.data.tDs) {
-    cacheDecodedTile(context, event.data.lId, tileData)
+  if (!payload || payload.error) {
+    if (typeof decodeWorker.rejectFunction === 'function') {
+      decodeWorker.rejectFunction(payload?.error || new Error('Tile decode failed'))
+    }
+
+    return
   }
 
-  const resolveFunction = event.target.resolveFunction
+  const context = globalThis.vms2Context
 
-  event.target.resolveFunction = null
+  for (const tileData of payload.tDs || []) {
+    cacheDecodedTile(context, payload.lId, tileData)
+  }
 
-  if (resolveFunction) {
-    resolveFunction()
+  if (typeof decodeWorker.resolveFunction === 'function') {
+    decodeWorker.resolveFunction()
+  }
+}
+
+function handleDecodeWorkerError (event) {
+  const decodeWorker = event.target
+
+  if (typeof decodeWorker.rejectFunction === 'function') {
+    decodeWorker.rejectFunction(event.error || new Error(event.message || 'Tile decode worker failed'))
   }
 }
 
@@ -171,12 +218,19 @@ export function ensureVms2Context (workerUrl) {
   const availableCores = navigator.hardwareConcurrency ?? (DEFAULT_MIN_NUMBER_OF_WORKERS + 1)
   const maxNumberOfWorkers = Math.max(availableCores - 1, DEFAULT_MIN_NUMBER_OF_WORKERS)
 
-  for (let count = 0; count < maxNumberOfWorkers; count++) {
-    const decodeWorker = new Worker(workerUrl)
+  try {
+    for (let count = 0; count < maxNumberOfWorkers; count++) {
+      const decodeWorker = new Worker(workerUrl)
 
-    decodeWorker.onmessage = handleDecodeWorkerMessage
+      decodeWorker.onmessage = handleDecodeWorkerMessage
+      decodeWorker.onerror = handleDecodeWorkerError
 
-    context.decodeWorkers.push(decodeWorker)
+      context.decodeWorkers.push(decodeWorker)
+    }
+  } finally {
+    if (typeof workerUrl === 'string' && workerUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(workerUrl)
+    }
   }
 
   globalThis.vms2Context = context

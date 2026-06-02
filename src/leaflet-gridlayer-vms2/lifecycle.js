@@ -169,6 +169,22 @@ const lifecycleMethods = {
   onRemove: function (map) {
     this._map.off('resize', this._onResize, this)
 
+    if (Array.isArray(this.mapOverlayMarkerDatas)) {
+      for (const marker of this.mapOverlayMarkerDatas) {
+        map.removeLayer(marker)
+      }
+
+      this.mapOverlayMarkerDatas.length = 0
+    }
+
+    if (this.mapOverlayDiv?.isConnected) {
+      this.mapOverlayDiv.remove()
+    }
+
+    if (this.printFormatMaskDiv?.isConnected) {
+      this.printFormatMaskDiv.remove()
+    }
+
     this._removeAllTiles()
     globalThis.L.DomUtil.remove(this._container)
     map._removeZoomLimit(this)

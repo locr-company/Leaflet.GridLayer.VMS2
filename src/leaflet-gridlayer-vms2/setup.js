@@ -24,7 +24,11 @@ const setupMethods = {
   initialize: function (options) {
     initializeLayerState(this)
 
-    ensureVms2Context(this._getWorkerURL(new URL('../decoder.js', import.meta.url)))
+    if (!globalThis.vms2Context) {
+      ensureVms2Context(this._getWorkerURL(new URL('../decoder.js', import.meta.url)))
+    } else {
+      ensureVms2Context()
+    }
 
     globalThis.L.GridLayer.prototype.initialize.call(this, options)
 

@@ -122,10 +122,10 @@ const geojsonMethods = {
         {
           const objectData = createObjectData(properties)
 
-          let arraySize = 4 + 4 + 4
+          let arraySize = 4 + 4
 
           for (const ring of geojsonData.coordinates) {
-            arraySize += ring.length * 4 * 2
+            arraySize += 4 + ring.length * 4 * 2
           }
 
           objectData.geometry = new DataView(new Uint8Array(arraySize).buffer)

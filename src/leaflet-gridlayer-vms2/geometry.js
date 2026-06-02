@@ -576,19 +576,25 @@ const geometryMethods = {
           drawingInfo.isGrid
         ) {
           if (drawingInfo.iconAngle !== 0) {
-            drawingInfo.context.setTransform(
-              new DOMMatrix()
-                .translate((x - drawingInfo.drawingArea.left) * drawingInfo.scale, (drawingInfo.drawingArea.top - y) * drawingInfo.scale)
-                .rotate(drawingInfo.iconAngle * 180 / Math.PI)
-            )
+            drawingInfo.context.save()
 
-            drawingInfo.context.drawImage(
-              drawingInfo.iconImage,
-              iconX * drawingInfo.scale,
-              iconY * drawingInfo.scale,
-              drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.scale,
-              drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.scale
-            )
+            try {
+              drawingInfo.context.setTransform(
+                new DOMMatrix()
+                  .translate((x - drawingInfo.drawingArea.left) * drawingInfo.scale, (drawingInfo.drawingArea.top - y) * drawingInfo.scale)
+                  .rotate(drawingInfo.iconAngle * 180 / Math.PI)
+              )
+
+              drawingInfo.context.drawImage(
+                drawingInfo.iconImage,
+                iconX * drawingInfo.scale,
+                iconY * drawingInfo.scale,
+                drawingInfo.iconWidth * drawingInfo.iconMirrorX * drawingInfo.scale,
+                drawingInfo.iconHeight * drawingInfo.iconMirrorY * drawingInfo.scale
+              )
+            } finally {
+              drawingInfo.context.restore()
+            }
           } else {
             drawingInfo.context.drawImage(
               drawingInfo.iconImage,
@@ -828,35 +834,42 @@ const geometryMethods = {
 
               if (maximumRotationAngleDelta < Math.PI * 2 / 4) {
                 const matrices = []
+                let matrixIndex = 0
 
-                drawingInfo.context.beginGroup(drawingInfo.text)
+                drawingInfo.context.save()
 
-                for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
-                  if (text[characterIndex] !== ' ') {
-                    const matrix = new DOMMatrix()
-                      .translate(
-                        (characterInfos[characterIndex].point.x - drawingInfo.drawingArea.left) * drawingInfo.scale,
-                        (drawingInfo.drawingArea.top - characterInfos[characterIndex].point.y) * drawingInfo.scale
-                      )
-                      .rotate(-characterInfos[characterIndex].rotationAngle * 180 / Math.PI)
+                try {
+                  drawingInfo.context.beginGroup(drawingInfo.text)
 
-                    matrices.push(matrix)
+                  for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
+                    if (text[characterIndex] !== ' ') {
+                      const matrix = new DOMMatrix()
+                        .translate(
+                          (characterInfos[characterIndex].point.x - drawingInfo.drawingArea.left) * drawingInfo.scale,
+                          (drawingInfo.drawingArea.top - characterInfos[characterIndex].point.y) * drawingInfo.scale
+                        )
+                        .rotate(-characterInfos[characterIndex].rotationAngle * 180 / Math.PI)
 
-                    drawingInfo.context.tw = characterInfos[characterIndex].width * drawingInfo.scale
-                    drawingInfo.context.setTransform(matrix)
-                    drawingInfo.context.strokeText(text[characterIndex], 0, 0)
+                      matrices.push(matrix)
+
+                      drawingInfo.context.tw = characterInfos[characterIndex].width * drawingInfo.scale
+                      drawingInfo.context.setTransform(matrix)
+                      drawingInfo.context.strokeText(text[characterIndex], 0, 0)
+                    }
                   }
-                }
 
-                for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
-                  if (text[characterIndex] !== ' ') {
-                    drawingInfo.context.tw = characterInfos[characterIndex].width * drawingInfo.scale
-                    drawingInfo.context.setTransform(matrices.shift())
-                    drawingInfo.context.fillText(text[characterIndex], 0, 0)
+                  for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
+                    if (text[characterIndex] !== ' ') {
+                      drawingInfo.context.tw = characterInfos[characterIndex].width * drawingInfo.scale
+                      drawingInfo.context.setTransform(matrices[matrixIndex++])
+                      drawingInfo.context.fillText(text[characterIndex], 0, 0)
+                    }
                   }
-                }
 
-                drawingInfo.context.endGroup()
+                  drawingInfo.context.endGroup()
+                } finally {
+                  drawingInfo.context.restore()
+                }
               }
             }
           }

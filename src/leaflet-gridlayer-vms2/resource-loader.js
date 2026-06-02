@@ -6,6 +6,7 @@ import {
   isTileLayerDataStale,
   removeTileAbortController
 } from './tile-requests.js'
+import { dequeueDecodeQueueEntry } from './context.js'
 
 function flushQueuedResolvers (entries, handler) {
   while (entries.length > 0) {
@@ -21,11 +22,11 @@ function compileTileWorkerQueue (layer) {
   return function decodeFunction () {
     for (const decodeWorker of globalThis.vms2Context.decodeWorkers) {
       if (!decodeWorker.resolveFunction) {
-        let decodeEntry = globalThis.vms2Context.decodeQueue.shift()
+        let decodeEntry = dequeueDecodeQueueEntry(globalThis.vms2Context)
 
         while (decodeEntry && isTileLayerDataStale(decodeEntry.tileLayerData)) {
           decodeEntry.resolve()
-          decodeEntry = globalThis.vms2Context.decodeQueue.shift()
+          decodeEntry = dequeueDecodeQueueEntry(globalThis.vms2Context)
         }
 
         if (!decodeEntry) {
@@ -34,24 +35,39 @@ function compileTileWorkerQueue (layer) {
 
         decodeWorker.postMessage(decodeEntry.decodeData)
 
+        const finalizeDecodeEntry = (cacheDecodedTile, error) => {
+          try {
+            if (cacheDecodedTile && !isTileLayerDataStale(decodeEntry.tileLayerData)) {
+              layer._getCachedTile(
+                decodeEntry.dataLayerId,
+                decodeEntry.x,
+                decodeEntry.y,
+                decodeEntry.z,
+                decodeEntry.tileLayerData
+              )
+            } else if (error) {
+              console.warn('Tile decode error', error)
+            }
+          } finally {
+            globalThis.vms2Context.decodeWorkersRunning--
+
+            decodeWorker.resolveFunction = null
+            decodeWorker.rejectFunction = null
+
+            decodeEntry.resolve()
+
+            if (globalThis.vms2Context.decodeQueueCursor < globalThis.vms2Context.decodeQueue.length) {
+              decodeFunction()
+            }
+          }
+        }
+
         decodeWorker.resolveFunction = () => {
-          if (!isTileLayerDataStale(decodeEntry.tileLayerData)) {
-            layer._getCachedTile(
-              decodeEntry.dataLayerId,
-              decodeEntry.x,
-              decodeEntry.y,
-              decodeEntry.z,
-              decodeEntry.tileLayerData
-            )
-          }
+          finalizeDecodeEntry(true)
+        }
 
-          globalThis.vms2Context.decodeWorkersRunning--
-
-          decodeEntry.resolve()
-
-          if (globalThis.vms2Context.decodeQueue.length > 0) {
-            decodeFunction()
-          }
+        decodeWorker.rejectFunction = error => {
+          finalizeDecodeEntry(false, error)
         }
 
         globalThis.vms2Context.decodeWorkersRunning++
@@ -349,8 +365,19 @@ const resourceLoaderMethods = {
         return
       }
 
-      x &= ((1 << z) - 1)
-      y &= ((1 << z) - 1)
+      const tileCount = Math.pow(2, z)
+
+      if (!Number.isFinite(tileCount) || tileCount <= 0) {
+        resolve()
+        return
+      }
+
+      x = ((x % tileCount) + tileCount) % tileCount
+
+      if (y < 0 || y >= tileCount) {
+        resolve()
+        return
+      }
 
       const tileLatitudeMin = this._tileToLatitude(y + 1, z)
       const tileLatitudeMax = this._tileToLatitude(y, z)

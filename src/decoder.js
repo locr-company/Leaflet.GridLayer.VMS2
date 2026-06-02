@@ -280,7 +280,17 @@ async function dTO(layerId, tileLayerDatas) {
 }
 
 onmessage = async e => {
-  const { decodedData, transferables } = await dTO(e.data.lId, e.data.datas)
+  try {
+    const { decodedData, transferables } = await dTO(e.data.lId, e.data.datas)
 
-  self.postMessage(decodedData, transferables)
+    self.postMessage(decodedData, transferables)
+  } catch (error) {
+    self.postMessage({
+      lId: e.data.lId,
+      error: {
+        message: error?.message || String(error),
+        stack: error?.stack || ''
+      }
+    })
+  }
 }

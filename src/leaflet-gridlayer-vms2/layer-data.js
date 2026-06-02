@@ -12,6 +12,37 @@ const DETAIL_ZOOMS_BY_LAYER = {
   elevation: [0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 10, 10, 10]
 }
 
+function dequeueTileInfo (tileLayerRequestInfo) {
+  if (!Array.isArray(tileLayerRequestInfo.tileInfos) || tileLayerRequestInfo.tileInfos.length === 0) {
+    return null
+  }
+
+  let cursor = tileLayerRequestInfo.tileInfoCursor ?? 0
+
+  while (cursor < tileLayerRequestInfo.tileInfos.length) {
+    const tileInfo = tileLayerRequestInfo.tileInfos[cursor]
+
+    tileLayerRequestInfo.tileInfos[cursor] = null
+    cursor++
+
+    if (tileInfo) {
+      tileLayerRequestInfo.tileInfoCursor = cursor
+
+      if (tileLayerRequestInfo.tileInfoCursor > 32 && tileLayerRequestInfo.tileInfoCursor * 2 >= tileLayerRequestInfo.tileInfos.length) {
+        tileLayerRequestInfo.tileInfos = tileLayerRequestInfo.tileInfos.slice(tileLayerRequestInfo.tileInfoCursor).filter(Boolean)
+        tileLayerRequestInfo.tileInfoCursor = 0
+      }
+
+      return tileInfo
+    }
+  }
+
+  tileLayerRequestInfo.tileInfos.length = 0
+  tileLayerRequestInfo.tileInfoCursor = 0
+
+  return null
+}
+
 export function getLayerStyleType (layer) {
   if (!layer.Grid && layer.Style) {
     if (layer.Style.IconFunction || layer.Style.TextFunction) {
@@ -58,7 +89,11 @@ const layerDataMethods = {
         const layerLayoutIds = []
 
         if (Array.isArray(layerLayout) && layerLayout.length > 0) {
-          layerLayoutIds.push(layerLayout[0])
+          for (const layerLayoutId of layerLayout) {
+            if (layerLayoutId) {
+              layerLayoutIds.push(layerLayoutId)
+            }
+          }
         } else {
           for (const geometryType in layerLayout) {
             for (const osmKeyName in layerLayout[geometryType]) {
@@ -189,8 +224,9 @@ const layerDataMethods = {
 
     tileLayerRequestInfo.requestInProcess = true
 
-    while (tileLayerRequestInfo.tileInfos.length > 0) {
-      const tileInfo = tileLayerRequestInfo.tileInfos.shift()
+    let tileInfo = dequeueTileInfo(tileLayerRequestInfo)
+
+    while (tileInfo) {
       const tileLayerData = tileInfo.tileLayerData
 
       if (!isTileLayerDataStale(tileLayerData)) {
@@ -206,6 +242,8 @@ const layerDataMethods = {
       tileLayerData.tileCount = Math.max(tileLayerData.tileCount - 1, 0)
 
       resolveTileLayerData(tileLayerData)
+
+      tileInfo = dequeueTileInfo(tileLayerRequestInfo)
     }
 
     tileLayerRequestInfo.requestInProcess = false
@@ -242,7 +280,8 @@ const layerDataMethods = {
       if (!globalThis.vms2Context.tileLayerRequestInfos[tileLayerData.dataLayerId]) {
         globalThis.vms2Context.tileLayerRequestInfos[tileLayerData.dataLayerId] = {
           requestInProcess: false,
-          tileInfos: []
+          tileInfos: [],
+          tileInfoCursor: 0
         }
       }
 

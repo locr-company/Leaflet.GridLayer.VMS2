@@ -45,6 +45,27 @@ function fetchAsDataUrl (urlString) {
   })
 }
 
+function clonePoiDataForMarker (poiData) {
+  const clonedPoiData = {
+    ...poiData,
+    iconData: {
+      ...(poiData.iconData ?? {})
+    }
+  }
+
+  delete clonedPoiData.marker
+
+  if (Array.isArray(poiData.iconData?.iconSize)) {
+    clonedPoiData.iconData.iconSize = [...poiData.iconData.iconSize]
+  }
+
+  if (Array.isArray(poiData.iconData?.iconAnchor)) {
+    clonedPoiData.iconData.iconAnchor = [...poiData.iconData.iconAnchor]
+  }
+
+  return clonedPoiData
+}
+
 const overlayMethods = {
   setPrintFormat: function (printFormat) {
     if (!(printFormat instanceof PrintFormat)) {
@@ -202,28 +223,30 @@ const overlayMethods = {
     removeMapOverlayMarkers(this)
     this.mapOverlayMarkerDatas = []
 
-    if (this.mapOverlayMarkerDatas.length === 0) {
-      const poiDatas = this.mapOverlay.getPoiDatas()
+    const poiDatas = this.mapOverlay.getPoiDatas()
 
-      for (const poiData of poiDatas) {
-        const newPoiData = JSON.parse(JSON.stringify(poiData))
+    for (const poiData of poiDatas) {
+      const newPoiData = clonePoiDataForMarker(poiData)
 
-        newPoiData.iconData.iconSize[0] *= markerScale
-        newPoiData.iconData.iconSize[1] *= markerScale
-        newPoiData.iconData.iconAnchor[0] *= markerScale
-        newPoiData.iconData.iconAnchor[1] *= markerScale
-
-        const latitude = poiData.marker?.getLatLng().lat ?? poiData.latitude
-        const longitude = poiData.marker?.getLatLng().lng ?? poiData.longitude
-        const marker = L.marker([latitude, longitude], { icon: L.icon(newPoiData.iconData) })
-
-        marker.addTo(this._map)
-        marker.dragging.enable()
-
-        this.mapOverlayMarkerDatas.push(marker)
-
-        poiData.marker = marker
+      if (!Array.isArray(newPoiData.iconData.iconSize) || !Array.isArray(newPoiData.iconData.iconAnchor)) {
+        continue
       }
+
+      newPoiData.iconData.iconSize[0] *= markerScale
+      newPoiData.iconData.iconSize[1] *= markerScale
+      newPoiData.iconData.iconAnchor[0] *= markerScale
+      newPoiData.iconData.iconAnchor[1] *= markerScale
+
+      const latitude = poiData.marker?.getLatLng().lat ?? poiData.latitude
+      const longitude = poiData.marker?.getLatLng().lng ?? poiData.longitude
+      const marker = L.marker([latitude, longitude], { icon: L.icon(newPoiData.iconData) })
+
+      marker.addTo(this._map)
+      marker.dragging.enable()
+
+      this.mapOverlayMarkerDatas.push(marker)
+
+      poiData.marker = marker
     }
   },
 
@@ -232,8 +255,6 @@ const overlayMethods = {
       if (!this.mapOverlayDiv.isConnected) {
         this._map.getContainer().appendChild(this.mapOverlayDiv)
       }
-
-      this._updateMapOverlayMarkerDatas()
     } else if (this.mapOverlayDiv.isConnected) {
       this.mapOverlayDiv.remove()
     }
@@ -241,14 +262,14 @@ const overlayMethods = {
     if (this.printFormat) {
       const printFormatSize = this.printFormat.getSize()
 
-      if (this.mapOverlay) {
-        this._updateMapOverlayMarkerDatas()
-      }
-
       this.mapOverlayDiv.innerHTML = this.mapOverlay?.getSvgOverlay({
         width: printFormatSize.width,
         height: printFormatSize.height
       }) ?? ''
+    }
+
+    if (this.mapOverlay) {
+      this._updateMapOverlayMarkerDatas()
     }
   },
 
