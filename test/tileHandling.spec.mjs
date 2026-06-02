@@ -470,4 +470,57 @@ describe('tile handling', () => {
       }
     }
   })
+
+  it('uses the custom zoom base when applying zoom offsets during rendering', async () => {
+    const previousDomMatrix = globalThis.DOMMatrix
+    const zoomStep = 1 / 1024
+    const zoomPowerBase = Math.pow(2, zoomStep)
+    const zoomOffset = -1 / zoomStep
+    let capturedTileInfo = null
+
+    globalThis.DOMMatrix = class DOMMatrix {}
+
+    try {
+      const { default: renderMethods } = await import(`../src/leaflet-gridlayer-vms2/render.js?test=${Date.now()}`)
+
+      const tileCanvas = {
+        width: 512,
+        height: 512,
+        inUse: true,
+        hasBeenRemoved: true
+      }
+      const layer = {
+        ...mathMethods,
+        tileSize: 512,
+        printMapScale: undefined,
+        options: {
+          mapScale: 1,
+          styleOverride: {},
+          zoomOffset,
+          zoomPowerBase
+        },
+        _requestTileDbInfos: async () => [],
+        _requestStyle: async () => ({
+          Order: [],
+          Layers: {},
+          BackgroundColor: [0, 0, 0]
+        }),
+        _getTileLayers: async (canvas, tileInfo) => {
+          capturedTileInfo = { ...tileInfo }
+
+          return {}
+        }
+      }
+
+      await renderMethods._drawTile.call(layer, tileCanvas, { x: 0, y: 0, z: 16 / zoomStep + zoomOffset })
+
+      expect(capturedTileInfo.vms2TileZ).to.equal(16)
+    } finally {
+      if (typeof previousDomMatrix === 'undefined') {
+        delete globalThis.DOMMatrix
+      } else {
+        globalThis.DOMMatrix = previousDomMatrix
+      }
+    }
+  })
 })

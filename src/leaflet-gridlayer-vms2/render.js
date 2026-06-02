@@ -87,7 +87,7 @@ function createDrawingInfo (layer, tileCanvas, tileInfo, userMapScale) {
     mapHeight: tileInfo.height,
 
     userMapScale,
-    objectScale: layer.options.objectScale * userMapScale * Math.pow(2, -layer.options.zoomOffset),
+    objectScale: layer.options.objectScale * userMapScale * Math.pow(layer.options.zoomPowerBase, -layer.options.zoomOffset),
 
     drawingArea: mapArea,
     boundingArea: mapArea,
@@ -287,7 +287,7 @@ const renderMethods = {
       tileInfo.width = tileCanvas.width
       tileInfo.height = tileCanvas.height
 
-      const userMapScale = (tileInfo.mapScale ?? this.printMapScale ?? this.options.mapScale) * Math.pow(2, this.options.zoomOffset)
+      const userMapScale = (tileInfo.mapScale ?? this.printMapScale ?? this.options.mapScale) * Math.pow(this.options.zoomPowerBase, this.options.zoomOffset)
 
       tileInfo.mapBounds = {}
 
