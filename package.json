@@ -1,6 +1,6 @@
 {
   "name": "@locr-company/leaflet-gridlayer-vms2",
-  "version": "1.2.0-beta.2",
+  "version": "1.2.0-beta.3",
   "description": "A Leaflet GridLayer-Plugin for locr VMS2",
   "type": "module",
   "types": "src/Leaflet.GridLayer.VMS2.d.ts",
@@ -41,6 +41,11 @@
     "url": "https://github.com/locr-company/Leaflet.GridLayer.VMS2/issues"
   },
   "homepage": "https://github.com/locr-company/Leaflet.GridLayer.VMS2#readme",
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">= 18.0.0"
   },
