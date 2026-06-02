@@ -159,6 +159,93 @@ describe('tile handling', () => {
     }
   })
 
+  it('hands raw tile buffers to decoder workers as transferables', async () => {
+    const previousFetch = globalThis.fetch
+    const previousWindow = globalThis.window
+    const previousVms2Context = globalThis.vms2Context
+    const rawTileBundle = new ArrayBuffer(24)
+    const rawTileBundleView = new DataView(rawTileBundle)
+    let postedMessage = null
+    let postedTransferables = null
+
+    rawTileBundleView.setUint32(0, 1, true)
+    rawTileBundleView.setUint32(4, 1, true)
+    rawTileBundleView.setUint32(8, 2, true)
+    rawTileBundleView.setUint32(12, 3, true)
+    rawTileBundleView.setUint32(16, 4, true)
+    rawTileBundleView.setUint32(20, 0, true)
+
+    globalThis.window = {
+      location: {
+        origin: 'https://app.example'
+      }
+    }
+
+    globalThis.fetch = async url => {
+      expect(String(url)).to.equal('https://tiles.example/3/2/1?k=amenity&v=school&t=Points')
+
+      return {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        arrayBuffer: async () => rawTileBundle
+      }
+    }
+
+    const decodeWorker = {
+      postMessage: function (message, transferables) {
+        postedMessage = message
+        postedTransferables = transferables
+
+        queueMicrotask(() => {
+          this.resolveFunction()
+        })
+      }
+    }
+
+    globalThis.vms2Context = {
+      decodeWorkers: [decodeWorker],
+      decodeWorkersRunning: 0,
+      decodeQueue: [],
+      decodeQueueCursor: 0
+    }
+
+    const layer = {
+      ...mathMethods,
+      options: {
+        tileUrl: 'https://tiles.example/{z}/{y}/{x}?k={key}&v={value}&t={type}'
+      },
+      tileDbInfos: [],
+      numberOfRequestedTiles: 0,
+      _getCachedTile: () => false
+    }
+
+    const tileLayerData = {
+      tileCanvas: {},
+      dataLayerId: 'amenity|school|Points'
+    }
+
+    try {
+      await resourceLoaderMethods._requestTile.call(layer, 'amenity|school|Points', 1, 2, 3, tileLayerData)
+
+      expect(postedMessage).to.deep.equal({
+        lId: 'amenity|school|Points',
+        rawData: rawTileBundle
+      })
+      expect(postedTransferables).to.deep.equal([rawTileBundle])
+      expect(postedMessage).not.to.have.property('datas')
+    } finally {
+      globalThis.fetch = previousFetch
+      globalThis.window = previousWindow
+
+      if (typeof previousVms2Context === 'undefined') {
+        delete globalThis.vms2Context
+      } else {
+        globalThis.vms2Context = previousVms2Context
+      }
+    }
+  })
+
   it('calls the Leaflet tile callback with render errors and releases the canvas', async () => {
     const renderError = new Error('render failed')
     const layer = {

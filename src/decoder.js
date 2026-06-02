@@ -150,6 +150,45 @@ function isolateUint8Array(data) {
     : data.slice()
 }
 
+function parseTileBundle(rawData) {
+  const rawDataDataView = new DataView(rawData)
+  let rawDataOffset = 0
+  let tileCount = rawDataDataView.getUint32(rawDataOffset, true)
+  const tileLayerDatas = []
+
+  rawDataOffset += 4
+
+  while (tileCount > 0) {
+    const tileX = rawDataDataView.getUint32(rawDataOffset, true)
+    rawDataOffset += 4
+
+    const tileY = rawDataDataView.getUint32(rawDataOffset, true)
+    rawDataOffset += 4
+
+    const tileZ = rawDataDataView.getUint32(rawDataOffset, true)
+    rawDataOffset += 4
+
+    const detailZoom = rawDataDataView.getUint32(rawDataOffset, true)
+    rawDataOffset += 4
+
+    const dataSize = rawDataDataView.getUint32(rawDataOffset, true)
+    rawDataOffset += 4
+
+    tileLayerDatas.push({
+      x: tileX,
+      y: tileY,
+      z: tileZ,
+      dZ: detailZoom,
+      cD: new Uint8Array(rawData, rawDataOffset, dataSize)
+    })
+
+    rawDataOffset += dataSize
+    tileCount--
+  }
+
+  return tileLayerDatas
+}
+
 function createPackedTileObjects(decodedBuffer, objectType, bounds) {
   const isolatedBuffer = isolateUint8Array(decodedBuffer)
   const objectsDataView = new DataView(isolatedBuffer.buffer, 0, isolatedBuffer.byteLength)
@@ -281,7 +320,8 @@ async function dTO(layerId, tileLayerDatas) {
 
 onmessage = async e => {
   try {
-    const { decodedData, transferables } = await dTO(e.data.lId, e.data.datas)
+    const tileLayerDatas = e.data.datas || parseTileBundle(e.data.rawData)
+    const { decodedData, transferables } = await dTO(e.data.lId, tileLayerDatas)
 
     self.postMessage(decodedData, transferables)
   } catch (error) {

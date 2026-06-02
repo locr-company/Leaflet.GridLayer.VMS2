@@ -33,7 +33,7 @@ function compileTileWorkerQueue (layer) {
           return
         }
 
-        decodeWorker.postMessage(decodeEntry.decodeData)
+        decodeWorker.postMessage(decodeEntry.decodeData, decodeEntry.transferables || [])
 
         const finalizeDecodeEntry = (cacheDecodedTile, error) => {
           try {
@@ -445,43 +445,7 @@ const resourceLoaderMethods = {
           return
         }
 
-        const decodeData = { lId: dataLayerId, datas: [] }
-        const rawDataDataView = new DataView(rawData)
-
-        let rawDataOffset = 0
-        let tileCount = rawDataDataView.getUint32(rawDataOffset, true)
-
-        rawDataOffset += 4
-
-        while (tileCount > 0) {
-          const tileX = rawDataDataView.getUint32(rawDataOffset, true)
-          rawDataOffset += 4
-
-          const tileY = rawDataDataView.getUint32(rawDataOffset, true)
-          rawDataOffset += 4
-
-          const tileZ = rawDataDataView.getUint32(rawDataOffset, true)
-          rawDataOffset += 4
-
-          const detailZoom = rawDataDataView.getUint32(rawDataOffset, true)
-          rawDataOffset += 4
-
-          const dataSize = rawDataDataView.getUint32(rawDataOffset, true)
-          rawDataOffset += 4
-
-          decodeData.datas.push({
-            x: tileX,
-            y: tileY,
-            z: tileZ,
-            dZ: detailZoom,
-            cD: this.options.disableDecode === true
-              ? new DataView(new ArrayBuffer())
-              : rawData.slice(rawDataOffset, rawDataOffset + dataSize)
-          })
-
-          rawDataOffset += dataSize
-          tileCount--
-        }
+        const decodeData = { lId: dataLayerId, rawData }
 
         globalThis.vms2Context.decodeQueue.push({
           dataLayerId,
@@ -490,6 +454,7 @@ const resourceLoaderMethods = {
           z,
           tileLayerData,
           decodeData,
+          transferables: [rawData],
           resolve
         })
 
