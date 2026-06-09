@@ -911,6 +911,7 @@ function evaluateNode (node, scope) {
         return left >= right
       }
 
+      /* eslint-disable eqeqeq */
       if (node.operator === '==') {
         return left == right
       }
@@ -918,6 +919,7 @@ function evaluateNode (node, scope) {
       if (node.operator === '!=') {
         return left != right
       }
+      /* eslint-enable eqeqeq */
 
       if (node.operator === '===') {
         return left === right
@@ -940,15 +942,17 @@ function evaluateNode (node, scope) {
       if (node.operator === '||') {
         const left = evaluateNode(node.left, scope)
 
-        return left ? left : evaluateNode(node.right, scope)
+        return left || evaluateNode(node.right, scope)
       }
 
       return undefined
 
     case 'ConditionalExpression':
-      return evaluateNode(node.test, scope)
-        ? evaluateNode(node.consequent, scope)
-        : evaluateNode(node.alternate, scope)
+      if (evaluateNode(node.test, scope)) {
+        return evaluateNode(node.consequent, scope)
+      }
+
+      return evaluateNode(node.alternate, scope)
 
     case 'MemberExpression': {
       const object = evaluateNode(node.object, scope)

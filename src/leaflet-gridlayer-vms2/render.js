@@ -503,11 +503,11 @@ const renderMethods = {
       drawingInfo.context.setTransform(IDENTITY)
       drawingInfo.context.globalCompositeOperation = 'destination-over'
 
-        if (this.options.type !== 'text') {
-          if (mapStyle.BackgroundPatternFunction) {
-            if (typeof mapStyle.BackgroundPatternFunction === 'string') {
-              mapStyle.BackgroundPatternFunction = compileObjectDataExpression(mapStyle.BackgroundPatternFunction)
-            }
+      if (this.options.type !== 'text') {
+        if (mapStyle.BackgroundPatternFunction) {
+          if (typeof mapStyle.BackgroundPatternFunction === 'string') {
+            mapStyle.BackgroundPatternFunction = compileObjectDataExpression(mapStyle.BackgroundPatternFunction)
+          }
 
           const patternName = mapStyle.BackgroundPatternFunction(null, tileInfo.vms2TileZ, this.randomGenerator)
 
@@ -526,19 +526,19 @@ const renderMethods = {
             drawingInfo.context.fillStyle = pattern
             drawingInfo.context.fillRect(0, 0, tileInfo.width, tileInfo.height)
           }
-        } else {
-          if (typeof mapStyle.BackgroundAlpha !== 'number') {
-            mapStyle.BackgroundAlpha = 1
-          }
-
-          drawingInfo.context.fillStyle = '#' + this._hexify32([
-            mapStyle.BackgroundColor[0],
-            mapStyle.BackgroundColor[1],
-            mapStyle.BackgroundColor[2],
-            Math.round(mapStyle.BackgroundAlpha * 255)
-          ])
-          drawingInfo.context.fillRect(0, 0, tileInfo.width, tileInfo.height)
         }
+      } else {
+        if (typeof mapStyle.BackgroundAlpha !== 'number') {
+          mapStyle.BackgroundAlpha = 1
+        }
+
+        drawingInfo.context.fillStyle = '#' + this._hexify32([
+          mapStyle.BackgroundColor[0],
+          mapStyle.BackgroundColor[1],
+          mapStyle.BackgroundColor[2],
+          Math.round(mapStyle.BackgroundAlpha * 255)
+        ])
+        drawingInfo.context.fillRect(0, 0, tileInfo.width, tileInfo.height)
       }
 
       drawingInfo.context.endGroup()
