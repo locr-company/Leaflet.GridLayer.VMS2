@@ -29,7 +29,7 @@ function createDecodedTile (x, y, z, detailZoom, objects) {
 }
 
 function getCachedTileKeys (context, layerId) {
-  return Array.from(context.tileCacheLayerMaps[layerId]?.keys() || []).sort()
+  return Array.from(context.tileCacheLayerMaps[layerId]?.keys() || []).sort((a, b) => a.localeCompare(b))
 }
 
 function createPruneLayer (zoomPowerBase, zoom, tiles) {

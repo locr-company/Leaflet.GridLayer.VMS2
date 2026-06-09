@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced the Cypress launch wrapper with a local runner script so the test harness no longer depends on `start-server-and-test` and its transitive `wait-on`/`axios` chain.
+
 ## [1.2.0-beta.3] - 2026-06-02
 
 ### Added

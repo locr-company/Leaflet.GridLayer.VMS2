@@ -1,4 +1,4 @@
-/* eslint-disable no-new-func, no-underscore-dangle */
+/* eslint-disable no-underscore-dangle */
 /* global DOMMatrix */
 
 import {
@@ -12,6 +12,7 @@ import {
   isTileCanvasStale,
   trimSaveDataCanvasPool
 } from './tile-requests.js'
+import { compileObjectDataExpression, compileSortExpression } from './style-expression.js'
 
 const IDENTITY = new DOMMatrix()
 
@@ -425,7 +426,7 @@ const renderMethods = {
 
         if (layer.SortFunction) {
           if (typeof layer._compiledSortFunction !== 'function') {
-            layer._compiledSortFunction = new Function('a', 'b', 'return (' + layer.SortFunction + ')')
+            layer._compiledSortFunction = compileSortExpression(layer.SortFunction)
           }
 
           mapObjects.sort((a, b) => {
@@ -502,18 +503,11 @@ const renderMethods = {
       drawingInfo.context.setTransform(IDENTITY)
       drawingInfo.context.globalCompositeOperation = 'destination-over'
 
-      if (this.options.type !== 'text') {
-        if (mapStyle.BackgroundPatternFunction) {
-          if (typeof mapStyle.BackgroundPatternFunction === 'string') {
-            mapStyle.BackgroundPatternFunction = new Function(
-              'ObjectData',
-              'MapZoom',
-              'RandomGenerator',
-              'return ' + mapStyle.BackgroundPatternFunction
-                .replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']')
-                .replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
-            )
-          }
+        if (this.options.type !== 'text') {
+          if (mapStyle.BackgroundPatternFunction) {
+            if (typeof mapStyle.BackgroundPatternFunction === 'string') {
+              mapStyle.BackgroundPatternFunction = compileObjectDataExpression(mapStyle.BackgroundPatternFunction)
+            }
 
           const patternName = mapStyle.BackgroundPatternFunction(null, tileInfo.vms2TileZ, this.randomGenerator)
 

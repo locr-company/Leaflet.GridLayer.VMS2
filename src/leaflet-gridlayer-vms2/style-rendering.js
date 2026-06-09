@@ -1,18 +1,8 @@
-/* eslint-disable no-new-func, no-underscore-dangle */
+/* eslint-disable no-underscore-dangle */
 /* global DOMMatrix */
 
 import { DEFAULT_PRINT_DPI } from './constants.js'
-
-function compileObjectDataExpression (expression) {
-  return new Function(
-    'ObjectData',
-    'MapZoom',
-    'RandomGenerator',
-    'return ' + expression
-      .replace(/<tags.([a-z1-9_:]+)>/g, 'ObjectData.tags[\'$1\']')
-      .replace(/<([a-z1-9_:]+)>/g, 'ObjectData.$1')
-  )
-}
+import { compileObjectDataExpression } from './style-expression.js'
 
 function ensureCompiledObjectDataFunction (objectStyle, propertyName) {
   if (typeof objectStyle?.[propertyName] === 'string') {

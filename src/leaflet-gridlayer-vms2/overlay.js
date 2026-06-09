@@ -15,13 +15,39 @@ function removeMapOverlayMarkers (layer) {
   }
 }
 
-function collectSvgUrlStrings (svgString) {
-  const matches = [
-    ...svgString.matchAll(/url\('((https?:\/\/[^\s']+)|(.*\/[^\s']+))'/g),
-    ...svgString.matchAll(/href="((https?:\/\/[^\s"]+)|(.*\/[^\s"]+))"/g)
-  ]
+function collectQuotedUrlStrings (svgString, prefix, quoteCharacter) {
+  const collectedUrlStrings = []
+  let searchIndex = 0
 
-  return [...new Set(matches.map(match => match[1]))]
+  while ((searchIndex = svgString.indexOf(prefix, searchIndex)) !== -1) {
+    const urlStartIndex = searchIndex + prefix.length
+    const urlEndIndex = svgString.indexOf(quoteCharacter, urlStartIndex)
+
+    if (urlEndIndex === -1) {
+      break
+    }
+
+    const urlString = svgString.slice(urlStartIndex, urlEndIndex)
+
+    if (urlString.includes('/')) {
+      collectedUrlStrings.push(urlString)
+    }
+
+    searchIndex = urlEndIndex + 1
+  }
+
+  return collectedUrlStrings
+}
+
+export function collectSvgUrlStrings (svgString) {
+  const matches = new Set([
+    ...collectQuotedUrlStrings(svgString, "url('", "'"),
+    ...collectQuotedUrlStrings(svgString, 'url("', '"'),
+    ...collectQuotedUrlStrings(svgString, 'href="', '"'),
+    ...collectQuotedUrlStrings(svgString, "href='", "'")
+  ])
+
+  return [...matches]
 }
 
 function fetchAsDataUrl (urlString) {
