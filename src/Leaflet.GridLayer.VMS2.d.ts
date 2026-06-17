@@ -89,6 +89,16 @@ declare module 'leaflet' {
              */
             tileUrl?: string;
             /**
+             * @default 8
+             * @description Maximum number of reusable save-data canvases retained after rendering.
+             */
+            saveDataCanvasPoolSize?: number;
+            /**
+             * @default 64
+             * @description Maximum number of reusable tile canvases retained after tile unload.
+             */
+            tileCanvasPoolSize?: number;
+            /**
              * @default 2
              * @description Base value for zoom level calculation. Changing this requires to define a different CRS as well.
              */

@@ -1,6 +1,6 @@
 {
   "name": "@locr-company/leaflet-gridlayer-vms2",
-  "version": "1.2.0-beta.2",
+  "version": "1.2.0-beta.3",
   "description": "A Leaflet GridLayer-Plugin for locr VMS2",
   "type": "module",
   "types": "src/Leaflet.GridLayer.VMS2.d.ts",
@@ -8,11 +8,11 @@
     "cy:run:no-real-data": "node ./node_modules/cypress/bin/cypress run --spec cypress/e2e/empty_map.cy.js,cypress/e2e/map_overlay.cy.js",
     "cy:run:real-data": "node ./node_modules/cypress/bin/cypress run --spec cypress/e2e/default_map.cy.js",
     "cy:run": "node ./node_modules/cypress/bin/cypress run",
-    "cypress-test-no-real-data": "start-server-and-test start-dev-server http://localhost:9876 cy:run:no-real-data",
-    "cypress-test-real-data": "start-server-and-test start-dev-server http://localhost:9876 cy:run:real-data",
-    "cypress-test": "start-server-and-test start-dev-server http://localhost:9876 cy:run",
-    "lint:js": "eslint src/*.js",
-    "lint:standardjs": "npx standard src/Leaflet.GridLayer.VMS2.js src/LocrMapCustomElement.js src/MapOverlay.js src/PrintFormat.js src/unicode.js",
+    "cypress-test-no-real-data": "node ./scripts/run-cypress-with-server.mjs --spec cypress/e2e/empty_map.cy.js,cypress/e2e/map_overlay.cy.js",
+    "cypress-test-real-data": "node ./scripts/run-cypress-with-server.mjs --spec cypress/e2e/default_map.cy.js",
+    "cypress-test": "node ./scripts/run-cypress-with-server.mjs",
+    "lint:js": "eslint src/Leaflet.GridLayer.VMS2.js src/LocrMapCustomElement.js src/MapOverlay.js src/PrintFormat.js src/unicode.js \"src/leaflet-gridlayer-vms2/**/*.js\"",
+    "lint:standardjs": "npx standard src/Leaflet.GridLayer.VMS2.js src/LocrMapCustomElement.js src/MapOverlay.js src/PrintFormat.js src/unicode.js \"src/leaflet-gridlayer-vms2/**/*.js\"",
     "start-dev-server": "node dev-server.mjs",
     "test": "mocha"
   },
@@ -41,6 +41,11 @@
     "url": "https://github.com/locr-company/Leaflet.GridLayer.VMS2/issues"
   },
   "homepage": "https://github.com/locr-company/Leaflet.GridLayer.VMS2#readme",
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">= 18.0.0"
   },
@@ -65,7 +70,6 @@
     "mocha": "^11.2.0",
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
-    "serve-index": "^1.9.1",
-    "start-server-and-test": "2.1.5"
+    "serve-index": "^1.9.1"
   }
 }

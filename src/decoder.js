@@ -1,20 +1,3 @@
-String.prototype.hashCode = function (seed = 0) {
-  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed
-
-  for (let i = 0, ch; i < this.length; i++) {
-    ch = this.charCodeAt(i)
-    h1 = Math.imul(h1 ^ ch, 2654435761)
-    h2 = Math.imul(h2 ^ ch, 1597334677)
-  }
-
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507)
-  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909)
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507)
-  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909)
-
-  return 4294967296 * (2097151 & h2) + (h1 >>> 0)
-}
-
 const print = data => {
   console.log(data)
 }
@@ -143,8 +126,6 @@ async function decompressTileData(encodedData) {
   return new Uint8Array(LZMA.decompress(encodedArray))
 }
 
-const utf8TextDecoder = new TextDecoder('utf-8')
-
 const eRM = 6378137
 
 function tTLa(y_, z_) {
@@ -163,20 +144,138 @@ function loTM(longitude_) {
   return longitude_ * eRM * Math.PI / 180
 }
 
+function isolateUint8Array(data) {
+  return data.byteOffset === 0 && data.byteLength === data.buffer.byteLength
+    ? data
+    : data.slice()
+}
+
+function parseTileBundle(rawData) {
+  const rawDataDataView = new DataView(rawData)
+  let rawDataOffset = 0
+  let tileCount = rawDataDataView.getUint32(rawDataOffset, true)
+  const tileLayerDatas = []
+
+  rawDataOffset += 4
+
+  while (tileCount > 0) {
+    const tileX = rawDataDataView.getUint32(rawDataOffset, true)
+    rawDataOffset += 4
+
+    const tileY = rawDataDataView.getUint32(rawDataOffset, true)
+    rawDataOffset += 4
+
+    const tileZ = rawDataDataView.getUint32(rawDataOffset, true)
+    rawDataOffset += 4
+
+    const detailZoom = rawDataDataView.getUint32(rawDataOffset, true)
+    rawDataOffset += 4
+
+    const dataSize = rawDataDataView.getUint32(rawDataOffset, true)
+    rawDataOffset += 4
+
+    tileLayerDatas.push({
+      x: tileX,
+      y: tileY,
+      z: tileZ,
+      dZ: detailZoom,
+      cD: new Uint8Array(rawData, rawDataOffset, dataSize)
+    })
+
+    rawDataOffset += dataSize
+    tileCount--
+  }
+
+  return tileLayerDatas
+}
+
+function createPackedTileObjects(decodedBuffer, objectType, bounds) {
+  const isolatedBuffer = isolateUint8Array(decodedBuffer)
+  const objectsDataView = new DataView(isolatedBuffer.buffer, 0, isolatedBuffer.byteLength)
+  let objectsDataViewOffset = 0
+
+  const numberOfObjects = objectsDataView.getUint32(objectsDataViewOffset, true)
+  objectsDataViewOffset += 4
+
+  const centers = new Float32Array(numberOfObjects * 2)
+  const envelopes = new Float32Array(numberOfObjects * 4)
+  const infoOffsets = new Uint32Array(numberOfObjects)
+  const infoSizes = new Uint32Array(numberOfObjects)
+  const geometryOffsets = objectType !== 'Points' ? new Uint32Array(numberOfObjects) : null
+  const geometrySizes = objectType !== 'Points' ? new Uint32Array(numberOfObjects) : null
+
+  for (let objectIndex = 0; objectIndex < numberOfObjects; objectIndex++) {
+    const centerOffset = objectIndex * 2
+    const envelopeOffset = objectIndex * 4
+    const centerX = objectsDataView.getFloat32(objectsDataViewOffset, true)
+    objectsDataViewOffset += 4
+    const centerY = objectsDataView.getFloat32(objectsDataViewOffset, true)
+    objectsDataViewOffset += 4
+
+    centers[centerOffset] = centerX
+    centers[centerOffset + 1] = centerY
+
+    envelopes[envelopeOffset] = centerX
+    envelopes[envelopeOffset + 1] = centerY
+    envelopes[envelopeOffset + 2] = centerX
+    envelopes[envelopeOffset + 3] = centerY
+
+    if (objectType !== 'Points') {
+      envelopes[envelopeOffset] = objectsDataView.getFloat32(objectsDataViewOffset, true)
+      objectsDataViewOffset += 4
+
+      envelopes[envelopeOffset + 1] = objectsDataView.getFloat32(objectsDataViewOffset, true)
+      objectsDataViewOffset += 4
+
+      envelopes[envelopeOffset + 2] = objectsDataView.getFloat32(objectsDataViewOffset, true)
+      objectsDataViewOffset += 4
+
+      envelopes[envelopeOffset + 3] = objectsDataView.getFloat32(objectsDataViewOffset, true)
+      objectsDataViewOffset += 4
+    }
+
+    const objectInfoSize = objectsDataView.getUint32(objectsDataViewOffset, true)
+    objectsDataViewOffset += 4
+
+    infoOffsets[objectIndex] = objectsDataViewOffset
+    infoSizes[objectIndex] = objectInfoSize
+    objectsDataViewOffset += objectInfoSize
+
+    if (geometryOffsets && geometrySizes) {
+      const geometrySize = objectsDataView.getUint32(objectsDataViewOffset, true)
+      objectsDataViewOffset += 4
+
+      geometryOffsets[objectIndex] = objectsDataViewOffset
+      geometrySizes[objectIndex] = geometrySize
+      objectsDataViewOffset += geometrySize
+    }
+  }
+
+  return {
+    objectCount: numberOfObjects,
+    bounds,
+    rawBuffer: isolatedBuffer.buffer,
+    centers: centers.buffer,
+    envelopes: envelopes.buffer,
+    infoOffsets: infoOffsets.buffer,
+    infoSizes: infoSizes.buffer,
+    geometryOffsets: geometryOffsets ? geometryOffsets.buffer : null,
+    geometrySizes: geometrySizes ? geometrySizes.buffer : null
+  }
+}
+
 async function dTO(layerId, tileLayerDatas) {
   let decodedData = { lId: layerId, tDs: [] }
+  let transferables = []
+  let layerIdData = layerId.split('|')
+  let objectType = layerIdData[2]
 
   for (let tileLayerData of tileLayerDatas) {
-    let tileObjects = []
-
     if (tileLayerData.cD.byteLength == 0) {
-      decodedData.tDs.push({ x: tileLayerData.x, y: tileLayerData.y, z: tileLayerData.z, dZ: tileLayerData.dZ, tileObjects: null })
+      decodedData.tDs.push({ x: tileLayerData.x, y: tileLayerData.y, z: tileLayerData.z, dZ: tileLayerData.dZ, tOs: null })
 
       continue
     }
-
-    let layerIdData = layerId.split('|')
-    let objectType = layerIdData[2]
 
     let bounds = {
       left: loTM(tTLo(tileLayerData.x, tileLayerData.z)),
@@ -185,78 +284,53 @@ async function dTO(layerId, tileLayerDatas) {
       bottom: laTM(tTLa(tileLayerData.y + 1, tileLayerData.z))
     }
 
-    tileObjects.push({ info: bounds })
+    const packedTileObjects = createPackedTileObjects(
+      await decompressTileData(tileLayerData.cD),
+      objectType,
+      bounds
+    )
 
-    const decodedBuffer = await decompressTileData(tileLayerData.cD)
-    let objectsDataView = new DataView(decodedBuffer.buffer, decodedBuffer.byteOffset, decodedBuffer.byteLength)
-    let objectsDataViewOffset = 0
+    decodedData.tDs.push({
+      x: tileLayerData.x,
+      y: tileLayerData.y,
+      z: tileLayerData.z,
+      dZ: tileLayerData.dZ,
+      packedTileObjects
+    })
 
-    let numberOfObjects = objectsDataView.getUint32(objectsDataViewOffset, true)
-    objectsDataViewOffset += 4
+    transferables.push(
+      packedTileObjects.rawBuffer,
+      packedTileObjects.centers,
+      packedTileObjects.envelopes,
+      packedTileObjects.infoOffsets,
+      packedTileObjects.infoSizes
+    )
 
-    for (let objectIndex = 0; objectIndex < numberOfObjects; objectIndex++) {
-      let center = {}
-
-      center.x = objectsDataView.getFloat32(objectsDataViewOffset, true)
-      objectsDataViewOffset += 4
-
-      center.y = objectsDataView.getFloat32(objectsDataViewOffset, true)
-      objectsDataViewOffset += 4
-
-      let envelope = { left: center.x, bottom: center.y, right: center.x, top: center.y }
-
-      if (objectType != "Points") {
-        envelope.left = objectsDataView.getFloat32(objectsDataViewOffset, true)
-        objectsDataViewOffset += 4
-
-        envelope.bottom = objectsDataView.getFloat32(objectsDataViewOffset, true)
-        objectsDataViewOffset += 4
-
-        envelope.right = objectsDataView.getFloat32(objectsDataViewOffset, true)
-        objectsDataViewOffset += 4
-
-        envelope.top = objectsDataView.getFloat32(objectsDataViewOffset, true)
-        objectsDataViewOffset += 4
-      }
-
-      let objectsInfoBufferSize = objectsDataView.getUint32(objectsDataViewOffset, true)
-      objectsDataViewOffset += 4
-
-      let objectsInfoDataView = new DataView(objectsDataView.buffer, objectsDataView.byteOffset + objectsDataViewOffset, objectsInfoBufferSize)
-      objectsDataViewOffset += objectsInfoBufferSize
-
-      let info = {}
-
-      if (objectsInfoBufferSize > 0) {
-        let infoJson = utf8TextDecoder.decode(new Uint8Array(objectsInfoDataView.buffer, objectsInfoDataView.byteOffset, objectsInfoDataView.byteLength))
-
-        info = JSON.parse(infoJson)
-        info.Hash = infoJson.hashCode()
-      }
-
-      info.Center = center
-      info.Envelope = envelope
-
-      let geometry = null
-
-      if (objectType != "Points") {
-        let geometryBufferSize = objectsDataView.getUint32(objectsDataViewOffset, true)
-        objectsDataViewOffset += 4
-
-        geometry = new DataView(objectsDataView.buffer, objectsDataView.byteOffset + objectsDataViewOffset, geometryBufferSize)
-
-        objectsDataViewOffset += geometryBufferSize
-      }
-
-      tileObjects.push({ info: info, geometry: geometry })
+    if (packedTileObjects.geometryOffsets) {
+      transferables.push(packedTileObjects.geometryOffsets)
     }
 
-    decodedData.tDs.push({ x: tileLayerData.x, y: tileLayerData.y, z: tileLayerData.z, dZ: tileLayerData.dZ, tOs: tileObjects })
+    if (packedTileObjects.geometrySizes) {
+      transferables.push(packedTileObjects.geometrySizes)
+    }
   }
 
-  return decodedData
+  return { decodedData, transferables }
 }
 
 onmessage = async e => {
-  self.postMessage(await dTO(e.data.lId, e.data.datas))
+  try {
+    const tileLayerDatas = e.data.datas || parseTileBundle(e.data.rawData)
+    const { decodedData, transferables } = await dTO(e.data.lId, tileLayerDatas)
+
+    self.postMessage(decodedData, transferables)
+  } catch (error) {
+    self.postMessage({
+      lId: e.data.lId,
+      error: {
+        message: error?.message || String(error),
+        stack: error?.stack || ''
+      }
+    })
+  }
 }

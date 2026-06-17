@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced the Cypress launch wrapper with a local runner script so the test harness no longer depends on `start-server-and-test` and its transitive `wait-on`/`axios` chain.
+
+## [1.2.0-beta.3] - 2026-06-02
+
+### Added
+
+- Tile bundle parsing and transferable handling for decoder workers.
+- Tile info dequeueing and improved error handling in the decoding pipeline.
+- Font asset URL construction and richer metadata during resource loading.
+- Tile caching and pruning logic with fallback handling.
+
+### Changed
+
+- Refined object scale calculation to use the custom zoom power base.
+- Refactored tile loading, request management, and mutable option handling.
+- Improved internal rendering, geometry, and overlay processing across the VMS2 pipeline.
+
+### Fixed
+
+- Corrected comment formatting and added the global `L` declaration in `lifecycle.js`.
+- Expanded and stabilized tile-handling and GL tile-loading test coverage.
+
 ## [1.2.0-beta.2] - 2026-01-27
 
 ### Fixed
@@ -46,6 +70,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - first official release
 
-[unreleased]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v1.1.0...HEAD
+[unreleased]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v1.2.0-beta.3...HEAD
+[1.2.0-beta.3]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v1.2.0-beta.2...v1.2.0-beta.3
+[1.2.0-beta.2]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v1.2.0-beta.1...v1.2.0-beta.2
+[1.2.0-beta.1]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v1.1.1...v1.2.0-beta.1
 [1.1.0]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/locr-company/Leaflet.GridLayer.VMS2/releases/tag/v1.0.0
