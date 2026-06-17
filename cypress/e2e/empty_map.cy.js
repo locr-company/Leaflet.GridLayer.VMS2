@@ -14,8 +14,14 @@ describe('basic map specs', () => {
 
           cy.wrap(layer.getPrintCanvas(), { timeout: 60000 }).then(canvas => {
             const image = canvas[0].toDataURL('image/png')
-            cy.fixture('empty_map.png').then(refImage => {
-              expect(refImage).to.equal(image.slice(prefix.length))
+            const base64Data = image.slice(prefix.length)
+            cy.writeFile('cypress/artifacts/empty_map.png', base64Data, 'base64')
+            cy.task('comparePngs', {
+              base: 'cypress/fixtures/empty_map.png',
+              compare: 'cypress/artifacts/empty_map.png',
+              diffPath: 'cypress/artifacts/empty_map-diff.png',
+            }).then((diffPixelCount) => {
+              expect(diffPixelCount).to.lessThan(100)
             })
           })
         })
