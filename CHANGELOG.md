@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Replaced the Cypress launch wrapper with a local runner script so the test harness no longer depends on `start-server-and-test` and its transitive `wait-on`/`axios` chain.
 
+### Fixed
+
+- Text styles with a bold or italic `FontStyle` now load the matching font file (`<FontFamily>-Bold.ttf`, `-Italic.ttf`/`-Oblique.ttf`, `-BoldItalic.ttf`/`-BoldOblique.ttf`, or `<Name>-Italic-VariableFont_<axes>.ttf`) instead of letting the browser synthesize the style from the regular face. Variable fonts declare a weight range so bold uses their `wght` axis. Families without such a file, like Kalam italic, keep the synthesized style.
+
 ## [1.2.0-beta.3] - 2026-06-02
 
 ### Added

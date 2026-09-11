@@ -87,6 +87,52 @@ function createPatternDescriptor (patternImage, repetition) {
   }
 }
 
+const VARIABLE_FONT_NAME = /^(.+)-VariableFont_([A-Za-z0-9,]+)$/
+
+/**
+ * Font files and FontFace descriptors for a style font, following the file names in the
+ * styles' fonts folder. The regular face is <FontFamily>.ttf. A style that asks for bold
+ * or italic also gets <FontFamily>-Bold.ttf, -Italic.ttf or -Oblique.ttf (-BoldItalic.ttf
+ * or -BoldOblique.ttf); the browser tries a face's files in order and synthesizes the
+ * style from the regular face when none of them exists.
+ * Variable fonts (<Name>-VariableFont_<axes>.ttf) cover all weights through their wght
+ * axis, which the browser only uses when the face declares a weight range, and keep their
+ * italics in <Name>-Italic-VariableFont_<axes>.ttf.
+ * @param {{FontFamily: string, FontStyle?: string}} style
+ * @returns {Array<{files: string[], descriptors: FontFaceDescriptors}>} Regular face first
+ */
+export function getFontFaceFiles (style) {
+  const name = style.FontFamily.replace(/ /g, '')
+  const styleTokens = String(style.FontStyle || '').toLowerCase().split(/\s+/)
+  const bold = styleTokens.some(token => token === 'bold' || token === 'bolder' || Number(token) >= 600)
+  const italic = styleTokens.includes('italic') || styleTokens.includes('oblique')
+  const variableFont = VARIABLE_FONT_NAME.exec(name)
+
+  if (variableFont) {
+    const [, baseName, axes] = variableFont
+    const weight = axes.split(',').includes('wght') ? '1 1000' : 'normal'
+    const faces = [{ files: [name + '.ttf'], descriptors: { style: 'normal', weight } }]
+
+    if (italic) {
+      faces.push({ files: [baseName + '-Italic-VariableFont_' + axes + '.ttf'], descriptors: { style: 'italic', weight } })
+    }
+
+    return faces
+  }
+
+  const faces = [{ files: [name + '.ttf'], descriptors: { style: 'normal', weight: 'normal' } }]
+
+  if (bold && italic) {
+    faces.push({ files: [name + '-BoldItalic.ttf', name + '-BoldOblique.ttf'], descriptors: { style: 'italic', weight: 'bold' } })
+  } else if (bold) {
+    faces.push({ files: [name + '-Bold.ttf'], descriptors: { style: 'normal', weight: 'bold' } })
+  } else if (italic) {
+    faces.push({ files: [name + '-Italic.ttf', name + '-Oblique.ttf'], descriptors: { style: 'italic', weight: 'normal' } })
+  }
+
+  return faces
+}
+
 function resolveTileDbInfosWithFallback (layer, queue, error) {
   console.warn('Tile DB info request failed', error)
 
@@ -158,22 +204,30 @@ const resourceLoaderMethods = {
   },
 
   _requestFontFace: function (style) {
-    return new Promise(resolve => {
-      let fontName = style.FontFamily.replace(/ /g, '') + '.ttf'
+    if (style.FontSpecs) {
       let fontStyle = 'normal'
       let fontWeight = 'normal'
 
-      if (style.FontSpecs) {
-        fontName = style.FontSpecs[0]
-
-        if (style.FontSpecs[1] === 'bold') {
-          fontWeight = style.FontSpecs[1]
-        } else if (style.FontSpecs[2]) {
-          fontStyle = style.FontSpecs[1]
-        }
+      if (style.FontSpecs[1] === 'bold') {
+        fontWeight = style.FontSpecs[1]
+      } else if (style.FontSpecs[2]) {
+        fontStyle = style.FontSpecs[1]
       }
 
-      const fontUrl = this.options.assetsUrl + '/fonts/' + fontName
+      return this._requestFontFaceFiles(style.FontFamily, [style.FontSpecs[0]], { style: fontStyle, weight: fontWeight })
+    }
+
+    // Resolves once the regular face and the face for FontStyle have settled, so text is
+    // measured and drawn with the real bold or italic file when there is one.
+    return Promise.all(
+      getFontFaceFiles(style).map(face => this._requestFontFaceFiles(style.FontFamily, face.files, face.descriptors))
+    ).then(() => undefined)
+  },
+
+  _requestFontFaceFiles: function (family, fontNames, descriptors) {
+    return new Promise(resolve => {
+      const fontName = fontNames.join(', ')
+      const fontUrls = fontNames.map(name => this.options.assetsUrl + '/fonts/' + name)
 
       if (globalThis.vms2Context.fontFaceCache[fontName]) {
         if (globalThis.vms2Context.fontFaceCache[fontName].isLoading) {
@@ -186,19 +240,19 @@ const resourceLoaderMethods = {
       }
 
       const font = new FontFace(
-        style.FontFamily,
-        'url(\'' + fontUrl + '\')',
-        { style: fontStyle, weight: fontWeight }
+        family,
+        fontUrls.map(fontUrl => 'url(\'' + fontUrl + '\')').join(', '),
+        descriptors
       )
 
       globalThis.vms2Context.fontFaceCache[fontName] = {
         isLoading: true,
         resolveFunctions: [resolve],
-        family: style.FontFamily,
+        family,
         fontName,
-        url: fontUrl,
-        style: fontStyle,
-        weight: fontWeight
+        urls: fontUrls,
+        style: descriptors.style,
+        weight: descriptors.weight
       }
 
       font.load()
